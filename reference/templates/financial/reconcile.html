@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}กระทบยอด — {{ info.thai_name or company.name }}{% endblock %}
+{% block breadcrumb %}
+<nav class="crumb">
+  <a href="/financial/">บริษัททั้งหมด</a> &rsaquo;
+  <a href="/financial/company?id={{ cid }}">{{ company.name or company.code }}</a> &rsaquo;
+  <a href="/financial/statement?id={{ cid }}&year={{ yearq }}">งบปี {{ year.year_thai }}</a> &rsaquo;
+  <span>กระทบยอด</span>
+</nav>
+{% endblock %}
+{% block content %}
+<h1>กระทบยอด: Express ดิบ → หลังปรับปรุง</h1>
+<p class="muted">{{ info.thai_name or company.name }} &middot; ปี {{ year.year_thai }} ({{ year.year }})</p>
+{% if not has_adj %}<p class="warn">ยังไม่มีรายการปรับปรุง — ไปที่หน้า <a href="/financial/tax?id={{ cid }}&year={{ yearq }}">คำนวณภาษี</a> และ <a href="/financial/lease?id={{ cid }}&year={{ yearq }}">เจ้าหนี้เช่าซื้อ</a> เพื่อบันทึกก่อน</p>{% endif %}
+
+<table class="grid recon">
+  <thead><tr><th>รายการ</th><th class="amt">Express ดิบ</th><th class="amt">หลังปรับปรุง</th><th class="amt">ผลต่าง</th></tr></thead>
+  <tbody>
+    {% set rows = [
+      ('รวมสินทรัพย์', raw.balance_sheet.total_assets, adj.balance_sheet.total_assets),
+      ('รวมหนี้สิน', raw.balance_sheet.total_liabilities, adj.balance_sheet.total_liabilities),
+      ('รวมส่วนของผู้ถือหุ้น', raw.balance_sheet.total_equity, adj.balance_sheet.total_equity),
+      ('รวมหนี้สินและส่วนของผู้ถือหุ้น', raw.balance_sheet.total_liab_equity, adj.balance_sheet.total_liab_equity),
+      ('กำไร (ขาดทุน) ก่อนภาษี', raw.income_statement.net_profit, adj.income_statement.pretax_profit),
+      ('ภาษีเงินได้', 0, adj.income_statement.income_tax),
+      ('กำไร (ขาดทุน) สุทธิ', raw.income_statement.net_profit, adj.income_statement.net_profit_after_tax),
+    ] %}
+    {% for name, a, b in rows %}
+    <tr>
+      <td>{{ name }}</td>
+      <td class="amt">{{ a | money }}</td>
+      <td class="amt">{{ b | money }}</td>
+      <td class="amt muted">{{ (b - a) | money }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h3 class="sec">รายการปรับปรุงที่นำมาใช้</h3>
+<table class="grid">
+  <thead><tr><th>รายการ (AJE)</th><th class="amt">จำนวน</th><th>กระทบ</th></tr></thead>
+  <tbody>
+    {% for r in adj.balance_sheet.asset_adjustments %}
+    <tr><td>{{ r.name }}</td><td class="amt">{{ r.value | money }}</td><td class="muted small">สินทรัพย์</td></tr>
+    {% endfor %}
+    {% for r in adj.balance_sheet.adjustments %}
+    <tr><td>{{ r.name }}</td><td class="amt">{{ r.value | money }}</td><td class="muted small">{{ 'หนี้สิน' if r.affects_total else 'แสดงผล (จัดประเภท)' }}</td></tr>
+    {% endfor %}
+    {% if not adj.balance_sheet.adjustments %}<tr><td colspan="3" class="muted">— ไม่มี —</td></tr>{% endif %}
+  </tbody>
+</table>
+
+<p class="muted small">หมายเหตุ: รอบนี้ปรับเฉพาะ (1) ภาษีเงินได้ และ (2) แสดงหนี้สินเช่าซื้อสุทธิ/จัดประเภท — รายการปรับปรุงอื่นของผู้สอบบัญชียังไม่รวม งบหลังปรับปรุงจึงอาจยังไม่ตรงไฟล์ตรวจสอบทุกบรรทัด</p>
+{% endblock %}

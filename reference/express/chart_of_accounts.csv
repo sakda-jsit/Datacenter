@@ -1,0 +1,244 @@
+﻿account_code,account_name,account_name2,level,parent,group,acctype,status
+10000,Assets,Assets,1,,1,1,A
+11000,Current Assets,Current Assets,2,10000,1,1,A
+11100,Cash on Hand and at Banks,Cash on Hand and at Banks,3,11000,1,1,A
+11110,Cash on Hand,Cash on Hand,4,11100,1,0,A
+11130,Current Account,Current Account,4,11100,1,1,A
+11131,C/A,C/A,5,11130,1,0,A
+11140,Savings Account,Savings Account,4,11100,1,1,A
+11141,S/A Kasikorn 700-2-41094-4 LOTUS AMATA,S/A Kasikorn 700-2-41094-4,5,11140,1,0,A
+11150,Account for Bank Transfer,Account for Bank Transfer,4,11100,1,1,A
+11151,Account for Bank Transfer,Account for Bank Transfer,5,11150,1,0,A
+11200,Short Term Investment,Short Term Investment,3,11000,1,0,A
+11300,Accounts and Notes Receivable,Accounts and Notes Receivable,3,11000,1,1,A
+11310,Accounts Receivable Trade,Accounts Receivable Trade,4,11300,1,0,A
+11330,Post-dated cheques Received,Post-dated cheques Received,4,11300,1,0,A
+11340,Allowance for Doubtful Accounts,Allowance for Doubtful Accounts,4,11300,1,0,A
+11320,Other Receivables,Other Receivables,4,11300,1,0,A
+11400,Inventories,Inventories,3,11000,1,1,A
+11410,Finished Goods,Finished Goods,4,11400,1,0,A
+11500,Other Current Assets,Other Current Assets,3,11000,1,1,A
+11510,Prepaid Expenses,Prepaid Expenses,4,11500,1,1,A
+11511,Prepaid Expenses Insurance,Prepaid Expenses Insurance,5,11510,1,0,A
+11514,Prepaid Corporate Tax,Prepaid Corporate Tax,5,11510,1,0,A
+11512,Prepaid Expenses Rental,Prepaid Expenses Rental,5,11510,1,0,A
+11513,Prepaid Expenses Interest,Prepaid Expenses Interest,5,11510,1,0,A
+11520,Advance Payment,Advance Payment,4,11500,1,1,A
+11530,Accrued Income,Accrued Income,4,11500,1,1,A
+11531,Accrued Income Interest,Accrued Income Interest,5,11530,1,0,A
+11532,Accrued Income Other,Accrued Income Other,5,11530,1,0,A
+11540,Purchase Tax,Purchase Tax,4,11500,1,0,A
+11550,Purchase Tax Suspense,Purchase Tax Suspense,4,11500,1,0,A
+11560,A/R Revenue Dept.,A/R Revenue Dept.,4,11500,1,0,A
+12000,Deposit,Deposit,2,10000,1,0,A
+18000,"Property,Plant and Equipments Net","Property,Plant and Equipments Net",2,10000,1,1,A
+18100,"Property, Plant and Equipments","Property, Plant and Equipments",3,18000,1,1,A
+18110,Land,Land,4,18100,1,0,A
+18120,Buildings,Buildings,4,18100,1,0,A
+18150,Office Equipment,Office Equipment,4,18100,1,0,A
+18160,Furniture Fixtures,Furniture Fixtures,4,18100,1,0,A
+18170,Vehicles,Vehicles,4,18100,1,0,A
+18200,Accumulated Depreciation,Accumulated Depreciation,3,18000,1,1,A
+18220,Accum. Depre.Buildings,Accum. Depre.Buildings,4,18200,1,0,A
+18250,Accum. Depre.Office Equipment,Accum. Depre.Office Equipment,4,18200,1,0,A
+18260,Accum. Depre.Furniture Fixtures,Accum. Depre.Furniture Fixtures,4,18200,1,0,A
+18270,Accum. Depre.Vehicles,Accum. Depre.Vehicles,4,18200,1,0,A
+13000,Other Assets,Other Assets,2,10000,1,1,A
+13100,"Fire Insurance Policy Goods,Building","Fire Insurance Policy Goods,Building",3,13000,1,0,A
+13200,Fire Insurance Policy Vehicles,Fire Insurance Policy Vehicles,3,13000,1,0,A
+13300,Accident Insurance policy Employees,Accident Insurance policy Employees,3,13000,1,0,A
+20000,Liabilities,Liabilities,1,,2,1,A
+21000,Current Liabilities,Current Liabilities,2,20000,2,1,A
+21100,Accounts Payable,Accounts Payable,3,21000,2,1,A
+21110,A/P Finish Goods,A/P Finish Goods,4,21100,2,0,A
+21120,A/P Indirect Mat.,A/P Indirect Mat.,4,21100,2,0,A
+21400,Others Current Liabilities,Others Current Liabilities,3,21000,2,1,A
+21410,Accrued Expenses,Accrued Expenses,4,21400,2,1,A
+21411,"Accrued Salary, Wage","Accrued Salary, Wage",5,21410,2,0,A
+21414,Accrued Rental Office,Accrued Rental Office,5,21410,2,0,A
+21416,Accrued Audit Fee,Accrued Audit Fee,5,21410,2,0,A
+21412,Accrued Social Fund,Accrued Social Fund,5,21410,2,0,A
+21417,Accrued Accountant Fee,Accrued Accountant Fee,5,21410,2,0,A
+21418,Accrued Expenses Electricity,Accrued Expenses Electricity,5,21410,2,0,A
+21413,Accrued Employee Welfare,Accrued Employee Welfare,5,21410,2,0,A
+21415,Accrued Interest Expense,Accrued Interest Expense,5,21410,2,0,A
+21419,Accrued Rental Vehicle,Accrued Rental Vehicle,5,21410,2,0,A
+21430,Witholding Tax Payable,Witholding Tax Payable,4,21400,2,1,A
+21431,Witholding Tax Payable Form1,Witholding Tax Payable Form1,5,21430,2,0,A
+21432,Witholding Tax Payable Form3,Witholding Tax Payable Form3,5,21430,2,0,A
+21434,Accrued Income Tax,Accrued Income Tax,5,21430,2,0,A
+21420,Deferred Revenues,Deferred Revenues,4,21400,2,1,A
+21421,Deferred Revenues Goods,Deferred Revenues Goods,5,21420,2,0,A
+21422,Deferred Revenues Commission,Deferred Revenues Commission,5,21420,2,0,A
+21470,Customer Deposits,Customer Deposits,4,21400,2,0,A
+21440,Sales Tax,Sales Tax,4,21400,2,0,A
+21450,Sale Tax Suspense,Sale Tax Suspense,4,21400,2,0,A
+21460,A/P Revernue Dept.,A/P Revernue Dept.,4,21400,2,0,A
+22000,Long term Liabilities,Long term Liabilities,2,20000,2,1,A
+22110,Long term Loan from Bank,Long term Loan from Bank,4,22100,2,0,A
+23000,Others Liabilities,Others Liabilities,2,20000,2,0,A
+30000,Shareholders' Equity,Shareholders' Equity,1,,3,1,A
+31000,Capital Stock,Capital Stock,2,30000,3,1,A
+32000,Retained Earnings Current Year,Retained Earnings Current Year,2,30000,3,0,A
+34000,Net Profit(Loss),Net Profit(Loss),2,30000,3,0,A
+40000,Income,Income,1,,4,1,A
+41000,Net Sales,Net Sales,2,40000,4,1,A
+41100,Revenue,Revenue,3,41000,4,0,A
+41200,Services Revenue,Services Revenue,3,41000,4,0,A
+41300,Sales Returns,Sales Returns,3,41000,4,0,A
+41400,Sales Discounts,Sales Discounts,3,41000,4,0,A
+42000,Other Income,Other Income,2,40000,4,1,A
+42100,Interest Income,Interest Income,3,42000,4,0,A
+42200,Gain (Loss) on Sale of Assets,Gain (Loss) on Sale of Assets,3,42000,4,0,A
+42300,Cash Discounts Income,Cash Discounts Income,3,42000,4,0,A
+42400,Scrap Sales,Scrap Sales,3,42000,4,0,A
+42900,Other Income,Other Income,3,42000,4,0,A
+50000,Expenses,Expenses,1,,5,1,A
+51000,Cost of Sales - Net,Cost of Sales - Net,2,50000,5,1,A
+51100,Cost of Goods Sold,Cost of Goods Sold,3,51000,5,0,A
+52000,Selling Expenses,Selling Expenses,2,50000,5,1,A
+52100,Salary,Salary,3,52000,5,1,A
+52200,Agent Expense,Agent Expense,3,52000,5,0,A
+52300,Telephone Expense,Telephone Expense,3,52000,5,0,A
+52600,Sales Promotion,Sales Promotion,3,52000,5,0,A
+52500,Delivery & Freight Expenses,Delivery & Freight Expenses,3,52000,5,1,A
+52400,Entertainment Expenses,Entertainment Expenses,3,52000,5,0,A
+52700,Insurance Premium Goods,Insurance Premium Goods,3,52000,5,0,A
+52800,Travel & Automotive Expenses,Travel & Automotive Expenses,3,52000,5,0,A
+53000,Administrative Expenses,Administrative Expenses,2,50000,5,1,A
+53100,Employee Expenses,Employee Expenses,3,53000,5,1,A
+53110,Salaries,Salaries,4,53100,5,0,A
+53111,Overtime,Overtime,4,53100,5,0,A
+53112,Allowance,Allowance,4,53100,5,0,A
+53114,Bonus,Bonus,4,53100,5,0,A
+53115,Social Security Fund,Social Security Fund,4,53100,5,0,A
+53116,Medical Expenses,Medical Expenses,4,53100,5,0,A
+53117,Seminar & Training,Seminar & Training,4,53100,5,0,A
+53118,Uniform,Uniform,4,53100,5,0,A
+53119,Insurance for Employee,Insurance for Employee,4,53100,5,0,A
+53120,Food and Beverage for Employee,Food and Beverage for Employee,4,53100,5,0,A
+53121,Staff Entertain,Staff Entertain,4,53100,5,0,A
+53122,Other Welfare,Other Welfare,4,53100,5,0,A
+53200,Office Expenses,Office Expenses,3,53000,5,1,A
+53210,Stationary Expenses,Stationary Expenses,4,53200,5,0,A
+53211,Repair & Maintenance Office,Repair & Maintenance Office,4,53200,5,0,A
+53212,Office Supplies,Office Supplies,4,53200,5,0,A
+53213,Membership and Subscribtion Expenses,Membership and Subscribtion Expenses,4,53200,5,0,A
+53216,Cleaning Expenses,Cleaning Expenses,4,53200,5,0,A
+53215,Security Expenses,Security Expenses,4,53200,5,0,A
+53300,Utilities,Utilities,3,53000,5,1,A
+53310,Telephone Expenses,Telephone Expenses,4,53300,5,0,A
+53320,Electricity Expenses,Electricity Expenses,4,53300,5,0,A
+53330,Water Supplies,Water Supplies,4,53300,5,0,A
+53340,Postage Expenses,Postage Expenses,4,53300,5,0,A
+53400,Depreciation,Depreciation,3,53000,5,1,A
+53440,Depreciation Computer Hardware,Depreciation Computer Hardware,4,53400,5,0,A
+53410,Depreciation Equipment,Depreciation Equipment,4,53400,5,0,A
+53420,Depreciation Furniture Fixtures,Depreciation Furniture Fixtures,4,53400,5,0,A
+53430,Depreciation Vehicle,Depreciation Vehicle,4,53400,5,0,A
+53500,Insurance Premiums,Insurance Premiums,3,53000,5,1,A
+53510,Insurance Premium Vehicle,Insurance Premium Vehicle,4,53500,5,0,A
+53600,Tax & Fee Expense,Tax & Fee Expense,3,53000,5,1,A
+53610,Premises Tax,Premises Tax,4,53600,5,0,A
+53611,Vehicle Tax,Vehicle Tax,4,53600,5,0,A
+53612,Signboard Tax,Signboard Tax,4,53600,5,0,A
+53613,Bank Charge,Bank Charge,4,53600,5,0,A
+53614,Audit Fee,Audit Fee,4,53600,5,0,A
+53615,Accountant Fee,Accountant Fee,4,53600,5,0,A
+53700,Other Expenses,Other Expenses,3,53000,5,1,A
+53710,Interest Expenses,Interest Expenses,4,53700,5,0,A
+53711,Doubtful Accounts,Doubtful Accounts,4,53700,5,0,A
+53712,Book,,4,53700,5,0,A
+53713,Charitable Contributions,Charitable Contributions,4,53700,5,0,A
+53715,Miscellaneous Expenses,Miscellaneous Expenses,4,53700,5,0,A
+53714,Gain or Loss on Exchange Rate,Gain or Loss on Exchange Rate,4,53700,5,0,A
+53800,Bad Debt,Bad Debt,3,53000,5,0,A
+53900,Tax & Panelty Expense,Tax & Panelty Expense,3,53000,5,1,A
+53910,VAT Non Refund,VAT Non Refund,4,53900,5,0,A
+53911,Untaxable Expense,Untaxable Expense,4,53900,5,0,A
+53912,Tax Penalty Expenses,Tax Penalty Expenses,4,53900,5,0,A
+60000,Corporate Income Tax,Corporate Income Tax,1,,5,0,A
+99999,Dummy Account,Dummy Account,1,,5,0,A
+53214,Rental Office,Rental Office,4,53200,5,0,A
+11120,Petty Cash,Petty Cash,4,11100,1,0,A
+11521,Advance Payment Supply,Advance Payment Supply,5,11520,1,0,A
+11522,Advance Payment Other,Advance Payment Other,5,11520,1,0,A
+11570,Prepaid Withholding Tax,Prepaid Withholding Tax,4,11500,1,1,A
+11571,Prepaid Withholding Tax Interest,Prepaid Withholding Tax Interest,5,11570,1,0,A
+11572,Prepaid Withholding Tax Custom-This year,Prepaid Withholding Tax Custom,5,11570,1,0,A
+18130,Machine,Machine,4,18100,1,0,A
+18140,Tools,Tools,4,18100,1,0,A
+18180,Computer Hardware & Software,Computer Hardware & Software,4,18100,1,1,A
+18181,Computer Hardware,Computer Hardware,5,18180,1,0,A
+18182,Computer Software,Computer Software,5,18180,1,0,A
+18190,Construction in Process,Construction in Process,4,18100,1,0,A
+18230,Accum. Depre.Machine,Accum. Depre.Machine,4,18200,1,0,A
+18240,Accum. Depre.Tools,Accum. Depre.Tools,4,18200,1,0,A
+18280,Accum. Depre.Computer,Accum. Depre.Computer,4,18200,1,1,A
+18281,Accum. Depre.Computer Hardware,Accum. Depre.Computer Hardware,5,18280,1,0,A
+18282,Accum. Depre.Computer Software,Accum. Depre.Computer Software,5,18280,1,0,A
+21130,A/P Service & Contractor,A/P Service & Contractor,4,21100,2,0,A
+21140,A/P Other,A/P Other,4,21100,2,0,A
+21200,Bank Over Draft,Bank Over Draft,3,21000,2,0,A
+21150,A/P Leasing-งล9917 ชบ,A/P Leasing,4,21100,2,0,A
+21300,Short Term Loan,Short Term Loan,3,21000,2,1,A
+21310,Short Term Loan from Bank,Short Term Loan from Bank,4,21300,2,0,A
+21320,Short Term Loan from Partner,Short Term Loan from Partner,4,21300,2,0,A
+21330,Short Term Loan Other,Short Term Loan Other,4,21300,2,0,A
+21433,Witholding Tax Payable Form53,Witholding Tax Payable Form53,5,21430,2,0,A
+31100,Capital Stock MS.SUTHATIP R.,Capital Stock MS.SUTHATIP R.,3,31000,3,0,A
+22120,Long term Loan from Partner,Long term Loan from Partner,4,22100,2,0,A
+22100,Long Term Loan,Long Term Loan,3,22000,2,1,A
+22200,Guarantee and Deposit Receipt,Guarantee and Deposit Receipt,3,22000,2,0,A
+33000,Retained Earnings Past Year,Retained Earnings Past Year,2,30000,3,0,A
+52110,Salary,Salary,4,52100,5,0,A
+52120,Overtime,Overtime,4,52100,5,0,A
+52130,Award,Award,4,52100,5,0,A
+52140,Social Fund,Social Fund,4,52100,5,0,A
+52510,Rental Vehical Expense,Rental Vehical Expense,4,52500,5,0,A
+52520,Gasoline Expense,Gasoline Expense,4,52500,5,0,A
+52530,Transportation Expense,Transportation Expense,4,52500,5,0,A
+52540,Express Way Expense,Express Way Expense,4,52500,5,0,A
+52900,Misc. of Sales,Misc. of Sales,3,52000,5,0,A
+53616,Profressional Fee,Profressional Fee,4,53600,5,0,A
+53217,Office Expenses,Office Expenses,4,53200,5,0,A
+53218,Local Travelling Fee,Local Travelling Fee,4,53200,5,0,A
+53350,Internet Expenses,Internet Expenses,4,53300,5,0,A
+11580,Deferred Interest Expense,Deferred Interest Expense,4,11500,1,0,A
+11590,Income Tax PND.91,Income Tax PND.91,4,11500,1,0,A
+11420,Service Fee,Service Fee,4,11400,1,0,A
+51200,Cost of Service Fee,Cost of Service Fee,3,51000,5,0,A
+31200,Capital Stock MR.NIMMANONT L.,Capital Stock MR.NIMMANONT L.,3,31000,3,0,A
+31300,Capital Stock MS.SAKULRAT W.,Capital Stock MS.SAKULRAT W.,3,31000,3,0,A
+53450,Depreciation Computer Software,Depreciation Computer Software,4,53400,5,0,A
+13400,Loans Receivable to Partner,Loans Receivable to Partner,3,13000,1,0,A
+53617,Special Business Tax,Special Business Tax,4,53600,5,0,A
+21480,Accrued Special Business Tax,Accrued Special Business Tax,4,21400,2,0,A
+11160,Fixed Account,Fixed Account,4,11100,1,1,A
+11161,Fixed Kasikorn 700-3-00954-2,Fixed Kasikorn 700-3-00954-2,5,11160,1,0,A
+21490,Accrued Expense Other,Accrued Expense Other,4,21400,2,1,A
+21491,Accrued Expense Other,Accrued Expense Other,5,21490,2,0,A
+11515,Prepaid Expense Other,Prepaid Expense Other,5,11510,1,0,A
+21492,Accrued Expense Telephone,,5,21490,2,0,A
+53360,Web Hosting Expenses,,4,53300,5,0,A
+11573,Prepaid Withholding Tax Custom-Last year,Prepaid Withholding Tax Custom,5,11570,1,0,A
+53618,Building Tax,Signboard Tax,4,53600,5,0,A
+11142,S/A AOMSIN 020218530804,,5,11140,1,0,A
+14000,long Term Investment,,2,10000,1,1,A
+14001,long Term Investment-ฉลากออมสิน,,3,14000,1,0,A
+11143,S/A Kasikorn 402-8-35789-2 ROBINSON,S/A Kasikorn 402-8-35789-2,5,11140,1,0,A
+53361,Domain Expenses,,4,53300,5,0,A
+51101,DUTY TAX,Cost of Goods Sold,3,51000,5,0,A
+51102,CLERING EXPENSE,Cost of Goods Sold,3,51000,5,0,A
+21493,Accrued Expense Water,,5,21490,2,0,A
+53219,Repair & Maintenance Vehicle,Repair & Maintenance Office,4,53200,5,0,A
+51103,FREIGHT CHARGES,FREIGHT CHARGES,3,51000,5,0,A
+53913,Depreciation Vehicle Over1M,Depreciation Vehicle Over1M,4,53900,5,0,A
+53220,Rental Copy Machine,Rental Office,4,53200,5,0,A
+53221,Service Copy Expense/B&W,Rental Office,4,53200,5,0,A
+53619,Letter Gurantee Fee,Letter Gurantee Fee,4,53600,5,0,A
+51104,TRANSPORT CHARGES,TRANSPORT CHARGES,3,51000,5,0,A
+53222,Service Copy Expense/Color,Rental Office,4,53200,5,0,A
+11516,Prepaid Expense Car Tax,Prepaid Expense Car Tax,5,11510,1,0,A
+11517,Prepaid Expense Telephone,Prepaid Expense Telephone,5,11510,1,0,A
+11518,Prepaid Expense Internet,Prepaid Expense Internet,5,11510,1,0,A

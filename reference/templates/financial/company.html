@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ info.thai_name or company.name }} — เลือกปี{% endblock %}
+{% block breadcrumb %}
+<nav class="crumb"><a href="/financial/">บริษัททั้งหมด</a> &rsaquo; <span>{{ info.thai_name or company.name or company.code }}</span></nav>
+{% endblock %}
+{% block content %}
+<h1>{{ info.thai_name or company.name or company.code }}</h1>
+<p class="muted">เลขผู้เสียภาษี {{ info.tax_id }} &middot; รหัส: {{ company.compcod }} &middot; ที่เก็บข้อมูล: <span class="mono">{{ company.folder }}</span></p>
+
+<h2>เลือกปีที่ต้องการออกงบ</h2>
+{% if years %}
+<div class="yearcards">
+  {% for y in years %}
+  <a class="yearcard{{ ' current' if y.period == 'CUR' else '' }}"
+     href="/financial/statement?id={{ company.id }}&year={{ y.year or y.period }}">
+    <div class="ythai">{{ y.year_thai or y.label }}</div>
+    {% if y.year %}<div class="yce">ค.ศ. {{ y.year }}</div>{% endif %}
+    <div class="ytag">{{ 'งวดปัจจุบัน' if y.period == 'CUR' else ('งวดถัดไป' if y.period == 'NY' else 'งวดก่อน') }}</div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p class="warn">ไม่พบงวดบัญชีที่ออกงบได้สำหรับบริษัทนี้</p>
+{% endif %}
+{% endblock %}

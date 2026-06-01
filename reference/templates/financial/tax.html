@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}คำนวณภาษีเงินได้ — {{ info.thai_name or company.name }}{% endblock %}
+{% block breadcrumb %}
+<nav class="crumb">
+  <a href="/financial/">บริษัททั้งหมด</a> &rsaquo;
+  <a href="/financial/company?id={{ cid }}">{{ company.name or company.code }}</a> &rsaquo;
+  <a href="/financial/statement?id={{ cid }}&year={{ yearq }}">งบปี {{ year.year_thai }}</a> &rsaquo;
+  <span>คำนวณภาษี</span>
+</nav>
+{% endblock %}
+{% block content %}
+<div class="stmt-head">
+  <div>
+    <h1>คำนวณภาษีเงินได้นิติบุคคล</h1>
+    <p class="muted">{{ info.thai_name or company.name }} &middot; ปี {{ year.year_thai }} ({{ year.year }})</p>
+  </div>
+  <div class="actions no-print">
+    <a class="btn ghost" href="/financial/statement?id={{ cid }}&year={{ yearq }}&adj=1">ดูงบหลังปรับปรุง</a>
+  </div>
+</div>
+{% if notice == 'saved' %}<p class="ok-msg">บันทึกแล้ว — นำไปใช้ใน PL/งบหลังปรับปรุงเรียบร้อย</p>{% endif %}
+
+<div class="resultbar">
+  <div><span class="muted small">กำไรทางภาษี</span><div class="big">{{ result.taxable | money }}</div></div>
+  <div><span class="muted small">ภาษีเงินได้</span><div class="big brand">{{ result.income_tax | money }}</div></div>
+</div>
+
+<form method="post" action="/financial/tax/save" class="wp">
+  <input type="hidden" name="id" value="{{ cid }}">
+  <input type="hidden" name="year" value="{{ yearq }}">
+
+  <label class="fld">กำไร (ขาดทุน) ทางบัญชีก่อนภาษี
+    <input type="text" name="profit_override" value="{{ tax.profit_override if tax.profit_override not in (none,'') else '' }}"
+           placeholder="{{ '%.2f'|format(pretax) }} (ดึงจาก Express อัตโนมัติ)">
+    <span class="muted small">เว้นว่าง = ใช้ค่าจาก Express ({{ pretax | money }})</span>
+  </label>
+
+  <h3 class="sec">บวก: รายการบวกกลับทางภาษี</h3>
+  <table class="grid wptbl" id="addbacks">
+    <thead><tr><th>รายการ</th><th class="amt">จำนวนเงิน</th><th></th></tr></thead>
+    <tbody>
+      {% for r in tax.addbacks %}
+      <tr>
+        <td><input type="text" name="addback_desc" value="{{ r.desc }}"></td>
+        <td><input type="text" class="amt" name="addback_amount" value="{{ r.amount or '' }}"></td>
+        <td><button type="button" class="btn danger sm" onclick="delRow(this)">ลบ</button></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <button type="button" class="btn ghost sm" onclick="addRow('addbacks','addback')">+ เพิ่มรายการบวกกลับ</button>
+
+  <h3 class="sec">หัก: รายการหักทางภาษี</h3>
+  <table class="grid wptbl" id="deductions">
+    <thead><tr><th>รายการ</th><th class="amt">จำนวนเงิน</th><th></th></tr></thead>
+    <tbody>
+      {% for r in tax.deductions %}
+      <tr>
+        <td><input type="text" name="deduction_desc" value="{{ r.desc }}"></td>
+        <td><input type="text" class="amt" name="deduction_amount" value="{{ r.amount or '' }}"></td>
+        <td><button type="button" class="btn danger sm" onclick="delRow(this)">ลบ</button></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <button type="button" class="btn ghost sm" onclick="addRow('deductions','deduction')">+ เพิ่มรายการหัก</button>
+
+  <h3 class="sec">อัตราภาษี (SME)</h3>
+  <div class="tierbar">
+    <label>ยกเว้นกำไรช่วงแรก (บาท)<input type="text" name="exempt" value="{{ result.tiers[0][1] }}"></label>
+    <label>เพดานอัตรากลาง (บาท)<input type="text" name="midcap" value="{{ result.tiers[1][1] }}"></label>
+    <label>อัตรากลาง<input type="text" name="rate_mid" value="{{ result.tiers[1][2] }}"></label>
+    <label>อัตราสูง<input type="text" name="rate_high" value="{{ result.tiers[2][2] }}"></label>
+  </div>
+  <p class="muted small">สูตร: (กำไรทางภาษี − ยกเว้น) × อัตรา ตามขั้น เช่น (616,466.93 − 300,000) × 15% = 47,470.04</p>
+
+  <div class="actions"><button class="btn" type="submit">บันทึก</button></div>
+</form>
+
+<script>
+function addRow(tblId, prefix){
+  var tb = document.querySelector('#'+tblId+' tbody');
+  var tr = document.createElement('tr');
+  tr.innerHTML = '<td><input type="text" name="'+prefix+'_desc"></td>'+
+                 '<td><input type="text" class="amt" name="'+prefix+'_amount"></td>'+
+                 '<td><button type="button" class="btn danger sm" onclick="delRow(this)">ลบ</button></td>';
+  tb.appendChild(tr);
+}
+function delRow(btn){ btn.closest('tr').remove(); }
+</script>
+{% endblock %}

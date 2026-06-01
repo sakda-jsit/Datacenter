@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}ตั้งค่า Root Path{% endblock %}
+{% block breadcrumb %}
+<nav class="crumb"><a href="/">หน้าหลัก</a> &rsaquo; <span>ตั้งค่า Root Path</span></nav>
+{% endblock %}
+{% block content %}
+<h1>ตั้งค่า Root Path</h1>
+<p class="muted">ระบุ root path ของ Express (เช่น <span class="mono">J:\</span>) ระบบจะอ่านทะเบียนรายชื่อจาก <span class="mono">root\secure\SCCOMP.DBF</span> และเปิดข้อมูลจาก <span class="mono">root\&lt;PATH&gt;</span> &middot; รวมทั้งหมด {{ total }} รายการ</p>
+
+{% if notice == 'added' %}<p class="ok-msg">เพิ่ม root แล้ว</p>
+{% elif notice == 'saved' %}<p class="ok-msg">บันทึก root แล้ว</p>
+{% elif notice == 'deleted' %}<p class="ok-msg">ลบ root แล้ว</p>
+{% elif notice == 'dup' %}<p class="warn">path นี้มีอยู่แล้ว</p>
+{% elif notice == 'empty' %}<p class="warn">กรุณาระบุ path</p>{% endif %}
+
+<table class="grid">
+  <thead>
+    <tr><th>Root path (แก้ไขได้)</th><th>สถานะ</th><th>รายการที่พบ</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td>
+        <form method="post" action="/settings/edit" class="rowform">
+          <input type="hidden" name="index" value="{{ r.index }}">
+          <input type="text" name="path" value="{{ r.path }}" class="mono" required>
+          <input type="text" name="label" value="{{ r.label }}" placeholder="ป้ายกำกับ (ไม่บังคับ)">
+          <button class="btn" type="submit">บันทึก</button>
+        </form>
+      </td>
+      <td>
+        {% if r.registry %}<span class="pill ok">พบ SCCOMP.DBF</span>
+        {% elif r.exists %}<span class="pill bad">ไม่พบ secure\SCCOMP.DBF</span>
+        {% else %}<span class="pill bad">ไม่พบ path</span>{% endif %}
+      </td>
+      <td>
+        {{ r.count }} รายการ
+        {% if r.names %}<div class="muted small">{{ r.names[:4] | join(', ') }}{% if r.count > 4 %} …{% endif %}</div>{% endif %}
+      </td>
+      <td>
+        <form method="post" action="/settings/delete" onsubmit="return confirm('ลบ root นี้?');">
+          <input type="hidden" name="index" value="{{ r.index }}">
+          <button class="btn danger" type="submit">ลบ</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    {% if not rows %}
+    <tr><td colspan="4" class="muted">ยังไม่มี root path</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<h2>เพิ่ม root ใหม่</h2>
+<form method="post" action="/settings/add" class="addform">
+  <label>Root path
+    <input type="text" name="path" placeholder="เช่น J:\ หรือ \\SERVER\Express" required>
+  </label>
+  <label>ป้ายกำกับ (ไม่บังคับ)
+    <input type="text" name="label" placeholder="เช่น เครื่องบัญชี B">
+  </label>
+  <button class="btn" type="submit">+ เพิ่ม</button>
+</form>
+<p class="muted small">บันทึกลงไฟล์: <span class="mono">{{ config_path }}</span> &middot; แก้ไขแล้วกลับไปหน้าเลือกบริษัทได้ทันที ไม่ต้องรีสตาร์ท</p>
+{% endblock %}

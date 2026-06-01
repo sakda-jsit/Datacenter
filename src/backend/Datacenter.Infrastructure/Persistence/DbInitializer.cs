@@ -1,0 +1,128 @@
+using Datacenter.Application.Common.Interfaces;
+using Datacenter.Application.Features.Import;
+using Datacenter.Application.Features.Import.DTOs;
+using Datacenter.Domain.Entities;
+using Datacenter.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace Datacenter.Infrastructure.Persistence;
+
+public static class DbInitializer
+{
+    public static async Task SeedAsync(IServiceProvider serviceProvider)
+    {
+        using var scope         = serviceProvider.CreateScope();
+        var db                  = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var passwordHasher      = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+        var expressAdapter      = scope.ServiceProvider.GetRequiredService<IExpressDbfAdapter>();
+        var configuration       = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        var logger              = scope.ServiceProvider.GetRequiredService<ILogger<AppDbContext>>();
+
+        await db.Database.MigrateAsync();
+
+        // ── Seed ClientCompanies จาก Express ─────────────────────────────────
+        if (!await db.ClientCompanies.AnyAsync())
+        {
+            var basePath = configuration["Import:ExpressBasePath"];
+
+            if (!string.IsNullOrWhiteSpace(basePath) && Directory.Exists(basePath))
+            {
+                // อ่านทะเบียนข้อมูล Express แล้วคัดเฉพาะบริษัทปัจจุบัน
+                // (ตัด X-/Z- = ปีเก่า/สำเนา และ CANDEL=N ตามกฎใน ExpressDatasetFilter)
+                IReadOnlyList<ExpressDatasetDto> registry;
+                try
+                {
+                    registry = await expressAdapter.ReadCompanyRegistryAsync(basePath);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning("อ่านทะเบียนข้อมูล sccomp.dbf ไม่ได้: {Message}", ex.Message);
+                    registry = [];
+                }
+
+                var current = registry.Where(ExpressDatasetFilter.IsCurrentCompany).ToList();
+                logger.LogInformation(
+                    "ทะเบียน Express: {Total} รายการ, เป็นบริษัทปัจจุบัน {Current} รายการ",
+                    registry.Count, current.Count);
+
+                var added = 0;
+                foreach (var dataset in current)
+                {
+                    try
+                    {
+                        var folder = Path.Combine(basePath, dataset.Path);
+                        if (!Directory.Exists(folder))
+                        {
+                            logger.LogWarning("ข้าม {Code}: ไม่พบโฟลเดอร์ {Folder}", dataset.Path, folder);
+                            continue;
+                        }
+                        if (!await expressAdapter.FolderIsValidAsync(folder))
+                        {
+                            logger.LogWarning("ข้าม {Code}: ไม่พบ ISINFO ในโฟลเดอร์", dataset.Path);
+                            continue;
+                        }
+
+                        var code = dataset.Path.ToUpper();
+                        if (await db.ClientCompanies.AnyAsync(c => c.Code == code)) continue;
+
+                        var info = await expressAdapter.ReadCompanyInfoAsync(folder);
+
+                        db.ClientCompanies.Add(new ClientCompany
+                        {
+                            Code                 = code,
+                            Name                 = !string.IsNullOrWhiteSpace(info.ThaiName) ? info.ThaiName
+                                                 : !string.IsNullOrWhiteSpace(info.EngName) ? info.EngName
+                                                 : dataset.CompName,
+                            TaxId                = info.TaxId,
+                            BranchCode           = "00000",
+                            FiscalYearStartMonth = 1,
+                            IsActive             = true,
+                            CreatedAt            = DateTime.UtcNow,
+                            CreatedBy            = "system",
+                        });
+                        added++;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning("ข้าม {Code}: {Message}", dataset.Path, ex.Message);
+                    }
+                }
+
+                if (added > 0)
+                {
+                    await db.SaveChangesAsync();
+                    logger.LogInformation("Seeded {Count} client companies from Express ({Path}).", added, basePath);
+                }
+                else
+                {
+                    logger.LogWarning("ไม่พบบริษัทปัจจุบันที่ seed ได้จากทะเบียน Express ({Path})", basePath);
+                }
+            }
+            else
+            {
+                logger.LogWarning("Express base path ไม่ถูกต้องหรือไม่มีอยู่: {Path}", basePath);
+            }
+        }
+
+        // ── Seed admin user ───────────────────────────────────────────────────
+        if (!await db.Users.AnyAsync(u => u.Username == "admin"))
+        {
+            db.Users.Add(new User
+            {
+                Username     = "admin",
+                PasswordHash = passwordHasher.Hash("admin1234"),
+                DisplayName  = "Administrator",
+                Role         = UserRole.Admin,
+                IsActive     = true,
+                CreatedAt    = DateTime.UtcNow,
+                CreatedBy    = "system",
+            });
+
+            await db.SaveChangesAsync();
+            logger.LogInformation("Seeded admin user.");
+        }
+    }
+}

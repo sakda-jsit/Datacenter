@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}บัญชีผู้ใช้ — ระบบสำนักงานบัญชี{% endblock %}
+{% block breadcrumb %}
+<nav class="crumb"><a href="/">หน้าหลัก</a> &rsaquo; <span>บัญชีผู้ใช้</span></nav>
+{% endblock %}
+{% block content %}
+<h1>บัญชีผู้ใช้</h1>
+<p class="muted">ผู้ใช้: <strong>{{ name }}</strong> ({{ user }})</p>
+
+{% if notice == 'changed' %}<p class="ok-msg">เปลี่ยนรหัสผ่านแล้ว</p>
+{% elif notice == 'badcurrent' %}<p class="warn">รหัสผ่านปัจจุบันไม่ถูกต้อง</p>
+{% elif notice == 'mismatch' %}<p class="warn">รหัสผ่านใหม่ไม่ตรงกัน หรือสั้นกว่า 6 ตัวอักษร</p>{% endif %}
+
+<h3 class="sec">เปลี่ยนรหัสผ่าน</h3>
+<form method="post" action="/account/password" class="addform">
+  <label>รหัสผ่านปัจจุบัน<input type="password" name="current" required></label>
+  <label>รหัสผ่านใหม่ (≥ 6 ตัว)<input type="password" name="new" required></label>
+  <label>ยืนยันรหัสผ่านใหม่<input type="password" name="confirm" required></label>
+  <button class="btn" type="submit">บันทึก</button>
+</form>
+{% endblock %}

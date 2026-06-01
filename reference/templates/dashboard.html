@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}หน้าหลัก — ระบบสำนักงานบัญชี{% endblock %}
+{% block breadcrumb %}
+<nav class="crumb"><span>Dashboard</span></nav>
+{% endblock %}
+{% block content %}
+<section class="section-head dashboard-head">
+  <div>
+    <h1>ระบบสำนักงานบัญชี</h1>
+    <p class="muted">เลือกโมดูลที่ต้องการใช้งาน{% if client_count is not none %} · ลูกค้าในระบบ {{ client_count }} ราย{% endif %}</p>
+  </div>
+</section>
+
+<div class="modgrid">
+  {% for m in modules %}
+  <a class="modcard{% if not m.active %} soon{% endif %}" href="{{ m.url }}">
+    <div class="modicon">{{ m.icon }}</div>
+    <div class="modbody">
+      <div class="modtitle">{{ m.label }}{% if not m.active %} <span class="tag">เร็วๆ นี้</span>{% endif %}</div>
+      <div class="moddesc">{{ m.desc }}</div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ระบบสำนักงานบัญชี{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="app">
+  <aside class="sidebar no-print" id="sidebar">
+    <div class="sidebar-head">
+      <a class="brand" href="/" aria-label="กลับหน้าหลัก">
+        <span class="logo">JS</span>
+        <span class="brandtext">Datacenter</span>
+      </a>
+      <button class="sidebar-toggle no-print" type="button" onclick="toggleSidebarDesktop()" aria-label="ย่อ/ขยายเมนู">⟨</button>
+    </div>
+
+    <nav class="menu" aria-label="เมนูหลัก">
+      <div class="menutitle">โมดูล</div>
+      {% for m in modules %}
+      <a class="menuitem{% if m.active and request.path.startswith(m.url) %} on{% endif %}{% if not m.active %} soon{% endif %}"
+         href="{{ m.url }}" title="{{ m.label }}">
+        <span class="ic">{{ m.icon }}</span>
+        <span class="ml"><strong>{{ m.label }}</strong><small>{{ m.desc }}</small></span>
+        {% if not m.active %}<span class="tag">Soon</span>{% endif %}
+      </a>
+      {% endfor %}
+      <div class="menusep"></div>
+      <a class="menuitem{% if request.path.startswith('/settings') %} on{% endif %}" href="/settings" title="ตั้งค่าแหล่งข้อมูล">
+        <span class="ic">⚙️</span><span class="ml"><strong>ตั้งค่าแหล่งข้อมูล</strong><small>Express root path</small></span>
+      </a>
+    </nav>
+
+    <div class="sidefoot">
+      <span class="dot"></span>
+      <span>Express DBF Connected</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar no-print">
+      <div class="topbar-left">
+        <button class="hamb" type="button" onclick="toggleSidebar()" aria-label="เปิด/ปิดเมนู">☰</button>
+        <div class="topbar-crumb">
+          {% block breadcrumb %}{% endblock %}
+        </div>
+      </div>
+      <div class="topbar-user">
+        <span class="user-avatar" aria-hidden="true">
+          {% if current_user is defined and current_user.name is defined %}{{ current_user.name[:1] }}{% elif user_name is defined %}{{ user_name[:1] }}{% else %}U{% endif %}
+        </span>
+        <span class="user-meta">
+          <strong>{% if current_user is defined and current_user.name is defined %}{{ current_user.name }}{% elif user_name is defined %}{{ user_name }}{% else %}ผู้ใช้งาน{% endif %}</strong>
+          <small>{% if current_user is defined and current_user.role is defined %}{{ current_user.role }}{% else %}Accounting Workspace{% endif %}</small>
+        </span>
+        <a class="logout-btn" href="/logout" title="ออกจากระบบ">Logout</a>
+      </div>
+    </header>
+
+    <main class="container">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="foot no-print">JSP Datacenter &middot; อ่านข้อมูลจาก Express Accounting (.dbf) โดยตรง</footer>
+  </div>
+
+  <script>
+    (function(){
+      try {
+        if (localStorage.getItem('sidebarCollapsed') === '1') {
+          document.body.classList.add('sidebar-collapsed');
+        }
+      } catch (e) {}
+    })();
+
+    function toggleSidebar(){
+      if (window.innerWidth <= 860) {
+        document.body.classList.toggle('sidebar-open');
+      } else {
+        toggleSidebarDesktop();
+      }
+    }
+
+    function toggleSidebarDesktop(){
+      if (window.innerWidth <= 860) {
+        document.body.classList.toggle('sidebar-open');
+        return;
+      }
+      document.body.classList.toggle('sidebar-collapsed');
+      try {
+        localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+      } catch (e) {}
+    }
+
+    document.addEventListener('click', function(e){
+      if (window.innerWidth > 860) return;
+      var side = document.getElementById('sidebar');
+      var btn = document.querySelector('.hamb');
+      if (document.body.classList.contains('sidebar-open') && side && !side.contains(e.target) && btn && !btn.contains(e.target)) {
+        document.body.classList.remove('sidebar-open');
+      }
+    });
+  </script>
+</body>
+</html>

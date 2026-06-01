@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>เข้าสู่ระบบ — ระบบสำนักงานบัญชี</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="authpage">
+  <div class="authcard">
+    <div class="authbrand"><span class="logo">JS</span>
+      <span>ระบบสำนักงานบัญชี<small>JSP Datacenter</small></span>
+    </div>
+    <h1>เข้าสู่ระบบ</h1>
+    <p class="muted small">กรุณาเข้าสู่ระบบเพื่อใช้งานแพลตฟอร์ม</p>
+    {% if error %}<p class="warn">{{ error }}</p>{% endif %}
+    <form method="post" action="/login" class="authform">
+      <input type="hidden" name="next" value="{{ next }}">
+      <label>ชื่อผู้ใช้
+        <input name="username" value="{{ username or '' }}" autocomplete="username" autofocus required>
+      </label>
+      <label>รหัสผ่าน
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button class="btn" type="submit">เข้าสู่ระบบ</button>
+    </form>
+  </div>
+</body>
+</html>

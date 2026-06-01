@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}เลือกบริษัท{% endblock %}
+{% block breadcrumb %}
+<nav class="crumb"><a href="/">🏠 หน้าหลัก</a> &rsaquo; <span>งบการเงิน</span></nav>
+{% endblock %}
+{% block content %}
+<div class="stmt-head page-title">
+  <div>
+    <h1 class="financial-heading"><span class="heading-icon" aria-hidden="true">📊</span>งบการเงิน</h1>
+  </div>
+  <a class="btn ghost refresh-btn" href="/refresh?to=/financial/"><span aria-hidden="true">↻</span>รีเฟรชรายชื่อ</a>
+</div>
+
+<div class="toolbar card-lite">
+  <form class="search" onsubmit="return false;">
+    <span class="search-ic">⌕</span>
+    <input type="text" id="q" placeholder="ค้นหาชื่อบริษัท / เลขผู้เสียภาษี / ที่เก็บข้อมูล..." oninput="onSearch()">
+  </form>
+  <div class="pagebar">
+    <label class="muted small">แสดงหน้าละ
+      <select id="perPage" onchange="setPerPage(this.value)">
+        <option value="10">10</option>
+        <option value="20">20</option>
+        <option value="50">50</option>
+      </select> รายการ
+    </label>
+    <span class="muted small" id="rangeInfo"></span>
+  </div>
+</div>
+
+<div class="table-card">
+  <table class="grid" id="tbl">
+    <thead>
+      <tr><th>ชื่อบริษัท</th><th>เลขประจำตัวผู้เสียภาษี</th><th>ที่เก็บข้อมูล</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for c in companies %}
+      <tr>
+        <td class="name">{{ c.thai_name or c.name or c.code }}{% if not c.exists %} <span class="pill bad">ไม่พบโฟลเดอร์</span>{% endif %}</td>
+        <td class="mono">{{ c.tax_id }}</td>
+        <td class="mono pathcell">{{ c.path }}</td>
+        <td class="right"><a class="btn sm row-action" href="/financial/company?id={{ c.id }}">เลือก →</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<nav class="pager" id="pager"></nav>
+
+<script>
+var perPage = 10, page = 1;
+
+function allRows() {
+  return Array.prototype.slice.call(document.querySelectorAll('#tbl tbody tr'));
+}
+function matchedRows() {
+  var q = document.getElementById('q').value.toLowerCase();
+  return allRows().filter(function(tr){
+    return tr.innerText.toLowerCase().indexOf(q) >= 0;
+  });
+}
+function render() {
+  var rows = allRows();
+  var matched = matchedRows();
+  var total = matched.length;
+  var pages = Math.max(1, Math.ceil(total / perPage));
+  if (page > pages) page = pages;
+  if (page < 1) page = 1;
+  var start = (page - 1) * perPage;
+  var end = start + perPage;
+  rows.forEach(function(tr){ tr.style.display = 'none'; });
+  matched.slice(start, end).forEach(function(tr){ tr.style.display = ''; });
+
+  var info = document.getElementById('rangeInfo');
+  info.textContent = total ? ('แสดง ' + (start + 1) + '–' + Math.min(end, total) + ' จาก ' + total + ' รายการ')
+                           : 'ไม่พบรายการ';
+  renderPager(pages);
+}
+function renderPager(pages) {
+  var nav = document.getElementById('pager');
+  nav.innerHTML = '';
+  if (pages <= 1) return;
+  function btn(label, target, opts) {
+    opts = opts || {};
+    var b = document.createElement('button');
+    b.textContent = label;
+    b.className = 'pgbtn' + (opts.active ? ' active' : '');
+    if (opts.disabled) { b.disabled = true; }
+    else { b.onclick = function(){ page = target; render(); }; }
+    nav.appendChild(b);
+  }
+  btn('‹ ก่อนหน้า', page - 1, {disabled: page === 1});
+  for (var i = 1; i <= pages; i++) btn(String(i), i, {active: i === page});
+  btn('ถัดไป ›', page + 1, {disabled: page === pages});
+}
+function onSearch() { page = 1; render(); }
+function setPerPage(v) { perPage = parseInt(v, 10) || 10; page = 1; render(); }
+
+document.addEventListener('DOMContentLoaded', render);
+</script>
+{% endblock %}

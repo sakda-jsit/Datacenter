@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}งบการเงิน {{ info.thai_name or company.name }} ปี {{ year.year_thai }}{% endblock %}
+{% block breadcrumb %}
+<nav class="crumb">
+  <a href="/financial/">บริษัททั้งหมด</a> &rsaquo;
+  <a href="/financial/company?id={{ company.id }}">{{ company.name or company.code }}</a> &rsaquo;
+  <span>ปี {{ year.year_thai or year.label }}</span>
+</nav>
+{% endblock %}
+{% block content %}
+
+<div class="stmt-head">
+  <div>
+    <h1>{{ info.thai_name or company.name or company.code }}</h1>
+    <p class="muted">เลขผู้เสียภาษี {{ info.tax_id }}</p>
+  </div>
+  <div class="period-badge">
+    <div class="py">สำหรับปีสิ้นสุด</div>
+    <div class="pv">31 ธันวาคม {{ year.year_thai or '' }}</div>
+  </div>
+  <div class="actions no-print">
+    <a class="btn ghost" href="/financial/company?id={{ company.id }}">เปลี่ยนปี</a>
+    <a class="btn ghost" href="/financial/tax?id={{ cid }}&year={{ yearq }}">คำนวณภาษี</a>
+    <a class="btn ghost" href="/financial/lease?id={{ cid }}&year={{ yearq }}">เจ้าหนี้เช่าซื้อ</a>
+    <a class="btn ghost" href="/financial/reconcile?id={{ cid }}&year={{ yearq }}">กระทบยอด</a>
+    <button class="btn" onclick="window.print()">พิมพ์ / บันทึก PDF</button>
+  </div>
+</div>
+
+{% if has_adj %}
+<div class="adjtoggle no-print">
+  {% if adjusted %}
+    <span class="pill ok">งบหลังปรับปรุง</span>
+    <a class="btn ghost sm" href="/financial/statement?id={{ cid }}&year={{ yearq }}&adj=0">ดูงบดิบ (Express)</a>
+  {% else %}
+    <span class="pill">งบดิบ (Express)</span>
+    <a class="btn ghost sm" href="/financial/statement?id={{ cid }}&year={{ yearq }}&adj=1">ดูงบหลังปรับปรุง</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if not bs.balanced %}
+<p class="warn">หมายเหตุ: สินทรัพย์ไม่เท่ากับหนี้สิน+ทุน (ส่วนต่าง {{ bs.diff | money }}) — ตรวจสอบยอดยกมา/รายการปิดบัญชีใน Express</p>
+{% endif %}
+
+<div class="stmt-grid">
+  <!-- ===== งบแสดงฐานะการเงิน ===== -->
+  <section class="card">
+    <h2>งบแสดงฐานะการเงิน</h2>
+
+    <h3 class="sec">สินทรัพย์</h3>
+    <table class="fs">
+      {% for r in bs.assets %}
+      <tr class="lvl{{ r.level }}{{ ' header' if r.is_header }}">
+        <td class="lbl">{{ r.name }}</td>
+        <td class="amt">{{ r.value | money }}</td>
+      </tr>
+      {% endfor %}
+      {% for r in bs.asset_adjustments %}
+      <tr class="aje"><td class="lbl">ปรับปรุง: {{ r.name }}</td><td class="amt">{{ r.value | money }}</td></tr>
+      {% endfor %}
+      <tr class="total"><td class="lbl">รวมสินทรัพย์</td><td class="amt">{{ bs.total_assets | money }}</td></tr>
+    </table>
+
+    <h3 class="sec">หนี้สิน</h3>
+    <table class="fs">
+      {% for r in bs.liabilities %}
+      <tr class="lvl{{ r.level }}{{ ' header' if r.is_header }}">
+        <td class="lbl">{{ r.name }}</td>
+        <td class="amt">{{ r.value | money }}</td>
+      </tr>
+      {% endfor %}
+      {% for r in bs.adjustments %}
+      <tr class="aje"><td class="lbl">ปรับปรุง: {{ r.name }}</td><td class="amt">{{ r.value | money }}</td></tr>
+      {% endfor %}
+      <tr class="subtotal"><td class="lbl">รวมหนี้สิน</td><td class="amt">{{ bs.total_liabilities | money }}</td></tr>
+    </table>
+
+    <h3 class="sec">ส่วนของผู้ถือหุ้น</h3>
+    <table class="fs">
+      {% for r in bs.equity %}
+      <tr class="lvl{{ r.level }}{{ ' header' if r.is_header }}">
+        <td class="lbl">{{ r.name }}</td>
+        <td class="amt">{{ r.value | money }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="subtotal"><td class="lbl">รวมส่วนของผู้ถือหุ้น</td><td class="amt">{{ bs.total_equity | money }}</td></tr>
+      <tr class="total"><td class="lbl">รวมหนี้สินและส่วนของผู้ถือหุ้น</td><td class="amt">{{ bs.total_liab_equity | money }}</td></tr>
+    </table>
+  </section>
+
+  <!-- ===== งบกำไรขาดทุน ===== -->
+  <section class="card">
+    <h2>งบกำไรขาดทุน</h2>
+
+    <h3 class="sec">รายได้</h3>
+    <table class="fs">
+      {% for r in pl.income %}
+      <tr class="lvl{{ r.level }}{{ ' header' if r.is_header }}">
+        <td class="lbl">{{ r.name }}</td>
+        <td class="amt">{{ r.value | money }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="subtotal"><td class="lbl">รวมรายได้</td><td class="amt">{{ pl.total_income | money }}</td></tr>
+    </table>
+
+    <h3 class="sec">ค่าใช้จ่าย</h3>
+    <table class="fs">
+      {% for r in pl.expense %}
+      <tr class="lvl{{ r.level }}{{ ' header' if r.is_header }}">
+        <td class="lbl">{{ r.name }}</td>
+        <td class="amt">{{ r.value | money }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="subtotal"><td class="lbl">รวมค่าใช้จ่าย</td><td class="amt">{{ pl.total_expense | money }}</td></tr>
+    </table>
+
+    <table class="fs">
+      {% if pl.adjusted %}
+      <tr class="subtotal"><td class="lbl">กำไร (ขาดทุน) ก่อนภาษี</td><td class="amt">{{ pl.pretax_profit | money }}</td></tr>
+      <tr class="aje"><td class="lbl">หัก ภาษีเงินได้</td><td class="amt">{{ pl.income_tax | money }}</td></tr>
+      <tr class="total grand"><td class="lbl">กำไร (ขาดทุน) สุทธิ</td><td class="amt">{{ pl.net_profit_after_tax | money }}</td></tr>
+      {% else %}
+      <tr class="total grand"><td class="lbl">กำไร (ขาดทุน) สุทธิ</td><td class="amt">{{ pl.net_profit | money }}</td></tr>
+      {% endif %}
+    </table>
+  </section>
+</div>
+{% endblock %}

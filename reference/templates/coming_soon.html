@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ m.label }} — กำลังพัฒนา{% endblock %}
+{% block breadcrumb %}
+<nav class="crumb"><a href="/">หน้าหลัก</a> &rsaquo; <span>{{ m.label }}</span></nav>
+{% endblock %}
+{% block content %}
+<div class="soonbox">
+  <div class="soonicon">{{ m.icon }}</div>
+  <h1>{{ m.label }}</h1>
+  <p class="muted">{{ m.desc }}</p>
+  <p class="pill">โมดูลนี้กำลังพัฒนา</p>
+  <p class="muted small">วางโครงไว้ในแพลตฟอร์มแล้ว — เพิ่มฟังก์ชันได้โดยสร้าง blueprint ใหม่ใน <span class="mono">modules/</span> และเปิด <span class="mono">active=True</span> ใน <span class="mono">core/registry.py</span></p>
+  <a class="btn" href="/">&larr; กลับหน้าหลัก</a>
+</div>
+{% endblock %}
