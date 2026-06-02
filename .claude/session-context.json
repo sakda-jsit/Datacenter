@@ -1,0 +1,6 @@
+{
+  "hookSpecificOutput": {
+    "hookEventName": "SessionStart",
+    "additionalContext": "[JSP Datacenter] ระบบสำนักงานบัญชี React+TS / ASP.NET Core 8 (Clean Architecture, CQRS) + SQL Server. ก่อนเริ่มงานทุก session: ยึด AGENTS.md (โหลดแล้ว) เป็นกฎหลัก; อ่าน docs/ ที่เกี่ยวข้องก่อนแก้โค้ด โดยเฉพาะ docs/12-implementation-status.md (สถานะโมดูล) และ docs/03-business-rules.md; repomix-output.xml = snapshot โค้ดทั้งหมด (ใหญ่มาก อย่าอ่านทั้งไฟล์ — ใช้ค้นหา/อ่านโค้ดจริงแทน). อย่าเดา — verify กับโค้ด/ข้อมูลจริงเสมอ. ตอบเป็นภาษาไทย."
+  }
+}

@@ -17,7 +17,17 @@ public record ImportBatchListDto(
     string? Message,
     DateTime CreatedAt,
     string CreatedBy,
-    DateTime? FinishedAt);
+    DateTime? FinishedAt,
+    bool IsPosted,
+    DateTime? PostedAt);
+
+public record PostImportResultDto(
+    int ImportBatchId,
+    int FiscalYear,
+    int AccountsUpserted,
+    int OpeningLines,
+    int MovementLines,
+    string Message);
 
 public record ImportBatchDetailDto(
     long Id,

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Features.Import.DTOs;
@@ -48,11 +49,20 @@ public class ExpressDbfAdapter : IExpressDbfAdapter
             double dbl => (decimal)dbl,
             int i => i,
             long l => l,
+            // Express เก็บฟิลด์ตัวเลขบางตัว (เช่น GROUP/ACCTYP ใน GLACC, VATRAT/YEARTHAI ใน ISINFO)
+            // เป็นชนิด Character ('C') จึงต้อง parse จาก string ด้วย มิฉะนั้นจะได้ 0 ทั้งหมด
+            string s when decimal.TryParse(s.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var v) => v,
             _ => 0m,
         };
 
     private static decimal MonthSum(DbfRow rec, string prefix, string suffix)
         => Enumerable.Range(1, 12).Sum(m => Dec(rec, $"{prefix}{m}{suffix}"));
+
+    private static DateTime? Date(DbfRow rec, string field)
+        => rec[field] as DateTime?;
+
+    private static bool IsLocked(DbfRow rec, string field)
+        => Str(rec, field).Equals("Y", StringComparison.OrdinalIgnoreCase);
 
     // ─── interface ────────────────────────────────────────────────────────────
 
@@ -149,5 +159,31 @@ public class ExpressDbfAdapter : IExpressDbfAdapter
         }
 
         return Task.FromResult<IReadOnlyList<ExpressTrialBalanceRowDto>>(result);
+    }
+
+    public Task<IReadOnlyList<ExpressAccountingPeriodDto>> ReadAccountingPeriodsAsync(string companyFolderPath, CancellationToken ct = default)
+    {
+        var records = ReadDbf(companyFolderPath, "ISPRD");
+        var r = records.FirstOrDefault()
+                ?? throw new InvalidOperationException("ISPRD ไม่มีข้อมูลนิยามรอบบัญชี");
+
+        var result = new List<ExpressAccountingPeriodDto>();
+
+        // งวดปัจจุบัน 12 งวด: BEG1..END12 / LOCK1..LOCK12
+        // ปีถัดไป 12 งวด: BEG{n}NY..END{n}NY / LOCK{n}NY
+        foreach (var suffix in new[] { "", "NY" })
+        foreach (var n in Enumerable.Range(1, 12))
+        {
+            var beg = Date(r, $"BEG{n}{suffix}");
+            var end = Date(r, $"END{n}{suffix}");
+            if (beg is null || end is null) continue; // งวดที่ไม่ได้กำหนดวันที่ — ข้าม
+
+            result.Add(new ExpressAccountingPeriodDto(
+                BeginDate: beg.Value,
+                EndDate:   end.Value,
+                Locked:    IsLocked(r, $"LOCK{n}{suffix}")));
+        }
+
+        return Task.FromResult<IReadOnlyList<ExpressAccountingPeriodDto>>(result);
     }
 }

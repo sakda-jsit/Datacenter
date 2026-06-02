@@ -3,6 +3,7 @@ import type { PaginatedResult } from '../../../shared/types/api.types'
 import type {
   ImportBatchListDto,
   ImportValidationSummaryDto,
+  PostImportResultDto,
   StartExpressImportRequest,
 } from '../types/import.types'
 
@@ -24,4 +25,10 @@ export const importApi = {
 
   startExpressImport: (data: StartExpressImportRequest) =>
     apiClient.post<{ id: number }>('/import/express', data).then((r) => r.data),
+
+  postBatch: (id: number) =>
+    apiClient.post<PostImportResultDto>(`/import/${id}/post`).then((r) => r.data),
+
+  deleteBatch: (id: number) =>
+    apiClient.delete(`/import/${id}`).then((r) => r.data),
 }

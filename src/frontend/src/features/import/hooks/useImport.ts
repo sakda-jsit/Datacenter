@@ -31,3 +31,19 @@ export function useStartExpressImport() {
     onSuccess: () => qc.invalidateQueries({ queryKey: [IMPORT_KEY] }),
   })
 }
+
+export function usePostImportBatch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => importApi.postBatch(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [IMPORT_KEY] }),
+  })
+}
+
+export function useDeleteImportBatch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => importApi.deleteBatch(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [IMPORT_KEY] }),
+  })
+}

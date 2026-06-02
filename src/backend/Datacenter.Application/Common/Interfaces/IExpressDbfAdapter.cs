@@ -25,6 +25,12 @@ public interface IExpressDbfAdapter
     Task<bool> FolderIsValidAsync(string companyFolderPath, CancellationToken ct = default);
 
     /// <summary>
+    /// อ่านนิยามรอบบัญชีจาก ISPRD (1 record): งวดปัจจุบัน 12 งวด + ปีถัดไป 12 งวด
+    /// แต่ละงวดมีวันเริ่ม/วันสิ้นงวด และ flag LOCK ('Y' = ปิด/ล็อกแล้ว) — ข้ามงวดที่ไม่มีวันที่
+    /// </summary>
+    Task<IReadOnlyList<ExpressAccountingPeriodDto>> ReadAccountingPeriodsAsync(string companyFolderPath, CancellationToken ct = default);
+
+    /// <summary>
     /// อ่านทะเบียนข้อมูลบริษัทจาก {basePath}\secure\sccomp.dbf (รายการดิบ ยังไม่กรอง)
     /// ใช้ ExpressDatasetFilter เพื่อคัดเฉพาะบริษัทปัจจุบัน
     /// </summary>

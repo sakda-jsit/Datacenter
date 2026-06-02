@@ -21,6 +21,7 @@ public interface IApplicationDbContext
     DbSet<FsExternalInput> FsExternalInputs { get; }
     DbSet<ComplianceTask> ComplianceTasks { get; }
     DbSet<AuditLog> AuditLogs { get; }
+    DbSet<AccountingPeriod> AccountingPeriods { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

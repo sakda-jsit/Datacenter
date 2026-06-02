@@ -46,7 +46,12 @@ public class FinancialStatementController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
-    // ── External Inputs (X4 tax) ──────────────────────────────────────────────
+    // ── External Inputs (X4 income tax, WHT prepaid tax applied) ───────────────
+
+    /// <summary>GET /api/v1/financial-statement/external-inputs?clientCompanyId=1&amp;fiscalYear=2024</summary>
+    [HttpGet("external-inputs")]
+    public async Task<IActionResult> GetExternalInputs([FromQuery] GetExternalInputsQuery query, CancellationToken ct)
+        => Ok(await mediator.Send(query, ct));
 
     /// <summary>PUT /api/v1/financial-statement/external-inputs</summary>
     [HttpPut("external-inputs")]

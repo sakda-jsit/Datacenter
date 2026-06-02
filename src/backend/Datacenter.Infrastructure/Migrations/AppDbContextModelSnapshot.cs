@@ -112,6 +112,53 @@ namespace Datacenter.Infrastructure.Migrations
                     b.ToTable("AccountStatementMappings", (string)null);
                 });
 
+            modelBuilder.Entity("Datacenter.Domain.Entities.AccountingPeriod", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("BeginDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ClientCompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PeriodNo")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("SourceLocked")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientCompanyId", "Year", "PeriodNo")
+                        .IsUnique();
+
+                    b.ToTable("AccountingPeriods", (string)null);
+                });
+
             modelBuilder.Entity("Datacenter.Domain.Entities.AuditLog", b =>
                 {
                     b.Property<long>("Id")
@@ -434,6 +481,9 @@ namespace Datacenter.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<bool>("IsPosted")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Message")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
@@ -443,6 +493,9 @@ namespace Datacenter.Infrastructure.Migrations
 
                     b.Property<string>("ModifiedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("PostedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("SourceType")
                         .HasColumnType("int");
@@ -823,6 +876,17 @@ namespace Datacenter.Infrastructure.Migrations
                     b.Navigation("ClientCompany");
 
                     b.Navigation("StatementLine");
+                });
+
+            modelBuilder.Entity("Datacenter.Domain.Entities.AccountingPeriod", b =>
+                {
+                    b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
+                        .WithMany()
+                        .HasForeignKey("ClientCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClientCompany");
                 });
 
             modelBuilder.Entity("Datacenter.Domain.Entities.ClosingPeriod", b =>

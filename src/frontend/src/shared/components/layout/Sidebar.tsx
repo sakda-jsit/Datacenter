@@ -84,6 +84,7 @@ const navGroups: NavGroup[] = [
     desc: 'VAT และ WHT',
     items: [
       { to: '/vat', icon: 'percent', label: 'ภาษีมูลค่าเพิ่ม', desc: 'ภ.พ.30, ภาษีซื้อ/ขาย' },
+      { to: '/pnd50', icon: 'fileText', label: 'ภ.ง.ด.50', desc: 'ภาษีเงินได้นิติบุคคล' },
       { to: '/tax-report?section=withholding', icon: 'receipt', label: 'หัก ณ ที่จ่าย', desc: 'ภ.ง.ด.3 และ ภ.ง.ด.53' },
       { to: '/tax-report', icon: 'fileText', label: 'รายงานภาษี', desc: 'รวมแบบและสถานะยื่น' },
     ],

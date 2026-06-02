@@ -16,5 +16,9 @@ public class ImportBatch : BaseEntity
     public string? Message { get; set; }
     public DateTime? FinishedAt { get; set; }
 
+    // Posting: ยกข้อมูลจาก staging ไปยังตารางจริง (Account + JournalEntry) แล้วหรือยัง
+    public bool IsPosted { get; set; }
+    public DateTime? PostedAt { get; set; }
+
     public ClientCompany ClientCompany { get; set; } = null!;
 }

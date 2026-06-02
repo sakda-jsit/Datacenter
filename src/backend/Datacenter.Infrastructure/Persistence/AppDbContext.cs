@@ -22,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<FsExternalInput> FsExternalInputs => Set<FsExternalInput>();
     public DbSet<ComplianceTask> ComplianceTasks => Set<ComplianceTask>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<AccountingPeriod> AccountingPeriods => Set<AccountingPeriod>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -31,10 +31,21 @@ public class GetProfitLossQueryHandler(IApplicationDbContext db)
         var (periodStart, periodEnd, _) = PeriodRangeHelper.Get(
             request.FiscalYear, request.MonthFrom, request.MonthTo);
 
+        // Express exports annual figures with the year's movement lumped at year-end and the
+        // prior-year P&L carried into the opening (OPEN-{fy}) entry. The closing mechanism
+        // resets P&L accounts each year, so the net balance accumulated through fiscal-year-end
+        // (= Express curEnd) IS that year's correct income/expense total. For the annual report
+        // we therefore sum everything up to year-end rather than only the in-year movement
+        // (which would exclude the prior-year offset and understate income/expense).
+        // A specific month range stays a best-effort in-period slice (see known limitation:
+        // monthly figures are not accurate because movement is lumped at year-end).
+        bool isAnnual = request.MonthFrom is null && request.MonthTo is null;
+        var fromDate = isAnnual ? new DateTime(2000, 1, 1) : periodStart;
+
         var periodNets = await db.JournalEntryLines.AsNoTracking()
             .Where(l =>
                 l.JournalEntry.ClientCompanyId == request.ClientCompanyId &&
-                l.JournalEntry.JournalDate >= periodStart &&
+                l.JournalEntry.JournalDate >= fromDate &&
                 l.JournalEntry.JournalDate < periodEnd)
             .Select(l => new { l.Account.AccountCode, l.DebitAmount, l.CreditAmount })
             .ToListAsync(ct);

@@ -28,4 +28,17 @@ public class ImportController(IMediator mediator) : ControllerBase
         var batchId = await mediator.Send(command, ct);
         return CreatedAtAction(nameof(GetValidation), new { id = batchId }, new { id = batchId });
     }
+
+    /// <summary>POST /api/v1/import/{id}/post — ยกข้อมูล staging เข้าระบบบัญชีจริง (Account + JournalEntry)</summary>
+    [HttpPost("{id:int}/post")]
+    public async Task<IActionResult> Post(int id, CancellationToken ct)
+        => Ok(await mediator.Send(new PostImportBatchCommand(id), ct));
+
+    /// <summary>DELETE /api/v1/import/{id} — ลบ batch และข้อมูล staging/posted ที่เกี่ยวข้อง</summary>
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    {
+        await mediator.Send(new DeleteImportBatchCommand(id), ct);
+        return NoContent();
+    }
 }

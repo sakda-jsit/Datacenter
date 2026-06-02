@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { AxiosError } from 'axios'
 import { Link } from 'react-router-dom'
 import DataTable, { type DataTableColumn } from '../../../shared/components/table/DataTable'
 import Button from '../../../shared/components/ui/Button'
@@ -9,7 +10,7 @@ import StateMessage from '../../../shared/components/ui/StateMessage'
 import StatusBadge from '../../../shared/components/ui/StatusBadge'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import { useClientList } from '../../clients/hooks/useClients'
-import { useImportHistory, useStartExpressImport } from '../hooks/useImport'
+import { useDeleteImportBatch, useImportHistory, usePostImportBatch, useStartExpressImport } from '../hooks/useImport'
 import type { ImportBatchListDto, ImportStatus } from '../types/import.types'
 
 const STATUS_LABEL: Record<ImportStatus, string> = {
@@ -26,6 +27,11 @@ const STATUS_TONE: Record<ImportStatus, 'yellow' | 'blue' | 'green' | 'red' | 'g
   Success: 'green',
   Failed: 'red',
   Cancelled: 'gray',
+}
+
+function apiErrorMessage(err: unknown): string {
+  const axiosErr = err as AxiosError<{ title?: string }>
+  return axiosErr?.response?.data?.title ?? 'เกิดข้อผิดพลาด กรุณาลองใหม่'
 }
 
 export default function ImportPage() {
@@ -198,7 +204,7 @@ export default function ImportPage() {
           </form>
           {startImport.isError && (
             <div className="mt-2">
-              <StateMessage tone="error">เกิดข้อผิดพลาด: กรุณาตรวจสอบการตั้งค่า Express path</StateMessage>
+              <StateMessage tone="error">{apiErrorMessage(startImport.error)}</StateMessage>
             </div>
           )}
         </Card>
@@ -240,23 +246,61 @@ export default function ImportPage() {
 }
 
 function ImportBatchAction({ batch }: { batch: ImportBatchListDto }) {
-  if (batch.errorRows > 0) {
-    return (
-      <Link to={`/import/${batch.id}/validation`} className="text-xs font-medium text-red-600 hover:text-red-800">
-        ดูข้อผิดพลาด
-      </Link>
-    )
+  const postBatch = usePostImportBatch()
+  const deleteBatch = useDeleteImportBatch()
+
+  function handleDelete() {
+    const warn = batch.isPosted
+      ? `ยืนยันลบ batch #${batch.id} (ปี ${batch.fiscalYear})?\nข้อมูลที่ post เข้าบัญชีแล้ว (ยอดยกมา/เคลื่อนไหวปีนี้) จะถูกลบออกจากระบบบัญชีด้วย`
+      : `ยืนยันลบ batch #${batch.id} (ปี ${batch.fiscalYear}) และข้อมูล staging ทั้งหมด?`
+    if (!confirm(warn)) return
+    deleteBatch.mutateAsync(batch.id).catch((err) => alert(apiErrorMessage(err)))
   }
 
-  if (batch.status === 'Success') {
-    return (
-      <Link to={`/import/${batch.id}/validation`} className="text-xs font-medium text-blue-600 hover:text-blue-800">
-        รายละเอียด
-      </Link>
-    )
-  }
+  return (
+    <div className="flex items-center justify-end gap-3">
+      {batch.errorRows > 0 && (
+        <Link to={`/import/${batch.id}/validation`} className="text-xs font-medium text-red-600 hover:text-red-800">
+          ดูข้อผิดพลาด
+        </Link>
+      )}
 
-  return null
+      {batch.status === 'Success' && batch.errorRows === 0 && (
+        <>
+          <Link to={`/import/${batch.id}/validation`} className="text-xs font-medium text-blue-600 hover:text-blue-800">
+            รายละเอียด
+          </Link>
+          {batch.isPosted ? (
+            <StatusBadge tone="green">ลงบัญชีแล้ว</StatusBadge>
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              className="px-3 py-1 text-xs"
+              disabled={postBatch.isPending}
+              onClick={() => {
+                if (confirm(`ยืนยัน Post ข้อมูลปี ${batch.fiscalYear} เข้าระบบบัญชี? (จะแทนที่ข้อมูลปีเดียวกันที่ post ไว้ก่อนหน้า)`)) {
+                  postBatch.mutateAsync(batch.id).catch((err) => alert(apiErrorMessage(err)))
+                }
+              }}
+            >
+              {postBatch.isPending ? 'กำลัง Post...' : 'Post เข้าบัญชี'}
+            </Button>
+          )}
+        </>
+      )}
+
+      <Button
+        type="button"
+        variant="danger"
+        className="px-3 py-1 text-xs"
+        disabled={deleteBatch.isPending}
+        onClick={handleDelete}
+      >
+        {deleteBatch.isPending ? 'กำลังลบ...' : 'ลบ'}
+      </Button>
+    </div>
+  )
 }
 
 function formatDateTime(value: string) {

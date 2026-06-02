@@ -43,3 +43,12 @@ public record ExpressTrialBalanceRowDto(
     decimal ClosingDebit,
     decimal ClosingCredit,
     decimal EndBalance);
+
+/// <summary>
+/// หนึ่งงวดในนิยามรอบบัญชีจาก ISPRD
+/// Locked = true เมื่อ Express ระบุ LOCK='Y' (งวดถูกปิด/ล็อกแล้วในต้นทาง)
+/// </summary>
+public record ExpressAccountingPeriodDto(
+    DateTime BeginDate,
+    DateTime EndDate,
+    bool Locked);

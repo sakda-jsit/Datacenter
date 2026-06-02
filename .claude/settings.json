@@ -1,0 +1,42 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat .claude/session-context.json",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "touch .claude/.repomix-dirty",
+            "shell": "bash",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f .claude/.repomix-dirty ]; then rm -f .claude/.repomix-dirty; npx --yes repomix >/dev/null 2>&1; fi",
+            "shell": "bash",
+            "async": true,
+            "timeout": 300,
+            "statusMessage": "อัปเดต repomix snapshot (โค้ดมีการแก้ไข)..."
+          }
+        ]
+      }
+    ]
+  }
+}

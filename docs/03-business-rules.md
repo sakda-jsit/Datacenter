@@ -49,3 +49,19 @@
 ## Audit Rules
 - Store user, datetime, action, entity, before value, and after value.
 - Import, edit, delete, approve, close, and reopen actions must be audited.
+
+## Accounting Period Definition (Express ISPRD)
+- นิยามรอบบัญชี (งวด + วันสิ้นงวด + สถานะล็อก) เป็น source of truth ดึงจากตาราง Express `ISPRD` ตอน import
+- หนึ่งไฟล์ Express นิยาม 2 ปีบัญชี (ปีปัจจุบัน 12 งวด + ปีถัดไป 12 งวด); นิยามในระบบจะ mirror ISPRD ปัจจุบันเสมอ (แทนที่ทั้งหมดของบริษัทตอน import)
+- ฟิลด์ `LOCK='Y'` ของ Express = งวดถูกปิด → seed สถานะ Closing Period เป็น "ปิดงวดแล้ว (Closed)" อัตโนมัติ
+- **Import ได้เฉพาะปีที่อยู่ในนิยามรอบบัญชี** (ปีที่ ISPRD ครอบคลุม) — ปีอื่นถูก reject
+- **ลบข้อมูลที่ import แล้วได้เฉพาะปีที่อยู่ในนิยามรอบบัญชีปัจจุบัน** — ปีที่หลุดออกจากรอบบัญชีเป็นข้อมูลประวัติ ห้ามลบ (ยกเว้นกรณีบริษัทยังไม่มีนิยามรอบบัญชีเลย)
+
+## Posting Rules (Staging → Production)
+- Import เขียนลง staging tables ก่อน (StagingAccount/StagingTrialBalance) แล้วจึง "post" เข้าตารางจริง (Account + JournalEntry/Line)
+- รายงาน (งบทดลอง/GL/งบการเงิน/ปิดรอบบัญชี) อ่านจากตารางจริง จึงต้อง post ก่อนข้อมูลจึงปรากฏ
+- เมื่อ import สำเร็จ (ไม่มี error) ระบบจะ **auto-post อัตโนมัติ**; ถ้า post ล้มเหลว batch ยังถือว่า import สำเร็จและกด Post ซ้ำได้
+- Post ปีเดิมซ้ำ = แทนที่ของเดิม (idempotent ตาม DocumentNo `OPEN-{ปี}`/`MOVE-{ปี}`)
+- Import ปีเดิมซ้ำ = แทนที่ batch เดิมของปีนั้นทั้งหมด (1 บริษัท/ปี เหลือ batch เดียว)
+
+> ข้อจำกัด: Express export เป็นยอดรวมรายปี ยอดเคลื่อนไหวถูกลงที่วันสิ้นปี → งบทดลอง/GL รายปีถูกต้อง แต่การกรองรายเดือนภายในปีไม่แม่นยำ

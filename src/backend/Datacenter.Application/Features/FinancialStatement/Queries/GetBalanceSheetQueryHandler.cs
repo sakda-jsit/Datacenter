@@ -29,39 +29,46 @@ public class GetBalanceSheetQueryHandler(IApplicationDbContext db)
             .ToDictionaryAsync(a => a.AccountCode, ct);
 
         // Full-year date range
-        var yearStart     = new DateTime(request.FiscalYear, 1, 1);
         var yearEnd       = new DateTime(request.FiscalYear + 1, 1, 1); // exclusive
-        var priorYearEnd  = yearStart; // opening = everything before year start
 
-        // Aggregate journal lines: net = debit - credit per account, for the full year
-        var yearNets = await GetAccountNetsAsync(db, request.ClientCompanyId, yearStart, yearEnd, ct);
+        // Balance-sheet accounts (assets/liabilities/equity) need the CUMULATIVE balance
+        // through the end of the fiscal year — opening carried-forward + in-year movement —
+        // not just the year's movement. The opening journal entry is dated prior-year 12-31,
+        // so a year-only range would exclude it and show only the current year's activity.
+        var cumulativeNets = await GetAccountNetsAsync(db, request.ClientCompanyId,
+            new DateTime(2000, 1, 1), yearEnd, ct);
 
-        // Opening balances (prior year ending = current year opening)
-        var openingNets = await GetAccountNetsAsync(db, request.ClientCompanyId,
-            new DateTime(2000, 1, 1), priorYearEnd, ct);
-
-        // RE opening: net of accounts mapped to "RE" before this year
-        decimal reOpeningNet = openingNets
+        // Net of the retained-earnings account(s) at fiscal year-end, EXCLUDING the current
+        // year's profit (which is added separately via netProfit below). This is the cumulative
+        // balance — not just the prior-year opening — so it also captures any direct adjustments
+        // booked to RE during the year (e.g. Express year-end closing entries to account 32000),
+        // which otherwise leave the balance sheet out by that adjustment.
+        decimal reOpeningNet = cumulativeNets
             .Where(kv => mappings.TryGetValue(kv.Key, out var m) && m.RefCode == "RE")
             .Sum(kv => kv.Value);
 
-        // Get external tax for this year (X4)
-        var x4Input = await db.FsExternalInputs.AsNoTracking()
-            .FirstOrDefaultAsync(x =>
+        // External income-tax inputs for this year: X4 = income tax expense,
+        // WHT = prepaid withholding tax applied against it (balance-sheet settlement).
+        var taxInputs = await db.FsExternalInputs.AsNoTracking()
+            .Where(x =>
                 x.ClientCompanyId == request.ClientCompanyId &&
                 x.FiscalYear == request.FiscalYear &&
-                x.RefCode == "X4", ct);
-        decimal externalTax = x4Input?.Amount ?? 0m;
+                (x.RefCode == "X4" || x.RefCode == "WHT"))
+            .ToDictionaryAsync(x => x.RefCode, x => x.Amount, ct);
+        decimal externalTax = taxInputs.GetValueOrDefault("X4");
+        decimal whtApplied  = taxInputs.GetValueOrDefault("WHT");
 
-        // Full-year net for P&L calculation (to get netProfit for RE)
+        // Full-year net for P&L calculation (to get netProfit for RE).
+        // Uses cumulative-through-year-end nets — the same basis as the standalone annual P&L —
+        // so net profit (and therefore retained earnings) reconciles with the P&L report.
         var plResult = FinancialStatementEngine.BuildProfitLoss(
             client, request.FiscalYear, null, null, allLines,
-            yearNets, mappings, accounts, externalTax);
+            cumulativeNets, mappings, accounts, externalTax);
 
         return FinancialStatementEngine.BuildBalanceSheet(
             client, request.FiscalYear, allLines,
-            yearNets, mappings, accounts,
-            reOpeningNet, plResult.NetProfit);
+            cumulativeNets, mappings, accounts,
+            reOpeningNet, plResult.NetProfit, externalTax, whtApplied);
     }
 
     private static async Task<Dictionary<string, decimal>> GetAccountNetsAsync(

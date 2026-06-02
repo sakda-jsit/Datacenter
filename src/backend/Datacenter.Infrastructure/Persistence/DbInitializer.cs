@@ -3,6 +3,7 @@ using Datacenter.Application.Features.Import;
 using Datacenter.Application.Features.Import.DTOs;
 using Datacenter.Domain.Entities;
 using Datacenter.Domain.Enums;
+using Datacenter.Infrastructure.Persistence.Seeds;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -123,6 +124,14 @@ public static class DbInitializer
 
             await db.SaveChangesAsync();
             logger.LogInformation("Seeded admin user.");
+        }
+
+        // ── Seed StatementLines (บรรทัดงบการเงินมาตรฐาน, master reference) ──────
+        if (!await db.StatementLines.AnyAsync())
+        {
+            db.StatementLines.AddRange(StatementLineSeed.GetLines());
+            await db.SaveChangesAsync();
+            logger.LogInformation("Seeded statement lines (FS master reference).");
         }
     }
 }

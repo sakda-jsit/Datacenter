@@ -1,0 +1,71 @@
+# Implementation Status
+
+สถานะการพัฒนา Phase 1 (อัปเดต: 2026-06-02)
+
+## โมดูล (Phase 1)
+
+| # | โมดูล | สถานะ | หมายเหตุ |
+|---|---|---|---|
+| 1 | Client Management | ✅ เสร็จ | full-stack |
+| 2 | Import Data (Express DBF) | ✅ เสร็จ | ISINFO/GLACC/GLBAL/ISPRD + auto-post |
+| 3 | VAT Management | ⛔ รอสเปก DBF | ต้องการโครงสร้างตารางภาษีซื้อ/ขายของ Express |
+| 4 | AR Management | ⛔ รอสเปก DBF | ต้องการตารางลูกหนี้/ใบแจ้งหนี้ |
+| 5 | AP Management | ⛔ รอสเปก DBF | ต้องการตารางเจ้าหนี้/ใบรับวางบิล |
+| 6 | Payroll | ⛔ รอสเปก DBF | ต้องการข้อมูลเงินเดือน + สูตรภาษี/ประกันสังคม |
+| 7 | Bank Reconciliation | ⛔ รอสเปก | ต้องการ statement ธนาคาร |
+| 8 | Trial Balance | ✅ เสร็จ | อ่านจาก Account + JournalEntry (ต้อง post ก่อน) |
+| 9 | General Ledger | ✅ เสร็จ | running balance ต่อบัญชี |
+| 10 | Financial Statement | ✅ เสร็จ | งบฐานะการเงิน + กำไรขาดทุน (ต้องตั้ง mapping บัญชี→บรรทัดงบ) |
+| 11 | Tax Report (PP30/PND) | 🟡 บางส่วน | **ภ.ง.ด.50 (ภาษีเงินได้นิติบุคคล) เสร็จ** — ปิด loop X4 ในงบการเงิน; PP30/ภ.ง.ด.3/53 ยังรอสเปก DBF |
+| 12 | Compliance Calendar | ✅ เสร็จ | |
+| 13 | Closing Period | ✅ เสร็จ | งวด/วันสิ้นงวดจาก ISPRD, close/reopen/lock (reopen/lock เฉพาะ Admin) |
+| 14 | Audit Log | ✅ เสร็จ | viewer + ตัวกรอง (paginated) |
+| 15 | Dashboard & KPI | ✅ เสร็จ (operational) | นับลูกค้า/งาน compliance/import — ยังไม่รวม KPI การเงิน |
+
+**เสร็จ 11/15 + ภ.ง.ด.50** — ที่เหลือ (VAT/PP30, AR, AP, Payroll, Bank, ภ.ง.ด.3/53) รอสเปกโครงสร้างตาราง Express DBF
+
+## Data Pipeline
+```
+Express DBF (ISINFO/GLACC/GLBAL/ISPRD)
+   ↓ Import (StartExpressImportCommand)
+Staging (StagingAccount / StagingTrialBalance) + AccountingPeriod (จาก ISPRD)
+   ↓ Post (auto-post เมื่อสำเร็จ, หรือกดเอง) — ExpressPostingService
+Production (Account + JournalEntry/Line)
+   ↓
+รายงาน: งบทดลอง / GL / งบการเงิน / ปิดรอบบัญชี / ภ.ง.ด.50
+```
+- **ภ.ง.ด.50**: กรอกภาษีเงินได้ (X4) + ภาษีจ่ายล่วงหน้า (WHT) ผ่าน FsExternalInput → ปิด loop ภาษีในงบดุล (ดู "ข้อจำกัด" ข้อ ภ.ง.ด.50)
+
+## การ map ข้อมูล Express → ระบบ
+- **GLACC → Account**: GROUP (1-5, Character) → AccountType; ACCTYP (0=detail/1=header) → IsPostable
+- **GLBAL (CUR) → JournalEntry**: ยอดยกมา (`OPEN-{ปี}`, signed debit-positive) + ยอดเคลื่อนไหว (`MOVE-{ปี}`, รวม closing adjustment เพื่อให้ยอดสิ้นงวดตรง Express)
+- **ISPRD → AccountingPeriod + ClosingPeriod**: วันเริ่ม/สิ้นงวด + LOCK → สถานะปิดงวด
+
+## ข้อจำกัดที่ทราบ
+- Express export เป็นยอดรวมรายปี → งบทดลอง/GL **รายปีถูกต้อง** แต่กรองรายเดือนภายในปีไม่แม่นยำ (movement กองที่ ธ.ค.)
+- โมเดลการ post (OPEN-{ปี} ลงวันที่ 31 ธ.ค. ปีก่อน + MOVE-{ปี} ลงวันที่ 31 ธ.ค. ปีนั้น) **รองรับนำเข้าทีละ 1 ปีงบ/บริษัท** — รายงานคำนวณจาก "ยอดสะสมถึงสิ้นปีงบ" (= curEnd ของ Express). การนำเข้าหลายปีพร้อมกันจะทำให้ยอดสะสมซ้อนกัน (ต้องออกแบบ posting ใหม่ใน Phase 2)
+- งบการเงินต้องตั้ง mapping บัญชี→บรรทัดงบก่อน (แท็บ Mapping) จึงจะแสดงผล — mapping เป็นข้อมูล**ต่อบริษัท** (ตั้งผ่าน UI/นำเข้า), Express GLACC ไม่มีฟิลด์ REF
+- ~~ภาษีเงินได้ X4 ไม่มี counterpart ในงบดุล~~ **แก้แล้ว (ภ.ง.ด.50):** หน้า `/pnd50` ให้กรอกภาษีเงินได้ (X4) + ภาษีจ่ายล่วงหน้าที่นำมาหัก (WHT). งบดุลลง counterpart: ลด A4 (ภาษีจ่ายล่วงหน้า) ด้วย WHT, netPayable=X4−WHT → ">0 = ภาษีค้างจ่าย (TXP, หนี้สิน), <0 = ภาษีรอคืน (TXR, สินทรัพย์)". งบดุลสมดุลทุกกรณี; JSP CONNX (X4=WHT=47,470.04) → งบดุล 1,593,305.42 ตรงงบยื่นเป๊ะ
+- ต้องอ่าน DBF ด้วย FileShare.ReadWrite (รองรับกรณี Express เปิดไฟล์ค้าง)
+
+## สถานะล่าสุด (2026-06-02) — ✅ ตรวจความถูกต้องผ่านแล้ว
+นำเข้า JSIT2016 (= JSP CONNX) ปี 2025 และตรวจเทียบกับ**งบการเงินจริงที่ยื่น** (reference/financial):
+- **Baseline ครบถูกต้อง**: Accounts 251 (postable 200), JournalEntries 2, lines 164, AccountingPeriods 24, posted 1; งบทดลอง ยอดยกมา DR=CR 6,944,419.59, เคลื่อนไหว DR=CR 20,667,109.83, signed net รวม = 0 (สมดุล)
+- **งบกำไรขาดทุน: ตรงงบจริงทุกบรรทัด** — รายได้รวม 3,579,157.45, ต้นทุนขาย 2,238,451.94, กำไรก่อนภาษี 566,641.62, กำไรสุทธิหลังภาษี 519,171.58 (ภาษี X4 = 47,470.04)
+- **งบดุล: สมดุลเป๊ะจาก GL** — สินทรัพย์ = หนี้สิน+ทุน = 1,640,775.46 (เมื่อไม่ใส่ X4)
+
+### Bug ที่พบและแก้ระหว่างตรวจ (5 จุด)
+1. `StatementLineSeed` เป็น dead code (ไม่ถูกเรียกใน OnModelCreating) → ตาราง StatementLines ว่าง. แก้: seed ตอน startup (idempotent) ใน `DbInitializer`
+2. `GetBalanceSheetQueryHandler` ใช้ช่วงวันที่ใน-ปี → งบดุลได้แค่ยอดเคลื่อนไหว ไม่รวมยอดยกมา. แก้: ใช้ยอดสะสมถึงสิ้นปีงบ
+3. `GetProfitLossQueryHandler` (รายปี) ใช้ within-year → รายได้/ค่าใช้จ่ายขาดส่วนที่ offset ในยอดยกมา. แก้: รายปีใช้ยอดสะสมถึงสิ้นปีงบ
+4. `FinancialStatementEngine.BuildProfitLoss` นับ "C" (ต้นทุนขาย) ซ้ำใน expLines. แก้: exclude "C"
+5. RE ใช้ยอด*ก่อนปี* ของบัญชี 32000 → พลาด closing adjustment ที่อยู่ใน MOVE. แก้: ใช้ยอดสะสมถึงสิ้นปีของบัญชี RE
+
+## สถานะล่าสุด (เพิ่มเติม) — โมดูล ภ.ง.ด.50 เสร็จ
+ปิด loop ภาษีเงินได้ในงบการเงิน: หน้า `/pnd50` (เมนูภาษี) + `GET /financial-statement/external-inputs` + FsExternalInput รับ `X4`/`WHT` + StatementLines TXR/TXP. งบดุลลง counterpart และสมดุลทุกกรณี — verified end-to-end (API 3 กรณี + หน้า UI จริง). JSP CONNX → งบดุล 1,593,305.42 ตรงงบยื่นเป๊ะ
+
+## งานถัดไป
+1. รอสเปก/ตัวอย่างตาราง DBF ของ VAT/sales/purchase/payroll → สร้าง entity + import + report ของโมดูลที่เหลือ (VAT/PP30, AR, AP, Payroll, Bank, ภ.ง.ด.3/53)
+2. (ตัวเลือก) อ่านยอดรายเดือนจาก GLBAL (DEBIT1..12) เพื่อให้งบทดลอง/P&L รายเดือนแม่นยำ
+3. (ตัวเลือก) กลไกตั้ง/นำเข้า account→REF mapping ต่อบริษัท (ปัจจุบันตั้งผ่าน UI ทีละบัญชี)
+4. (Phase 2) ออกแบบ posting ใหม่รองรับนำเข้าหลายปีงบพร้อมกัน

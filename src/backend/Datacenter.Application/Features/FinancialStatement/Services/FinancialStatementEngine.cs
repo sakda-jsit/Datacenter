@@ -43,13 +43,34 @@ public static class FinancialStatementEngine
         // prior-year net balance of the retained-earnings account (32000 pattern)
         decimal reOpeningNetBalance,
         // net profit calculated from P&L (passed in after P&L is computed)
-        decimal netProfit)
+        decimal netProfit,
+        // income tax for the year (X4) — already deducted from netProfit above
+        decimal incomeTax,
+        // prepaid withholding tax applied against this year's income tax (WHT)
+        decimal whtApplied)
     {
         var lineAmounts = AggregateByRefCode(accountNetBalances, mappings, accounts, allLines);
 
-        var assetLines = BuildLines(allLines, lineAmounts, 'A');
-        var liabLines  = BuildLines(allLines, lineAmounts, 'L');
+        // TXR/TXP are injected below from the income-tax settlement (not from mapped accounts),
+        // so exclude them here to avoid an empty duplicate line.
+        var assetLines = BuildLines(allLines, lineAmounts, 'A', exclude: ["TXR"]).ToList();
+        var liabLines  = BuildLines(allLines, lineAmounts, 'L', exclude: ["TXP"]).ToList();
         var equityLines = BuildEquityLines(allLines, lineAmounts, reOpeningNetBalance, netProfit);
+
+        // ── Income-tax settlement on the balance sheet (closes the X4 loop) ──────────
+        // X4 reduced retained earnings via netProfit; book the counterpart here so the
+        // statement balances:  DR tax expense / CR prepaid WHT (asset↓) + tax payable (liab↑).
+        if (whtApplied != 0)
+            ApplyToLine(assetLines, "A4", -whtApplied);   // consume prepaid WHT asset
+
+        decimal netPayable = incomeTax - whtApplied;
+        if (netPayable > 0.005m)
+            liabLines.Add(BuildTaxLine(allLines, "TXP", "ภาษีเงินได้ค้างจ่าย", 'L', 35, netPayable));
+        else if (netPayable < -0.005m)
+            assetLines.Add(BuildTaxLine(allLines, "TXR", "ภาษีเงินได้จ่ายล่วงหน้า (รอขอคืน)", 'A', 17, -netPayable));
+
+        assetLines = assetLines.OrderBy(l => l.SortOrder).ToList();
+        liabLines  = liabLines.OrderBy(l => l.SortOrder).ToList();
 
         decimal totalAssets  = assetLines.Sum(l => l.Amount);
         decimal totalLiab    = liabLines.Sum(l => l.Amount);
@@ -61,6 +82,28 @@ public static class FinancialStatementEngine
             assetLines, liabLines, equityLines,
             totalAssets, totalLiab, totalEquity, totalLE,
             totalAssets - totalLE);
+    }
+
+    /// <summary>Adjusts an existing presentation line's amount in place (e.g. consume prepaid tax).</summary>
+    private static void ApplyToLine(List<FsLineDto> lines, string refCode, decimal delta)
+    {
+        int i = lines.FindIndex(l => l.RefCode == refCode);
+        if (i >= 0)
+            lines[i] = lines[i] with { Amount = lines[i].Amount + delta };
+    }
+
+    /// <summary>Builds an injected tax line from its StatementLine definition, or a literal fallback.</summary>
+    private static FsLineDto BuildTaxLine(
+        IReadOnlyList<StatementLine> allLines,
+        string refCode, string fallbackName, char fallbackSection, int fallbackSort, decimal amount)
+    {
+        var line = allLines.FirstOrDefault(l => l.RefCode == refCode);
+        return new FsLineDto(
+            refCode,
+            line?.LineName ?? fallbackName,
+            line?.Section ?? fallbackSection,
+            line?.SortOrder ?? fallbackSort,
+            amount, []);
     }
 
     // ── Profit & Loss ──────────────────────────────────────────────────────────
@@ -86,9 +129,11 @@ public static class FinancialStatementEngine
         var cogLine = BuildSingleLine(allLines, lineAmounts, "C");
         decimal totalExpenses = cogLine.Amount;
 
-        // Operating expenses (X1, X2) — keep natural sign
+        // Operating expenses (X1, X2) — keep natural sign.
+        // Exclude "C" (cost of sales, reported separately above) and X3/X4 (finance cost & tax,
+        // shown below as deductions) so none of them are double-counted in total expenses.
         var expLines = BuildLines(allLines, lineAmounts, 'X',
-            exclude: ["X3", "X4"]);
+            exclude: ["C", "X3", "X4"]);
         totalExpenses += expLines.Sum(l => l.Amount);
 
         decimal grossProfit         = totalIncome - cogLine.Amount;

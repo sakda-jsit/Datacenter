@@ -4,7 +4,9 @@ namespace Datacenter.Application.Features.FinancialStatement.Commands;
 
 public class UpsertExternalInputCommandValidator : AbstractValidator<UpsertExternalInputCommand>
 {
-    private static readonly HashSet<string> AllowedRefCodes = ["X4"];
+    // X4  = income tax expense (P&L deduction)
+    // WHT = prepaid withholding tax applied against this year's income tax (balance-sheet settlement)
+    private static readonly HashSet<string> AllowedRefCodes = ["X4", "WHT"];
 
     public UpsertExternalInputCommandValidator()
     {

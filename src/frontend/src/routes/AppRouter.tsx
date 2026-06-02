@@ -15,6 +15,7 @@ import PayrollPage from '../features/payroll/pages/PayrollPage'
 import BankReconciliationPage from '../features/bank-reconciliation/pages/BankReconciliationPage'
 import GeneralLedgerPage from '../features/general-ledger/pages/GeneralLedgerPage'
 import TaxReportPage from '../features/tax-report/pages/TaxReportPage'
+import Pnd50Page from '../features/tax-report/pages/Pnd50Page'
 import ComplianceCalendarRoute from '../features/compliance-calendar/pages/ComplianceCalendarRoute'
 import ClosingPeriodPage from '../features/closing-period/pages/ClosingPeriodPage'
 import AuditLogPage from '../features/audit-log/pages/AuditLogPage'
@@ -42,6 +43,7 @@ export default function AppRouter() {
           <Route path="bank-reconciliation" element={<BankReconciliationPage />} />
           <Route path="general-ledger" element={<GeneralLedgerPage />} />
           <Route path="tax-report" element={<TaxReportPage />} />
+          <Route path="pnd50" element={<Pnd50Page />} />
           <Route path="compliance" element={<ComplianceCalendarRoute />} />
           <Route path="closing-period" element={<ClosingPeriodPage />} />
           <Route path="audit-log" element={<AuditLogPage />} />

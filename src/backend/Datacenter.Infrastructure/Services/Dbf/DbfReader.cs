@@ -31,7 +31,9 @@ public static class DbfReader
 
     public static List<DbfRow> Read(string path, Encoding textEncoding)
     {
-        var bytes = File.ReadAllBytes(path);
+        // เปิดด้วย FileShare.ReadWrite เพื่ออ่านได้แม้โปรแกรม Express จะเปิดไฟล์ค้างไว้
+        // (ไฟล์ควบคุมอย่าง ISPRD มักถูก Express ล็อกขณะโปรแกรมเปิดอยู่)
+        var bytes = ReadAllBytesShared(path);
         if (bytes.Length < 32)
             throw new InvalidDataException($"ไฟล์ DBF เสียหายหรือว่างเปล่า: {path}");
 
@@ -60,6 +62,17 @@ public static class DbfReader
         }
 
         return rows;
+    }
+
+    /// <summary>
+    /// อ่านไฟล์ทั้งหมดด้วย FileShare.ReadWrite — รองรับกรณีไฟล์ DBF ถูกโปรแกรมอื่น (Express) เปิดค้างไว้
+    /// </summary>
+    private static byte[] ReadAllBytesShared(string path)
+    {
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        var buffer = new byte[fs.Length];
+        fs.ReadExactly(buffer);
+        return buffer;
     }
 
     // ─── header / field descriptors ────────────────────────────────────────────

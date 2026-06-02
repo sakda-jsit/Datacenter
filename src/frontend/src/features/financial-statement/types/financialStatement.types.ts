@@ -55,3 +55,11 @@ export interface AccountMappingDto {
   lineName: string
   section: string
 }
+
+export interface FsExternalInputDto {
+  id: number
+  fiscalYear: number
+  refCode: string
+  amount: number
+  note?: string
+}

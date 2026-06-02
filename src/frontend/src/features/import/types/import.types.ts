@@ -17,6 +17,17 @@ export interface ImportBatchListDto {
   createdAt: string
   createdBy: string
   finishedAt?: string
+  isPosted: boolean
+  postedAt?: string
+}
+
+export interface PostImportResultDto {
+  importBatchId: number
+  fiscalYear: number
+  accountsUpserted: number
+  openingLines: number
+  movementLines: number
+  message: string
 }
 
 export interface ImportBatchDetailDto {

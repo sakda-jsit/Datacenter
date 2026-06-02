@@ -55,7 +55,9 @@ public class GetImportHistoryQueryHandler(IApplicationDbContext db, ICompanyAcce
                 x.Message,
                 x.CreatedAt,
                 x.CreatedBy,
-                x.FinishedAt))
+                x.FinishedAt,
+                x.IsPosted,
+                x.PostedAt))
             .ToListAsync(ct);
 
         return PaginatedResult<ImportBatchListDto>.Create(items, total, request.PageNumber, request.PageSize);

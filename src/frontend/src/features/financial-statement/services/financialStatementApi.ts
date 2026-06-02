@@ -2,6 +2,7 @@ import apiClient from '../../../shared/services/apiClient'
 import type {
   AccountMappingDto,
   BalanceSheetDto,
+  FsExternalInputDto,
   ProfitLossDto,
 } from '../types/financialStatement.types'
 
@@ -32,6 +33,9 @@ export const financialStatementApi = {
 
   deleteMapping: (clientCompanyId: number, accountCode: string) =>
     apiClient.delete(`${BASE}/mappings/${clientCompanyId}/${accountCode}`),
+
+  getExternalInputs: (params: { clientCompanyId: number; fiscalYear: number }) =>
+    apiClient.get<FsExternalInputDto[]>(`${BASE}/external-inputs`, { params }).then((r) => r.data),
 
   upsertExternalInput: (data: {
     clientCompanyId: number

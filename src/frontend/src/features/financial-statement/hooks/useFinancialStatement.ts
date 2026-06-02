@@ -50,6 +50,17 @@ export function useDeleteMapping() {
   })
 }
 
+export function useExternalInputs(
+  params: { clientCompanyId: number; fiscalYear: number },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [FS_KEY, 'external-inputs', params],
+    queryFn: () => financialStatementApi.getExternalInputs(params),
+    enabled: enabled && params.clientCompanyId > 0,
+  })
+}
+
 export function useUpsertExternalInput() {
   const qc = useQueryClient()
   return useMutation({
