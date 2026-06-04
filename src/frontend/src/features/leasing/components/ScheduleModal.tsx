@@ -8,6 +8,12 @@ function fmt(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+/** ISO (yyyy-mm-dd...) → dd/mm/yyyy */
+function fmtDate(iso: string) {
+  const [y, m, d] = iso.slice(0, 10).split('-')
+  return `${d}/${m}/${y}`
+}
+
 interface Props {
   companyId: number
   fiscalYear: number
@@ -98,7 +104,7 @@ export default function ScheduleModal({ companyId, fiscalYear, contractId, onClo
                       return (
                         <tr key={p.periodNo} className={`border-t border-gray-100 ${inYear ? 'bg-sky-50/50' : ''}`}>
                           <td className="px-3 py-1 text-right text-gray-500">{p.periodNo}</td>
-                          <td className="px-3 py-1 text-gray-600">{p.dueDate.slice(0, 10)}</td>
+                          <td className="px-3 py-1 text-gray-600">{fmtDate(p.dueDate)}</td>
                           <td className="px-3 py-1 text-right font-mono">{fmt(p.installment)}</td>
                           <td className="px-3 py-1 text-right font-mono">{fmt(p.principal)}</td>
                           <td className="px-3 py-1 text-right font-mono">{fmt(p.interest)}</td>
