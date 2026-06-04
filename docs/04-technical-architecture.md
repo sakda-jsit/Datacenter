@@ -121,3 +121,28 @@ SQL Server provider หรือ configuration โดยตรง
 
 Admin เข้าถึงได้ทุกบริษัท ผู้ใช้อื่นต้องมีสิทธิ์ใน `CompanyUserAccess` มิฉะนั้นจะได้รับ
 `ForbiddenException` (HTTP 403)
+
+## ส่วนขยายสถาปัตยกรรมจาก Requirement v11
+
+### Express Data Access
+- "เชื่อม DB Express" = อ่านไฟล์ DBF โดยตรง (ISINFO/GLACC/GLBAL/ISPRD) ผ่าน DBF reader adapter ใน Infrastructure (FileShare.ReadWrite)
+- ต้องดึงแบบ **snapshot ตามรอบปิดงบ**: เก็บ snapshot ของยอด/ข้อมูลที่ใช้ปิดงบไว้ถาวร (ยอดไม่เปลี่ยนเมื่อ Express ถูกแก้ภายหลัง)
+- เก็บ import evidence: ไฟล์ต้นฉบับ + metadata (ปีบัญชี, รอบ, ผู้ดึง, เวลา, จำนวนรายการ, checksum, สถานะ)
+
+### PDF Extraction Service (Infrastructure)
+- อ่าน ภ.ง.ด.3/53 PDF จากสรรพากร — layout คงที่ → **template-based parser** (ไม่ต้อง OCR แบบ free-form)
+- field ที่ต้อง extract: ประเภทแบบ, เลขผู้เสียภาษี, เดือน/ปีภาษี, ประเภทยื่น/ครั้งที่, จำนวนราย, ยอดเงินได้, ยอดภาษี, เงินเพิ่ม, ยอดชำระ, วันที่ยื่น/ชำระ, เลขอ้างอิง
+- ส่งผลไป reconcile กับ Express ก่อนบันทึก
+
+### Attachment / Evidence Storage
+- บริการกลางจัดเก็บไฟล์แนบ + metadata (module, record ref, ประเภท, ผู้อัปโหลด, วันที่, ปีบัญชี, สถานะตรวจสอบ)
+- retention อย่างน้อย 10 ปี
+
+### Field-Level Audit Infrastructure
+- กลไกกลาง (เช่น EF Core SaveChanges interceptor) บันทึก old/new ทุก field ของ entity ที่ผู้ใช้แก้ไขได้
+- ขยายจาก AuditLog เดิม → รองรับ field-level diff + reason + attachment reference
+- รองรับ export (Excel/PDF/CSV) สำหรับผู้สอบบัญชี
+
+### Report Rendering
+- รายงานหลักต้อง render ตรง Excel เดิม 100% (Page Break Preview) + export Excel/PDF
+- report package: version + สถานะ draft/review/final + lock

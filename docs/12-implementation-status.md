@@ -69,3 +69,46 @@ Production (Account + JournalEntry/Line)
 2. (ตัวเลือก) อ่านยอดรายเดือนจาก GLBAL (DEBIT1..12) เพื่อให้งบทดลอง/P&L รายเดือนแม่นยำ
 3. (ตัวเลือก) กลไกตั้ง/นำเข้า account→REF mapping ต่อบริษัท (ปัจจุบันตั้งผ่าน UI ทีละบัญชี)
 4. (Phase 2) ออกแบบ posting ใหม่รองรับนำเข้าหลายปีงบพร้อมกัน
+
+---
+
+## สถานะเทียบ Requirement v11 (workbook 2025_JSPC_FIN.xlsx) — อัปเดต 2026-06-04
+
+Requirement v11 เพิ่มขอบเขตจาก workbook ปิดงบจริง พร้อมคำตอบ User ยืนยันแล้ว (open questions ปิดแล้ว 12/13 ข้อ)
+
+| โมดูล (req v11) | สถานะปัจจุบัน | บล็อก DBF? | หมายเหตุ |
+|---|---|---|---|
+| Adjusted TB + Adjustment Entry | ❌ ยังไม่เริ่ม | ไม่ | TB ปัจจุบันยังไม่มีชั้น adjustment (docs/13) |
+| Leasing / Loan Working Paper | ❌ ยังไม่เริ่ม | ไม่ | **มีหน้าจัดการในระบบ → ส่ง adjustment เข้า TB ปีปัจจุบัน** |
+| CAP (งบเปลี่ยนแปลงส่วนผู้ถือหุ้น) | ❌ ยังไม่เริ่ม | ไม่ | FS ปัจจุบัน = BS + P&L |
+| NOTE2 (หมายเหตุประกอบงบ) | ❌ ยังไม่เริ่ม | ไม่ | แยก template ↔ data binding (docs/13) |
+| DBD group-code taxonomy | 🟡 มี StatementLines ต่อบริษัท | ไม่ | ยังไม่มี master taxonomy มาตรฐาน |
+| Fixed Asset Register | ❌ ยังไม่เริ่ม | ไม่ | ค่าเสื่อม 2 ชุด + disposal + กำไร/ขาดทุน auto (docs/14) |
+| Prepaid Schedule | ❌ ยังไม่เริ่ม | ไม่ | pattern เดียวกลาง (docs/14) |
+| Stock / FIFO / FG↔TB | ❌ ยังไม่เริ่ม | บางส่วน | FIFO จาก Express; ต่าง→adjustment manual (docs/15) |
+| Cash Count / Interest Income | ❌ ยังไม่เริ่ม | ไม่ | docs/13, docs/17 |
+| AR/AP Recon + Bank Statement | ⛔ รอสเปก DBF + bank statement | ใช่ | status matched/partial/unmatched (docs/17) |
+| Subsequent Payment Check | ❌ ยังไม่เริ่ม | ไม่ | ใช้ GL1/JV1 ปีถัดไป (docs/17) |
+| TAX engine (เต็มรูป) | 🟡 ภ.ง.ด.50 (X4/WHT) เสร็จ | ไม่ | ต่อยอดเป็น full engine จาก TB (docs/16) |
+| PP30 auto จาก VAT | 🟡 อยู่ในโมดูล Tax | ใช่ | รอสเปก Input/Output VAT DBF |
+| PND.3/53 PDF reconcile | ❌ ยังไม่เริ่ม | ไม่ (ใช้ PDF) | layout คงที่ → template parser (docs/16) |
+| Field-level audit ทุก field | 🟡 มี Audit Log พื้นฐาน | ไม่ | ยังไม่ field-level (docs/18) |
+| Attachment / Evidence | ❌ ยังไม่เริ่ม | ไม่ | docs/18 |
+| Audit log export | 🟡 มี viewer/filter | ไม่ | ยังไม่มี export Excel/PDF/CSV |
+| Report package (draft/review/final/lock) | 🟡 มี Closing Period lock | ไม่ | ยังไม่มี report package/version |
+| Snapshot Express ตามรอบปิดงบ | ❌ ยังไม่เริ่ม | ไม่ | เก็บถาวร 10 ปี |
+
+### คำตอบ Open Questions ที่ใช้เป็นฐานพัฒนา (ยืนยัน 2026-06-04)
+1. "เชื่อม DB Express" = **อ่านไฟล์ DBF โดยตรง** (ที่ทำอยู่) → ไม่มีความขัดแย้งกับ pipeline ปัจจุบัน
+2. Payroll = **เลื่อนไป Phase หลัง**
+3. ขายสินทรัพย์ = ระบบ**คำนวณกำไร/ขาดทุนอัตโนมัติ**
+4. อัตราค่าเสื่อม = **มี master ต่อประเภทสินทรัพย์** (default + override)
+5. Stock ≠ TB = **แสดงผลต่าง ให้บัญชีบันทึก adjustment เอง** (ไม่ auto)
+6. Parallel run = **ตรงเป๊ะทุกยอด (ผลต่าง = 0)**
+7. การลบข้อมูล = **ทุกคนลบได้ + audit trail**
+8. Export = **Excel + PDF + CSV**
+9. review/lock งบก่อน final = **เก็บ version final เริ่มจาก v0; ยื่นงบแล้ว lock ห้ามแก้; ยื่นเพิ่มเติม = เปิด version ใหม่ (version เดิม freeze ถาวร); ปลดล็อกได้ทุกคนที่มีสิทธิ์ในบริษัท + audit** (ดู docs/18)
+10. Express data = **snapshot ตามรอบปิดงบ + เก็บถาวร**
+11. Leasing/Loan = **มีหน้าจัดการในระบบ** → adjustment เข้า TB ปีปัจจุบัน
+12. PDF สรรพากร = **layout คงที่ → template parser**
+13. Retention = **10 ปี**

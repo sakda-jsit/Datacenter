@@ -49,3 +49,11 @@ Use sample files in `/reference/express` to create unit tests and integration te
 - Do not build large page-only React files when the UI can be decomposed into reusable components.
 - Do not duplicate common table, form, filter, pagination, or status UI logic across modules.
 - Do not keep Python web runtime in production.
+
+## Migration Baseline & Parallel Run (Requirement v11)
+- **Baseline = ปีบัญชี 2025/2568** — ไม่ migrate hidden sheet 2016–2024
+- สูตร Excel ที่ใช้งานจริง (ในพื้นที่ Page Break Preview) ต้อง migrate เป็น business rule ทั้งหมด — ไม่ให้เหลือขั้นตอนคำนวณหลักใน Excel
+- จัดทำ formula inventory แยกตาม module (TB/FS/TAX/VAT/WHT/FA/Prepaid/AR-AP/Stock) แล้วให้ฝ่ายบัญชียืนยันก่อนพัฒนา; สูตรที่ยังไม่เข้าใจ = open issue ห้ามเดา
+- **Parallel run 1 งวด (ปี 2025): ผลลัพธ์ระบบใหม่ต้องตรง Excel เดิมเป๊ะทุกยอด (ผลต่าง = 0)** ก่อน go-live
+- ต้องมีผู้ sign-off ผล parallel run (ผู้รับผิดชอบ/ผู้สอบบัญชี — ยังต้องยืนยันว่าใคร) ก่อนใช้งานจริง
+- รายละเอียดเต็มใน docs/21
