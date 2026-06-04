@@ -22,6 +22,8 @@ public interface IApplicationDbContext
     DbSet<ComplianceTask> ComplianceTasks { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<AccountingPeriod> AccountingPeriods { get; }
+    DbSet<AdjustmentEntry> AdjustmentEntries { get; }
+    DbSet<AdjustmentEntryLine> AdjustmentEntryLines { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

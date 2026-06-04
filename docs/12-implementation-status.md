@@ -78,7 +78,7 @@ Requirement v11 เพิ่มขอบเขตจาก workbook ปิดง
 
 | โมดูล (req v11) | สถานะปัจจุบัน | บล็อก DBF? | หมายเหตุ |
 |---|---|---|---|
-| Adjusted TB + Adjustment Entry | ❌ ยังไม่เริ่ม | ไม่ | TB ปัจจุบันยังไม่มีชั้น adjustment (docs/13) |
+| Adjusted TB + Adjustment Entry | ✅ เสร็จ (2026-06-04) | ไม่ | AdjustmentEntry/Line + เมนู "กระดาษทำการปิดงบ" `/adjustments` — ดูหัวข้อด้านล่าง |
 | Leasing / Loan Working Paper | ❌ ยังไม่เริ่ม | ไม่ | **มีหน้าจัดการในระบบ → ส่ง adjustment เข้า TB ปีปัจจุบัน** |
 | CAP (งบเปลี่ยนแปลงส่วนผู้ถือหุ้น) | ❌ ยังไม่เริ่ม | ไม่ | FS ปัจจุบัน = BS + P&L |
 | NOTE2 (หมายเหตุประกอบงบ) | ❌ ยังไม่เริ่ม | ไม่ | แยก template ↔ data binding (docs/13) |
@@ -97,6 +97,17 @@ Requirement v11 เพิ่มขอบเขตจาก workbook ปิดง
 | Audit log export | 🟡 มี viewer/filter | ไม่ | ยังไม่มี export Excel/PDF/CSV |
 | Report package (draft/review/final/lock) | 🟡 มี Closing Period lock | ไม่ | ยังไม่มี report package/version |
 | Snapshot Express ตามรอบปิดงบ | ❌ ยังไม่เริ่ม | ไม่ | เก็บถาวร 10 ปี |
+
+### ✅ Adjusted TB + Adjustment Entry — เสร็จ (2026-06-04, req v11 docs/13 ข้อ 1–2)
+ชั้นฐานของกระดาษทำการปิดงบ ที่โมดูลปิดงบอื่น (Leasing/Loan/FixedAsset/Prepaid/Stock) จะส่ง adjustment เข้ามาต่อยอด
+
+- **Domain:** `AdjustmentEntry` (header: ClientCompanyId, FiscalYear, DocumentNo `ADJ-{ปี}-{ลำดับ}`, EntryDate, SourceType, Reference, Reason, AttachmentPath) + `AdjustmentEntryLine` (AccountId, Debit, Credit, Description) + enum `AdjustmentSourceType` (Manual/Leasing/Loan/Tax/Other). migration `AddAdjustmentEntries`
+- **CQRS:** Create/Update/Delete (balanced Dr=Cr บังคับใน validator; account ต้อง postable+อยู่บริษัทเดียวกัน; ทุกคนลบได้+audit ตาม req #7) + `GetAdjustmentEntriesQuery` (list) + `GetAdjustedTrialBalanceQuery`
+- **Adjusted TB:** คำนวณสดจากยอดนำเข้า (JournalEntry, สะสมถึงสิ้นปีงบ) + adjustment ปัจจุบัน — คอลัมน์: ยอดยกมา / เคลื่อนไหว / ก่อนปรับ(net) / ปรับปรุง / หลังปรับ(net) ตามสูตร `DebitFinal = max(BalDr+AdjDr−BalCr−AdjCr,0)`. มีธง balancedBefore/adjustmentsBalanced/balancedAfter (VR)
+- **API:** `AdjustmentsController` — `GET/POST/PUT/DELETE /api/v1/adjustments` + `GET /adjustments/trial-balance`
+- **Frontend:** เมนู "กระดาษทำการปิดงบ" → `/adjustments` 2 แท็บ (งบทดลองหลังปรับปรุง / รายการปรับปรุง + ฟอร์ม modal)
+- **Verify:** ทดสอบ API ครบ (create ADJ-2025-0001 / reject imbalanced 422 / สูตรถูก acc4 73860+1000=74860, acc8 3280.88−1000=2280.88 / delete 204) + หน้า UI จริงผ่าน Preview กับ JSIT2016 ปี 2025 (ยอดก่อนปรับ Dr=Cr 9,078,861.69, badges เขียวครบ)
+- **หมายเหตุ enum:** API serialize enum เป็น **integer** (ไม่มี JsonStringEnumConverter — closing-period/compliance พึ่ง numeric status) → frontend types ของโมดูลนี้ใช้ number, POST sourceType เป็นตัวเลข
 
 ### คำตอบ Open Questions ที่ใช้เป็นฐานพัฒนา (ยืนยัน 2026-06-04)
 1. "เชื่อม DB Express" = **อ่านไฟล์ DBF โดยตรง** (ที่ทำอยู่) → ไม่มีความขัดแย้งกับ pipeline ปัจจุบัน

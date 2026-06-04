@@ -94,6 +94,7 @@ const navGroups: NavGroup[] = [
     icon: 'chart',
     desc: 'งบการเงินและปิดรอบ',
     items: [
+      { to: '/adjustments', icon: 'scale', label: 'กระดาษทำการปิดงบ', desc: 'งบทดลองหลังปรับปรุง' },
       { to: '/financial-statement', icon: 'chart', label: 'งบการเงิน', desc: 'กำไรขาดทุนและฐานะการเงิน' },
       { to: '/closing-period', icon: 'lock', label: 'ปิดรอบบัญชี', desc: 'ตรวจสอบและ lock period' },
     ],

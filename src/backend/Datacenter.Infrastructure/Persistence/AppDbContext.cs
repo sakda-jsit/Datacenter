@@ -23,6 +23,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ComplianceTask> ComplianceTasks => Set<ComplianceTask>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<AccountingPeriod> AccountingPeriods => Set<AccountingPeriod>();
+    public DbSet<AdjustmentEntry> AdjustmentEntries => Set<AdjustmentEntry>();
+    public DbSet<AdjustmentEntryLine> AdjustmentEntryLines => Set<AdjustmentEntryLine>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

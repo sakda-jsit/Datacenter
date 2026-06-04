@@ -53,7 +53,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// ใน Development ไม่บังคับ HTTPS redirect เพราะ Vite proxy เรียกผ่าน HTTP (localhost:5229)
+// การ 307 redirect ข้าม origin (5229 -> 7065) ทำให้ browser ตัด Authorization header ทิ้ง => 401 => เด้ง login ซ้ำ
+if (!app.Environment.IsDevelopment())
+    app.UseHttpsRedirection();
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
