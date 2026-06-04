@@ -9,6 +9,7 @@ import ImportValidationPage from '../features/import/pages/ImportValidationPage'
 import TrialBalancePage from '../features/trial-balance/pages/TrialBalancePage'
 import FinancialStatementPage from '../features/financial-statement/pages/FinancialStatementPage'
 import AdjustmentsPage from '../features/adjustments/pages/AdjustmentsPage'
+import LeasingPage from '../features/leasing/pages/LeasingPage'
 import VatPage from '../features/vat/pages/VatPage'
 import ArPage from '../features/ar/pages/ArPage'
 import ApPage from '../features/ap/pages/ApPage'
@@ -38,6 +39,7 @@ export default function AppRouter() {
           <Route path="trial-balance" element={<TrialBalancePage />} />
           <Route path="financial-statement" element={<FinancialStatementPage />} />
           <Route path="adjustments" element={<AdjustmentsPage />} />
+          <Route path="leasing" element={<LeasingPage />} />
           <Route path="vat" element={<VatPage />} />
           <Route path="ar" element={<ArPage />} />
           <Route path="ap" element={<ApPage />} />

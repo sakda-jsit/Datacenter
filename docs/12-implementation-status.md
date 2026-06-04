@@ -79,7 +79,7 @@ Requirement v11 เพิ่มขอบเขตจาก workbook ปิดง
 | โมดูล (req v11) | สถานะปัจจุบัน | บล็อก DBF? | หมายเหตุ |
 |---|---|---|---|
 | Adjusted TB + Adjustment Entry | ✅ เสร็จ (2026-06-04) | ไม่ | AdjustmentEntry/Line + เมนู "กระดาษทำการปิดงบ" `/adjustments` — ดูหัวข้อด้านล่าง |
-| Leasing / Loan Working Paper | ❌ ยังไม่เริ่ม | ไม่ | **มีหน้าจัดการในระบบ → ส่ง adjustment เข้า TB ปีปัจจุบัน** |
+| Leasing / Loan Working Paper | ✅ เสร็จ (2026-06-04) | ไม่ | LeaseContract + engine effective-interest + เมนู "เช่าซื้อ / เงินกู้" `/leasing` → generate adjustment เข้า TB — ดูหัวข้อด้านล่าง |
 | CAP (งบเปลี่ยนแปลงส่วนผู้ถือหุ้น) | ❌ ยังไม่เริ่ม | ไม่ | FS ปัจจุบัน = BS + P&L |
 | NOTE2 (หมายเหตุประกอบงบ) | ❌ ยังไม่เริ่ม | ไม่ | แยก template ↔ data binding (docs/13) |
 | DBD group-code taxonomy | 🟡 มี StatementLines ต่อบริษัท | ไม่ | ยังไม่มี master taxonomy มาตรฐาน |
@@ -108,6 +108,17 @@ Requirement v11 เพิ่มขอบเขตจาก workbook ปิดง
 - **Frontend:** เมนู "กระดาษทำการปิดงบ" → `/adjustments` 2 แท็บ (งบทดลองหลังปรับปรุง / รายการปรับปรุง + ฟอร์ม modal)
 - **Verify:** ทดสอบ API ครบ (create ADJ-2025-0001 / reject imbalanced 422 / สูตรถูก acc4 73860+1000=74860, acc8 3280.88−1000=2280.88 / delete 204) + หน้า UI จริงผ่าน Preview กับ JSIT2016 ปี 2025 (ยอดก่อนปรับ Dr=Cr 9,078,861.69, badges เขียวครบ)
 - **หมายเหตุ enum:** API serialize enum เป็น **integer** (ไม่มี JsonStringEnumConverter — closing-period/compliance พึ่ง numeric status) → frontend types ของโมดูลนี้ใช้ number, POST sourceType เป็นตัวเลข
+
+### ✅ Leasing / Loan Working Paper — เสร็จ (2026-06-04, req v11 docs/13 ข้อ 2)
+ต่อยอดจาก Adjustment Entry: บันทึกสัญญา → ระบบคำนวณตารางตัดบัญชี → generate รายการปรับปรุงดอกเบี้ยเข้า TB
+
+- **Domain:** `LeaseContract` (เงินต้น/ค่างวด/จำนวนงวด/วันเริ่ม/VAT-ต่องวด + ผูกบัญชี GL 4 ตัว: หนี้สิน/ดอกเบี้ยรอตัด/ภาษีซื้อยังไม่ถึงกำหนด/ดอกเบี้ยจ่าย) + enum `LeaseContractType` (HirePurchase/Loan). migration `AddLeaseContracts`. **ไม่เก็บ schedule — คำนวณสด** (เหมือน Adjusted TB)
+- **Engine:** `LeaseAmortizationEngine` (pure) — solve อัตราต่องวดแบบ effective-interest (Newton-Raphson) จาก (เงินต้น, ค่างวด, จำนวนงวด); ดอกเบี้ยงวด = round(ยอดคงเหลือ × r); งวดสุดท้าย absorb เศษ → ยอดเงินต้นรวม = financed เป๊ะ. สรุปสิ้นปี: ยอดยกมา/ชำระในปี/คงเหลือ/current portion(1 ปี)/ระยะยาว ต่อ gross liability, ดอกเบี้ยรอตัด, VAT, net principal
+- **CQRS:** Create/Update/Delete สัญญา + `GenerateLeaseAdjustment` (ดอกเบี้ยรับรู้ในปี → Dr ดอกเบี้ยจ่าย / Cr ดอกเบี้ยรอตัด [HP] หรือ Cr หนี้สิน [Loan] ผ่าน `CreateAdjustmentEntryCommand` เดิม) + Queries: list / detail+schedule / `GetLeaseWorkpaper` (SUM ต่อสัญญา + เทียบ GL → Diff)
+- **API:** `LeasingController` — `GET/POST/PUT/DELETE /api/v1/leasing` + `/leasing/{id}` (schedule) + `/leasing/workpaper` + `/leasing/generate-adjustment`
+- **Frontend:** เมนู "เช่าซื้อ / เงินกู้" → `/leasing` 2 แท็บ (สัญญา + ฟอร์ม/ตารางตัดบัญชี modal / กระดาษทำการ + เทียบ GL + ปุ่ม generate adjustment)
+- **Verify:** สร้างสัญญา SOLAR ROOFTOP (E057-2025) จากไฟล์จริง `2025_JSPC_LEASING.xlsx` กับ JSIT2016 — **ยอด gross liability + VAT ตรง sheet SUM เป๊ะ** (164,304 / ชำระ 3,912 / คงเหลือ 160,392 / current 23,472 / LT 136,920; VAT 10,748.64/255.92/1,535.52); ดอกเบี้ยแยกรายงวดต่างจาก Excel ≤0.02 สตางค์ (วิธีปัดเศษ IRR), ยอดเงินต้นปิดที่ 0.00 เป๊ะ. generate → ADJ-2025-0001 (Dr ดอกเบี้ยจ่าย 1,840.49 / Cr ดอกเบี้ยรอตัด 1,840.49) เข้า Adjustment module + adjusted TB สมดุล. UI ผ่าน Preview ครบ
+- **หมายเหตุความแม่น:** engine สร้างยอดสอดคล้องภายในสัญญา (รวมเป๊ะ); การ split รายงวดอาจต่าง Excel ต้นทาง ≤ ไม่กี่สตางค์ → ปรับ manual ได้ที่หน้า adjustment
 
 ### คำตอบ Open Questions ที่ใช้เป็นฐานพัฒนา (ยืนยัน 2026-06-04)
 1. "เชื่อม DB Express" = **อ่านไฟล์ DBF โดยตรง** (ที่ทำอยู่) → ไม่มีความขัดแย้งกับ pipeline ปัจจุบัน

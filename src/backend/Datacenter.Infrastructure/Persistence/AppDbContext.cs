@@ -25,6 +25,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AccountingPeriod> AccountingPeriods => Set<AccountingPeriod>();
     public DbSet<AdjustmentEntry> AdjustmentEntries => Set<AdjustmentEntry>();
     public DbSet<AdjustmentEntryLine> AdjustmentEntryLines => Set<AdjustmentEntryLine>();
+    public DbSet<LeaseContract> LeaseContracts => Set<LeaseContract>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

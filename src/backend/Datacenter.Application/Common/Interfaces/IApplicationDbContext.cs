@@ -24,6 +24,7 @@ public interface IApplicationDbContext
     DbSet<AccountingPeriod> AccountingPeriods { get; }
     DbSet<AdjustmentEntry> AdjustmentEntries { get; }
     DbSet<AdjustmentEntryLine> AdjustmentEntryLines { get; }
+    DbSet<LeaseContract> LeaseContracts { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
