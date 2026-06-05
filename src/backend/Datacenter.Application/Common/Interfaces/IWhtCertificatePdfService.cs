@@ -19,10 +19,17 @@ public record WhtCertificateModel(
     decimal TaxAmount,
     decimal TaxRate,
     string AmountInWords,      // รวมภาษีเป็นตัวอักษร
-    DateTime? IssueDate);
+    DateTime? IssueDate,
+    // หมวดเงินได้ที่จะลงจำนวนเงิน (1..6 ตามแบบ 50 ทวิ; 41=40(4)(ก) ดอกเบี้ย, 42=40(4)(ข) เงินปันผล)
+    int IncomeCategory,
+    // เงื่อนไขการหัก/ออกภาษี (1=หักภาษี ณ ที่จ่าย, 2=ออกให้ตลอดไป, 3=ออกภาษีให้ครั้งเดียว, 4=อื่นๆ)
+    int ConditionType);
 
 /// <summary>สร้าง PDF หนังสือรับรองหัก ณ ที่จ่าย (QuestPDF + ฟอนต์ไทย) — 1 ใบ/หน้า</summary>
 public interface IWhtCertificatePdfService
 {
     byte[] Generate(IReadOnlyList<WhtCertificateModel> certificates);
+
+    /// <summary>เรนเดอร์เป็นรูป PNG หน้าละ 1 รูป (สำหรับ preview ในเว็บ — เลี่ยงปัญหา iframe PDF ขึ้นจอดำ)</summary>
+    IReadOnlyList<byte[]> GenerateImages(IReadOnlyList<WhtCertificateModel> certificates);
 }

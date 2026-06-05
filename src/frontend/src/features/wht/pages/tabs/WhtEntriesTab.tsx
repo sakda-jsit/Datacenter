@@ -3,12 +3,13 @@ import Button from '../../../../shared/components/ui/Button'
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
 import ExportMenu from '../../../../shared/components/ui/ExportMenu'
-import { useSendWht, useWhtEntries } from '../../hooks/useWht'
+import { useWhtEntries } from '../../hooks/useWht'
 import { EMAIL_STATUS_CLASS, EMAIL_STATUS_LABEL, MONTH_LABEL, WHT_FORM_LABEL } from '../../types/wht.types'
 import type { WhtSendResult } from '../../types/wht.types'
 import type { ExportSection } from '../../../../shared/utils/exportTable'
 import PayeeEmailModal, { type PayeeRow } from '../../components/PayeeEmailModal'
 import CertificatePreviewModal from '../../components/CertificatePreviewModal'
+import WhtSendModal from '../../components/WhtSendModal'
 
 function fmt(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -29,11 +30,11 @@ export default function WhtEntriesTab({ companyId, year }: Props) {
   const [month, setMonth] = useState(0)
   const [form, setForm] = useState(0) // 0 = ทั้งหมด
   const { data, isLoading, isError } = useWhtEntries(companyId, year, month, form || undefined)
-  const send = useSendWht(companyId)
 
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [emailModal, setEmailModal] = useState(false)
   const [previewIds, setPreviewIds] = useState<number[] | null>(null)
+  const [sendOpen, setSendOpen] = useState(false)
   const [sendResult, setSendResult] = useState<WhtSendResult[] | null>(null)
   const [error, setError] = useState('')
 
@@ -65,17 +66,10 @@ export default function WhtEntriesTab({ companyId, year }: Props) {
     setSelected((prev) => (prev.size === rows.length ? new Set() : new Set(rows.map((r) => r.id))))
   }
 
-  async function handleSend() {
+  function handleSent(res: WhtSendResult[]) {
     setError('')
-    setSendResult(null)
-    try {
-      const res = await send.mutateAsync([...selected])
-      setSendResult(res)
-      setSelected(new Set())
-    } catch (err) {
-      const msg = (err as { response?: { data?: { detail?: string; title?: string } } })?.response?.data
-      setError(msg?.detail ?? msg?.title ?? 'ส่งอีเมลไม่สำเร็จ')
-    }
+    setSendResult(res)
+    setSelected(new Set())
   }
 
   return (
@@ -108,8 +102,8 @@ export default function WhtEntriesTab({ companyId, year }: Props) {
             <Button type="button" variant="secondary" onClick={() => setPreviewIds([...selected])} disabled={selected.size === 0}>
               Preview หัก ณ ที่จ่าย ({selected.size})
             </Button>
-            <Button type="button" onClick={handleSend} disabled={selected.size === 0 || send.isPending}>
-              {send.isPending ? 'กำลังส่ง...' : `ส่งเมล (${selected.size})`}
+            <Button type="button" onClick={() => setSendOpen(true)} disabled={selected.size === 0}>
+              ส่งเมล ({selected.size})
             </Button>
           </div>
         </div>
@@ -236,6 +230,14 @@ export default function WhtEntriesTab({ companyId, year }: Props) {
       )}
       {previewIds && previewIds.length > 0 && (
         <CertificatePreviewModal companyId={companyId} entryIds={previewIds} onClose={() => setPreviewIds(null)} />
+      )}
+      {sendOpen && (
+        <WhtSendModal
+          companyId={companyId}
+          entryIds={[...selected]}
+          onClose={() => setSendOpen(false)}
+          onSent={handleSent}
+        />
       )}
     </div>
   )

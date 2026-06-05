@@ -50,7 +50,8 @@ export function useSetPayeeEmail(companyId: number) {
 export function useSendWht(companyId: number) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (entryIds: number[]) => whtApi.send(companyId, entryIds),
+    mutationFn: (vars: { entryIds: number[]; grouping?: number; recipientEmail?: string }) =>
+      whtApi.send(companyId, vars.entryIds, vars.grouping ?? 0, vars.recipientEmail),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['wht-entries', companyId] }),
   })
 }

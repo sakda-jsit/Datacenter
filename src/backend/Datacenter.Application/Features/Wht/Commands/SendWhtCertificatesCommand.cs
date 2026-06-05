@@ -10,10 +10,16 @@ using Microsoft.EntityFrameworkCore;
 namespace Datacenter.Application.Features.Wht.Commands;
 
 /// <summary>
-/// ส่งหนังสือรับรองหัก ณ ที่จ่ายทางอีเมล (req 3,5,6) — จัดกลุ่มตามผู้ถูกหัก (1 อีเมล/ผู้ถูกหัก แนบ PDF ทุกใบ).
+/// ส่งหนังสือรับรองหัก ณ ที่จ่ายทางอีเมล (req 3,5,6) ตามรูปแบบที่เลือก:
+/// - ByPayee: จัดกลุ่มตามผู้ถูกหัก (1 อีเมล/ผู้ถูกหัก แนบ PDF ทุกใบของคนนั้น)
+/// - Single: รวมทุกฉบับที่เลือกเป็น 1 อีเมล ส่งไปยัง RecipientEmail เดียว
 /// อัปเดตสถานะส่งเมลของแต่ละ entry (ส่งแล้ว+วันเวลา+ผู้ส่ง / ส่งไม่สำเร็จ+error).
 /// </summary>
-public record SendWhtCertificatesCommand(int ClientCompanyId, IReadOnlyList<int> EntryIds)
+public record SendWhtCertificatesCommand(
+    int ClientCompanyId,
+    IReadOnlyList<int> EntryIds,
+    WhtSendGrouping Grouping = WhtSendGrouping.ByPayee,
+    string? RecipientEmail = null)
     : IRequest<IReadOnlyList<WhtSendResultDto>>, IRequireCompanyAccess;
 
 public class SendWhtCertificatesCommandHandler(
@@ -49,14 +55,33 @@ public class SendWhtCertificatesCommandHandler(
         var now = DateTime.UtcNow;
         var sender = currentUser.Username;
 
-        // จัดกลุ่มตามผู้ถูกหัก (TaxId)
-        foreach (var group in entries.GroupBy(e => e.PayeeTaxId ?? ""))
+        // สร้าง "กลุ่มการส่ง" ตามรูปแบบที่เลือก
+        // (taxId, payeeName, recipient, entries)
+        List<(string TaxId, string PayeeName, string? Recipient, List<Domain.Entities.WhtEntry> Entries)> sendGroups;
+        if (request.Grouping == WhtSendGrouping.Single)
         {
-            var taxId = group.Key;
-            var groupEntries = group.ToList();
-            var payeeName = groupEntries[0].PayeeName;
-            emailByTax.TryGetValue(taxId, out var recipient);
+            var recipient = request.RecipientEmail?.Trim();
+            if (string.IsNullOrWhiteSpace(recipient))
+                throw new ValidationException(new[] { new FluentValidation.Results.ValidationFailure(
+                    "RecipientEmail", "กรุณาระบุอีเมลผู้รับ (รูปแบบรวมส่งเมลเดียว)") });
+            sendGroups = [("", "(ส่งรวมเมลเดียว)", recipient, entries)];
+        }
+        else
+        {
+            sendGroups = entries
+                .GroupBy(e => e.PayeeTaxId ?? "")
+                .Select(g => (
+                    TaxId: g.Key,
+                    PayeeName: g.First().PayeeName,
+                    Recipient: emailByTax.TryGetValue(g.Key, out var em) ? em : null,
+                    Entries: g.ToList()))
+                .ToList();
+        }
 
+        var payerName = string.IsNullOrWhiteSpace(payer.LegalName) ? payer.Name : payer.LegalName;
+
+        foreach (var (taxId, payeeName, recipient, groupEntries) in sendGroups)
+        {
             string? error = null;
             if (string.IsNullOrWhiteSpace(recipient))
             {
@@ -68,12 +93,14 @@ public class SendWhtCertificatesCommandHandler(
                 {
                     var models = groupEntries.Select(e => WhtCertificateBuilder.Build(e, payer)).ToList();
                     var pdfBytes = pdf.Generate(models);
+                    var fileTag = string.IsNullOrWhiteSpace(taxId) ? "all" : taxId;
                     var attachments = new[]
                     {
-                        new EmailAttachment($"wht-{taxId}-{now:yyyyMMddHHmmss}.pdf", pdfBytes),
+                        new EmailAttachment($"wht-{fileTag}-{now:yyyyMMddHHmmss}.pdf", pdfBytes),
                     };
-                    var subject = $"หนังสือรับรองการหักภาษี ณ ที่จ่าย จาก {(string.IsNullOrWhiteSpace(payer.LegalName) ? payer.Name : payer.LegalName)}";
-                    var body = $"<p>เรียน {payeeName}</p><p>แนบหนังสือรับรองการหักภาษี ณ ที่จ่าย จำนวน {groupEntries.Count} ฉบับ</p>";
+                    var subject = $"หนังสือรับรองการหักภาษี ณ ที่จ่าย จาก {payerName}";
+                    var greeting = request.Grouping == WhtSendGrouping.Single ? "เรียน ผู้รับ" : $"เรียน {payeeName}";
+                    var body = $"<p>{greeting}</p><p>แนบหนังสือรับรองการหักภาษี ณ ที่จ่าย จำนวน {groupEntries.Count} ฉบับ จาก {payerName}</p>";
                     await email.SendAsync(new EmailMessage(recipient!, subject, body, attachments), ct);
                 }
                 catch (Exception ex)

@@ -38,7 +38,9 @@ public class Note2ExcelExporter : INote2ExcelExporter
         ws.PageSetup.Margins.Left = 0.5; ws.PageSetup.Margins.Right = 0.2;
         ws.PageSetup.Margins.Top = 0.5; ws.PageSetup.Margins.Bottom = 0.3;
         ws.PageSetup.CenterHorizontally = true;
-        ws.PageSetup.FitToPages(1, 0);
+        // ใช้สเกลคงที่ (ไม่ใช่ "Fit to") เพื่อให้ Page Break Preview ลาก/ปรับเส้นแบ่งหน้าได้
+        // (โหมด Fit-to-page จะล็อก preview ให้ย่อสเกลแทนการลากเส้น)
+        ws.PageSetup.Scale = 90;
 
         int yTh = data.FiscalYear + 543, pTh = data.PriorYear + 543;
         var items = Order(data);

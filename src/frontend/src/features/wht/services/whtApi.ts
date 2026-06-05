@@ -15,7 +15,7 @@ export const whtApi = {
       .get<WhtEntryItem[]>('/wht', { params: { clientCompanyId, year, month, formType } })
       .then((r) => r.data),
 
-  // PDF หนังสือรับรอง (preview) — ดึงเป็น blob (ต้องแนบ JWT ผ่าน axios)
+  // PDF หนังสือรับรอง (ดาวน์โหลด) — ดึงเป็น blob (ต้องแนบ JWT ผ่าน axios)
   certificate: (clientCompanyId: number, entryIds: number[]) =>
     apiClient
       .get('/wht/certificate', {
@@ -25,13 +25,28 @@ export const whtApi = {
       })
       .then((r) => r.data as Blob),
 
+  // รูป PNG (data URL) สำหรับ preview ในเว็บ — เลี่ยงปัญหา iframe PDF ขึ้นจอดำ
+  certificateImages: (clientCompanyId: number, entryIds: number[]) =>
+    apiClient
+      .get<string[]>('/wht/certificate/images', {
+        params: { clientCompanyId, entryIds },
+        paramsSerializer: { indexes: null },
+      })
+      .then((r) => r.data),
+
   setPayeeEmail: (clientCompanyId: number, taxId: string, email: string | null) =>
     apiClient
       .put('/wht/payee-email', { clientCompanyId, taxId, email })
       .then((r) => r.data),
 
-  send: (clientCompanyId: number, entryIds: number[]) =>
+  // grouping: 0 = รวมตามผู้ถูกหัก, 1 = รวมส่งเมลเดียว (ต้องมี recipientEmail)
+  send: (
+    clientCompanyId: number,
+    entryIds: number[],
+    grouping = 0,
+    recipientEmail?: string,
+  ) =>
     apiClient
-      .post<WhtSendResult[]>('/wht/send', { clientCompanyId, entryIds })
+      .post<WhtSendResult[]>('/wht/send', { clientCompanyId, entryIds, grouping, recipientEmail })
       .then((r) => r.data),
 }

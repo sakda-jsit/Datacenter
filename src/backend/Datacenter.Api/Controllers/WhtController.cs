@@ -34,6 +34,11 @@ public class WhtController(IMediator mediator) : ControllerBase
         return File(bytes, "application/pdf", "wht-certificate.pdf");
     }
 
+    /// <summary>GET /api/v1/wht/certificate/images?clientCompanyId=1&amp;entryIds=1&amp;entryIds=2 — รูป PNG (data URL) สำหรับ preview</summary>
+    [HttpGet("certificate/images")]
+    public async Task<IActionResult> GetCertificateImages([FromQuery] int clientCompanyId, [FromQuery] int[] entryIds, CancellationToken ct)
+        => Ok(await mediator.Send(new GetWhtCertificateImagesQuery(clientCompanyId, entryIds ?? []), ct));
+
     /// <summary>PUT /api/v1/wht/payee-email — กำหนด/แก้ไขอีเมลผู้ถูกหัก</summary>
     [HttpPut("payee-email")]
     public async Task<IActionResult> UpdatePayeeEmail([FromBody] UpdateWhtPayeeEmailCommand command, CancellationToken ct)
