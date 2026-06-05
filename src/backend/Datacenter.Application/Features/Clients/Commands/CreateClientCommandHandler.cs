@@ -21,6 +21,7 @@ public class CreateClientCommandHandler(IApplicationDbContext db, ICurrentUserSe
         {
             Code = request.Code.Trim().ToUpper(),
             Name = request.Name.Trim(),
+            LegalName = request.Name.Trim(),
             TaxId = request.TaxId.Trim(),
             BranchCode = request.BranchCode.Trim(),
             Address = request.Address?.Trim(),

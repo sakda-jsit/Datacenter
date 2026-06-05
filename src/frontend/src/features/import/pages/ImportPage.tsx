@@ -8,8 +8,10 @@ import PageHeader from '../../../shared/components/ui/PageHeader'
 import Pagination from '../../../shared/components/ui/Pagination'
 import StateMessage from '../../../shared/components/ui/StateMessage'
 import StatusBadge from '../../../shared/components/ui/StatusBadge'
+import ExportMenu from '../../../shared/components/ui/ExportMenu'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import { useClientList } from '../../clients/hooks/useClients'
+import type { ExportSection } from '../../../shared/utils/exportTable'
 import { useDeleteImportBatch, useImportHistory, usePostImportBatch, useStartExpressImport } from '../hooks/useImport'
 import type { ImportBatchListDto, ImportStatus } from '../types/import.types'
 
@@ -75,10 +77,7 @@ export default function ImportPage() {
       key: 'client',
       header: 'บริษัท',
       render: (batch) => (
-        <>
-          <span className="font-mono text-xs text-slate-700">{batch.clientCode}</span>
-          <span className="ml-1 text-xs text-gray-500">{batch.clientName}</span>
-        </>
+        <span className="text-sm text-slate-700">{batch.clientName}</span>
       ),
       sortValue: (batch) => batch.clientName,
       sortable: true,
@@ -163,9 +162,31 @@ export default function ImportPage() {
       <PageHeader
         title="นำเข้าข้อมูล"
         action={(
-          <Button type="button" onClick={() => setShowForm((value) => !value)}>
-            + นำเข้าข้อมูลใหม่
-          </Button>
+          <div className="flex items-center gap-2">
+            {history && history.items.length > 0 && (
+              <ExportMenu
+                meta={{ title: 'ประวัตินำเข้าข้อมูล', subtitle: `หน้า ${history.pageNumber}/${history.totalPages}`, fileName: 'import-history' }}
+                getSections={(): ExportSection[] => [{
+                  name: 'ประวัตินำเข้า',
+                  columns: [
+                    { key: 'createdAt', header: 'เวลา', value: (b) => b.createdAt?.slice(0, 19).replace('T', ' ') ?? '' },
+                    { key: 'clientName', header: 'บริษัท' },
+                    { key: 'fiscalYear', header: 'ปีบัญชี', align: 'right' },
+                    { key: 'status', header: 'สถานะ', value: (b) => STATUS_LABEL[b.status as keyof typeof STATUS_LABEL] ?? b.status },
+                    { key: 'totalRows', header: 'รวมแถว', align: 'right' },
+                    { key: 'successRows', header: 'สำเร็จ', align: 'right' },
+                    { key: 'errorRows', header: 'ผิดพลาด', align: 'right' },
+                    { key: 'message', header: 'ข้อความ', value: (b) => b.message ?? '' },
+                    { key: 'createdBy', header: 'โดย' },
+                  ],
+                  rows: history.items,
+                }]}
+              />
+            )}
+            <Button type="button" onClick={() => setShowForm((value) => !value)}>
+              + นำเข้าข้อมูลใหม่
+            </Button>
+          </div>
         )}
       />
 
@@ -176,7 +197,7 @@ export default function ImportPage() {
             <div>
               <p className="mb-1 text-sm font-medium text-gray-700">บริษัทลูกค้า *</p>
               <p className="min-w-64 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                {selectedClient ? `${selectedClient.code} — ${selectedClient.name}` : 'เลือกบริษัทที่ header ก่อน'}
+                {selectedClient ? selectedClient.name : 'เลือกบริษัทที่ header ก่อน'}
               </p>
             </div>
 

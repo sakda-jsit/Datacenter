@@ -6,7 +6,9 @@ import Pagination from '../../../shared/components/ui/Pagination'
 import SearchInput from '../../../shared/components/ui/SearchInput'
 import StateMessage from '../../../shared/components/ui/StateMessage'
 import ClientTable from '../components/ClientTable'
+import ExportMenu from '../../../shared/components/ui/ExportMenu'
 import { useClientList, useDeactivateClient } from '../hooks/useClients'
+import type { ExportSection } from '../../../shared/utils/exportTable'
 
 export default function ClientListPage() {
   const navigate = useNavigate()
@@ -27,9 +29,25 @@ export default function ClientListPage() {
       <PageHeader
         title="จัดการลูกค้า"
         action={(
-          <Button type="button" onClick={() => navigate('/clients/new')}>
-            + เพิ่มลูกค้าใหม่
-          </Button>
+          <div className="flex items-center gap-2">
+            {data && data.items.length > 0 && (
+              <ExportMenu
+                meta={{ title: 'รายชื่อลูกค้า', fileName: 'clients' }}
+                getSections={(): ExportSection[] => [{
+                  name: 'ลูกค้า',
+                  columns: [
+                    { key: 'name', header: 'ชื่อบริษัท' },
+                    { key: 'taxId', header: 'เลขภาษี' },
+                    { key: 'isActive', header: 'สถานะ', value: (c) => (c.isActive ? 'ใช้งาน' : 'ปิด') },
+                  ],
+                  rows: data.items,
+                }]}
+              />
+            )}
+            <Button type="button" onClick={() => navigate('/clients/new')}>
+              + เพิ่มลูกค้าใหม่
+            </Button>
+          </div>
         )}
       />
 

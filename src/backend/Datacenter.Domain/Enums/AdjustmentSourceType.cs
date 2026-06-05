@@ -16,5 +16,7 @@ public enum AdjustmentSourceType
     /// <summary>ปรับปรุงทางภาษี</summary>
     Tax = 3,
     /// <summary>อื่น ๆ</summary>
-    Other = 4
+    Other = 4,
+    /// <summary>มาจากกระดาษทำการสินทรัพย์ถาวร (ค่าเสื่อมราคา/จำหน่าย)</summary>
+    FixedAsset = 5
 }

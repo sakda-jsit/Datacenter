@@ -70,7 +70,7 @@ public class GetTrialBalanceQueryHandler(IApplicationDbContext db)
         }
 
         return new TrialBalanceReportDto(
-            client.Id, client.Code, client.Name,
+            client.Id, client.Code, client.LegalName,
             request.Year, request.MonthFrom, request.MonthTo,
             rows);
     }

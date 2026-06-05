@@ -8,7 +8,7 @@
 |---|---|---|---|
 | 1 | Client Management | ✅ เสร็จ | full-stack |
 | 2 | Import Data (Express DBF) | ✅ เสร็จ | ISINFO/GLACC/GLBAL/ISPRD + auto-post |
-| 3 | VAT Management | ⛔ รอสเปก DBF | ต้องการโครงสร้างตารางภาษีซื้อ/ขายของ Express |
+| 3 | VAT Management | ✅ เสร็จ (2026-06-05) | นำเข้า ISVAT.DBF + รายงาน ภ.พ.30 รายเดือน + รายละเอียดภาษีซื้อ/ขาย — ดูหัวข้อด้านล่าง |
 | 4 | AR Management | ⛔ รอสเปก DBF | ต้องการตารางลูกหนี้/ใบแจ้งหนี้ |
 | 5 | AP Management | ⛔ รอสเปก DBF | ต้องการตารางเจ้าหนี้/ใบรับวางบิล |
 | 6 | Payroll | ⛔ รอสเปก DBF | ต้องการข้อมูลเงินเดือน + สูตรภาษี/ประกันสังคม |
@@ -16,13 +16,13 @@
 | 8 | Trial Balance | ✅ เสร็จ | อ่านจาก Account + JournalEntry (ต้อง post ก่อน) |
 | 9 | General Ledger | ✅ เสร็จ | running balance ต่อบัญชี |
 | 10 | Financial Statement | ✅ เสร็จ | งบฐานะการเงิน + กำไรขาดทุน (ต้องตั้ง mapping บัญชี→บรรทัดงบ) |
-| 11 | Tax Report (PP30/PND) | 🟡 บางส่วน | **ภ.ง.ด.50 (ภาษีเงินได้นิติบุคคล) เสร็จ** — ปิด loop X4 ในงบการเงิน; PP30/ภ.ง.ด.3/53 ยังรอสเปก DBF |
+| 11 | Tax Report (PP30/PND) | 🟡 บางส่วน | **ภ.ง.ด.50 เสร็จ** (X4 loop ในงบ) + **ภ.พ.30 เสร็จ** (จาก ISVAT, ดูโมดูล #3); ภ.ง.ด.3/53 มีไฟล์ ISTAX.DBF แล้ว (ยังไม่ทำ) |
 | 12 | Compliance Calendar | ✅ เสร็จ | |
 | 13 | Closing Period | ✅ เสร็จ | งวด/วันสิ้นงวดจาก ISPRD, close/reopen/lock (reopen/lock เฉพาะ Admin) |
 | 14 | Audit Log | ✅ เสร็จ | viewer + ตัวกรอง (paginated) |
 | 15 | Dashboard & KPI | ✅ เสร็จ (operational) | นับลูกค้า/งาน compliance/import — ยังไม่รวม KPI การเงิน |
 
-**เสร็จ 11/15 + ภ.ง.ด.50** — ที่เหลือ (VAT/PP30, AR, AP, Payroll, Bank, ภ.ง.ด.3/53) รอสเปกโครงสร้างตาราง Express DBF
+**เสร็จ 12/15 + ภ.ง.ด.50 + ภ.พ.30** — ที่เหลือ (AR, AP, Payroll, Bank, ภ.ง.ด.3/53) ปลดบล็อกได้โดยสำรวจ DBF จริง: AR* (ARMAS/ARTRN/ARBIL), AP* (APMAS/APTRN/APBIL), ISTAX (WHT) มีอยู่ใน Express แล้ว — ใช้ `tools/dbf_diag.py` reverse-engineer โครงสร้าง
 
 ## Data Pipeline
 ```
@@ -83,15 +83,15 @@ Requirement v11 เพิ่มขอบเขตจาก workbook ปิดง
 | CAP (งบเปลี่ยนแปลงส่วนผู้ถือหุ้น) | ❌ ยังไม่เริ่ม | ไม่ | FS ปัจจุบัน = BS + P&L |
 | NOTE2 (หมายเหตุประกอบงบ) | ❌ ยังไม่เริ่ม | ไม่ | แยก template ↔ data binding (docs/13) |
 | DBD group-code taxonomy | 🟡 มี StatementLines ต่อบริษัท | ไม่ | ยังไม่มี master taxonomy มาตรฐาน |
-| Fixed Asset Register | ❌ ยังไม่เริ่ม | ไม่ | ค่าเสื่อม 2 ชุด + disposal + กำไร/ขาดทุน auto (docs/14) |
+| Fixed Asset Register | ✅ เสร็จ (2026-06-05) | ไม่ (import ได้) | FixedAsset + AssetTypeMaster + DepreciationEngine (เส้นตรง 2 ชุด) + disposal กำไร/ขาดทุน auto + **import จาก Express FAMAS.DBF** + เมนู "สินทรัพย์ถาวร" `/fixed-assets` → generate adjustment เข้า TB — ดูหัวข้อด้านล่าง |
 | Prepaid Schedule | ❌ ยังไม่เริ่ม | ไม่ | pattern เดียวกลาง (docs/14) |
 | Stock / FIFO / FG↔TB | ❌ ยังไม่เริ่ม | บางส่วน | FIFO จาก Express; ต่าง→adjustment manual (docs/15) |
 | Cash Count / Interest Income | ❌ ยังไม่เริ่ม | ไม่ | docs/13, docs/17 |
 | AR/AP Recon + Bank Statement | ⛔ รอสเปก DBF + bank statement | ใช่ | status matched/partial/unmatched (docs/17) |
 | Subsequent Payment Check | ❌ ยังไม่เริ่ม | ไม่ | ใช้ GL1/JV1 ปีถัดไป (docs/17) |
 | TAX engine (เต็มรูป) | 🟡 ภ.ง.ด.50 (X4/WHT) เสร็จ | ไม่ | ต่อยอดเป็น full engine จาก TB (docs/16) |
-| PP30 auto จาก VAT | 🟡 อยู่ในโมดูล Tax | ใช่ | รอสเปก Input/Output VAT DBF |
-| PND.3/53 PDF reconcile | ❌ ยังไม่เริ่ม | ไม่ (ใช้ PDF) | layout คงที่ → template parser (docs/16) |
+| PP30 auto จาก VAT | ✅ เสร็จ (2026-06-05) | ไม่ (ISVAT) | นำเข้า ISVAT.DBF → รายงาน ภ.พ.30 รายเดือน — ดูหัวข้อด้านล่าง |
+| PND.3/53 PDF reconcile | ❌ ยังไม่เริ่ม | ไม่ (ISTAX.DBF) | Express เก็บ WHT ใน ISTAX.DBF (AMOUNT/TAXRAT/TAXAMT/TAXTYP/TAXPRD) → ทำจาก DBF ได้ ไม่ต้องพึ่ง PDF |
 | Field-level audit ทุก field | 🟡 มี Audit Log พื้นฐาน | ไม่ | ยังไม่ field-level (docs/18) |
 | Attachment / Evidence | ❌ ยังไม่เริ่ม | ไม่ | docs/18 |
 | Audit log export | 🟡 มี viewer/filter | ไม่ | ยังไม่มี export Excel/PDF/CSV |
@@ -119,6 +119,63 @@ Requirement v11 เพิ่มขอบเขตจาก workbook ปิดง
 - **Frontend:** เมนู "เช่าซื้อ / เงินกู้" → `/leasing` 2 แท็บ (สัญญา + ฟอร์ม/ตารางตัดบัญชี modal / กระดาษทำการ + เทียบ GL + ปุ่ม generate adjustment)
 - **Verify:** สร้างสัญญา SOLAR ROOFTOP (E057-2025) จากไฟล์จริง `2025_JSPC_LEASING.xlsx` กับ JSIT2016 — **ยอด gross liability + VAT ตรง sheet SUM เป๊ะ** (164,304 / ชำระ 3,912 / คงเหลือ 160,392 / current 23,472 / LT 136,920; VAT 10,748.64/255.92/1,535.52); ดอกเบี้ยแยกรายงวดต่างจาก Excel ≤0.02 สตางค์ (วิธีปัดเศษ IRR), ยอดเงินต้นปิดที่ 0.00 เป๊ะ. generate → ADJ-2025-0001 (Dr ดอกเบี้ยจ่าย 1,840.49 / Cr ดอกเบี้ยรอตัด 1,840.49) เข้า Adjustment module + adjusted TB สมดุล. UI ผ่าน Preview ครบ
 - **หมายเหตุความแม่น:** engine สร้างยอดสอดคล้องภายในสัญญา (รวมเป๊ะ); การ split รายงวดอาจต่าง Excel ต้นทาง ≤ ไม่กี่สตางค์ → ปรับ manual ได้ที่หน้า adjustment
+
+### ✅ Fixed Asset Register — เสร็จ (2026-06-05, req v11 docs/14)
+ทะเบียนสินทรัพย์ถาวร (source of truth) + ค่าเสื่อมราคา 2 ชุด (บัญชี/ภาษี) + จำหน่าย/ขาย กำไร/ขาดทุนอัตโนมัติ → generate adjustment เข้า TB
+
+- **Domain:** `AssetTypeMaster` (มาสเตอร์ประเภท + อัตราบัญชี/ภาษี + อายุ, global, seed 8 ประเภทมาตรฐาน) + `FixedAsset` (รหัส/ชื่อ/ประเภท/วันได้มา/ราคาทุน/มูลค่าซาก/อัตราบัญชี+ภาษี override ได้/สถานะ Active·Disposed·Sold·WrittenOff/วันจำหน่าย+ราคาขาย + ผูกบัญชี GL: ค่าเสื่อมสะสม/ค่าเสื่อมราคา/สินทรัพย์). enums `FixedAssetStatus`, `DepreciationSet`(Book/Tax); `AdjustmentSourceType.FixedAsset=5`. migration `AddFixedAssets`. **ไม่เก็บ schedule — คำนวณสด**
+- **Engine:** `DepreciationEngine` (pure) — เส้นตรง: ปีเต็ม = round(ราคาทุน×อัตรา%, 2), ฐาน = ราคาทุน−มูลค่าซาก (cap สะสมไม่เกินฐาน, ปีสุดท้าย absorb เศษ → NBV ปิดที่มูลค่าซากเป๊ะ), ปีแรก/ปีจำหน่าย prorate ตามวันใช้งานจริง/วันทั้งปี, อัตรา 0 = ไม่คิด (ที่ดิน). `AsOf(fiscalYear)` คืน opening/charge/closing/NBV; `Disposal()` = ราคาขาย − NBV ชุดบัญชี ณ วันจำหน่าย
+- **CQRS:** Create/Update(รวมจำหน่าย)/Delete สินทรัพย์ + `GenerateDepreciationAdjustment` (เลือกชุด Book/Tax → Dr ค่าเสื่อมราคา / Cr ค่าเสื่อมราคาสะสม ผ่าน `CreateAdjustmentEntryCommand`) + Queries: `GetAssetTypes` (global) / list / detail+schedule 2 ชุด+disposal / `GetFixedAssetWorkpaper` (per-asset + สรุปตามประเภท[NOTE2] + เทียบ GL: accum เทียบยอดสะสมสิ้นปี, expense เทียบ movement ในปี)
+- **API:** `FixedAssetsController` — `GET /fixed-assets/asset-types` + `GET/POST/PUT/DELETE /api/v1/fixed-assets` + `/fixed-assets/{id}` + `/fixed-assets/workpaper` + `/fixed-assets/generate-adjustment`
+- **Frontend:** เมนู "สินทรัพย์ถาวร" (ไอคอน building) → `/fixed-assets` 2 แท็บ (ทะเบียน + ฟอร์ม modal auto-fill อัตราจากประเภท + ตารางค่าเสื่อม 2 ชุด modal / กระดาษทำการ + สรุปประเภท + เทียบ GL + ปุ่ม generate ตามชุด)
+- **Verify:** ทดสอบ engine กับสินทรัพย์ที่รู้ผล — รถ 120,000 อัตรา 20% ได้มา 2024-07-01 → 2024 prorate 184/366 = 12,065.57, 2025 = 24,000, สะสม 36,065.57, NBV 83,934.43, ปีสุดท้าย 2029 absorb เศษปิด NBV 0.00 เป๊ะ; disposal รถขาย 100,000 อัตรา 20% ขาย 2025-06-30 ราคา 50,000 → ขาดทุน 82.19 (NBV 50,082.19); generate → ADJ-2025-0001 (source=FixedAsset) Dr ค่าเสื่อม / Cr ค่าเสื่อมสะสม สมดุล 33,917.81. API ครบ + UI ผ่าน Preview (ทะเบียน/modal 2 ชุด/workpaper/เทียบ GL) ไม่มี console error
+- **หมายเหตุ:** ใช้ตัดจำหน่ายแบบเส้นตรงเท่านั้น (req v11 = DATEDIF/straight-line); ยังไม่ generate journal ตัดจำหน่ายสินทรัพย์ออก (ลบ cost+accum+กำไร/ขาดทุน) — ตอนนี้แสดงกำไร/ขาดทุนให้บันทึก adjustment เองได้ที่หน้า adjustment
+
+#### ✅ Import จาก Express FAMAS.DBF — เสร็จ (2026-06-05)
+Express มีทะเบียนสินทรัพย์เต็มรูปใน **`FAMAS.DBF`** (ตารางมาตรฐานทุกบริษัท) → import ได้ ไม่ต้องป้อนมือ
+
+**หลักการสถาปัตยกรรม (User ยืนยัน 2026-06-05):** การนำเข้าข้อมูลจาก Express **ทำที่เดียว** = เมนู ข้อมูลและนำเข้า → "นำเข้าข้อมูล" (StartExpressImport) ซึ่งดึง **ทุกอย่าง**ในครั้งเดียว (GL/บัญชี/รอบบัญชี + **สินทรัพย์ FAMAS**). ไม่มีปุ่ม import แยกตามหน้าย่อย. ระบบเน้นดึงจาก Express ให้มากที่สุด ป้อนมือเฉพาะที่ Express ไม่มี (เช่น การแมพบัญชี GL)
+- **field map:** FASCOD→AssetCode, FASDES+FASDES2→AssetName, FASGRP→AssetGroupCode, ACCCOD→CategoryCode, STRDAT/PURDAT→AcquireDate, COSVAL→Cost, SALVAG→SalvageValue (Express ใช้ 1 บาท), RATE→Book+TaxRatePct, **ACCMBF→AccumulatedBroughtForward** (ค่าเสื่อมสะสมยกมา), SALDAT/SALAMT/→Disposal
+- **ยอดยกมา (ACCMBF):** field `AccumulatedBroughtForward` + `BroughtForwardYear` ใน FixedAsset → engine เริ่มสะสมจากยอดนี้ ณ ต้นปีที่ระบุ (แทนคำนวณใหม่จากวันได้มา) → **ตรง Express เป๊ะ** (verify ACS2023: ค่าเสื่อมสะสมตาม schedule vs GL ที่ Express โพสต์ ต่างเพียง 0.20–0.47 บาท)
+- **GL mapping (สิ่งเดียวที่ป้อนมือ):** Express เก็บแค่หมวด (ACCCOD) ไม่เก็บเลขบัญชีจริง → entity `AssetAccountMapping` (ClientCompanyId, CategoryCode, 3 บัญชี GL) + หน้าแมพ (modal "แมพบัญชี" ในหน้าสินทรัพย์) ที่ list หมวดทั้งหมด (รวมที่ยังไม่แมพ Id=0) → บันทึกแล้วเติมบัญชีให้สินทรัพย์ที่ยังว่างอัตโนมัติ; ครั้งถัดไป import กลางก็เติมบัญชีจาก mapping ให้เอง
+- **โครงสร้าง:** `FixedAssetImporter.ImportAsync` (service กลาง, upsert ตาม AssetCode, ไม่ผ่าน staging) ถูกเรียกใน `StartExpressImportCommandHandler` (หลัง auto-post, try/catch แยก). `IExpressDbfAdapter.ReadFixedAssetsAsync` (FAMAS optional → ว่างถ้าไม่มี). **ไม่มี** command/endpoint import แยกของ FA
+- **API ที่เหลือของ FA:** `GET/PUT /fixed-assets/account-mappings` (แมพบัญชี) — import ใช้ `POST /api/v1/import/express` กลาง
+- **Frontend (เฟสนี้):** ทะเบียนสินทรัพย์ **ดึงจาก Express 100%** — หน้าสินทรัพย์มีเฉพาะ "แมพบัญชี" (สิ่งเดียวที่ป้อนมือ) + ดู/แก้ไข/ลบ; **ปิดการสร้างสินทรัพย์เองในระบบ** (เอาปุ่ม + create path ใน UI ออก; backend CreateFixedAssetCommand/POST ยังคงอยู่ dormant สำหรับเฟสหน้า)
+
+#### ✅ ปิด gap NOTE2 + ตัดจำหน่าย (2026-06-05)
+- **สรุปตามประเภท (NOTE2):** workpaper เดิมกองรวม "(ไม่ระบุประเภท)" เพราะ import ไม่ map FASGRP→AssetType. แก้: `GetFixedAssetWorkpaperQueryHandler` จัดกลุ่มตาม **หมวด ACCCOD** (CategoryCode) + ใช้ชื่อจาก `AssetAccountMapping.Description` (เช่น "คอมพิวเตอร์") → fallback รหัสหมวด. Verify JSP CONNX: 6–7 กลุ่ม (CO/EQ/FU/SO...) พร้อม cost/charge ต่อกลุ่ม. รายการในทะเบียนแสดง categoryCode ในคอลัมน์ประเภทด้วย
+- **Generate รายการตัดจำหน่าย/ขาย:** `GenerateDisposalAdjustmentCommand` + `POST /fixed-assets/generate-disposal` + modal "สร้างรายการตัดจำหน่าย/ขาย" (เลือกสินทรัพย์ที่จำหน่ายในปีงบ + บัญชีกำไร/ขาดทุน/เงินรับ). สร้าง AdjustmentEntry: **Dr ค่าเสื่อมสะสม + Dr เงินรับ(ราคาขาย) + Dr ขาดทุน / Cr ราคาทุน + Cr กำไร** สมดุลเสมอ. Verify JSP CONNX ปี 2025: 2 รายการ (C003 กำไร 2,335.45 + E037 กำไร 3,712.47) → ADJ สมดุล Dr=Cr 38,142.24
+- **Bug fix (brought-forward ตัดหมดแล้ว):** สินทรัพย์ที่ ACCMBF = ฐานคิดค่าเสื่อม (ตัดหมดตั้งแต่ยอดยกมา) → `BuildSchedule` คืน 0 แถว → `AsOf`/`Disposal` เดิม fallback accum=0/NBV=ราคาทุนเต็ม **ผิด**. แก้: เพิ่ม `StartingAccum()` ให้ทั้งสอง method fallback เป็นยอดยกมา → C003 NBV ณ จำหน่าย = 1.00 (ซาก), accum = 19,112 ถูกต้อง
+- **Verify:** import กลาง ACS2023/2025 → batch message รวม "สินทรัพย์ 6 รายการ (ใหม่ 6)"; 6 สินทรัพย์ (ISUZU D-MAX/ตู้เย็น/แอร์/iPad/ตู้เชื่อม/มอเตอร์ไซค์), brought-forward ตรง, เติมบัญชีจาก mapping อัตโนมัติ, workpaper+generate+UI ผ่าน Preview ครบ
+
+### ✅ Export รายงาน (Excel/CSV/PDF) — เสร็จ (2026-06-05, req v11 #8)
+Utility กลางฝั่ง frontend + ปุ่ม `ExportMenu` ใช้ซ้ำทุกตาราง (เลี่ยงปัญหาฟอนต์ไทยใน PDF ฝั่ง server)
+- **`shared/utils/exportTable.ts`:** `exportCsv` (UTF-8 + BOM), `exportXlsx` (SheetJS `xlsx` 0.20.3 จาก CDN ทางการ — 0 vulnerabilities; 1 section = 1 sheet), `exportPdf` (เปิดหน้าต่างพร้อม `window.print()` → Save as PDF; ไทยเรนเดอร์ผ่านฟอนต์ระบบ Sarabun/Tahoma). รับ `ExportSection[]` (รายงานหลายส่วน เช่น BS+P&L, FA workpaper 3 ส่วน)
+- **`shared/components/ui/ExportMenu.tsx`:** dropdown "ส่งออก ▾" (Excel/CSV/PDF) + `getSections()` lazy build
+- **ติดตั้งครบทุกตารางที่มีข้อมูลจริง:** งบทดลอง, บัญชีแยกประเภท (flatten lines), งบการเงิน (BS 3 ส่วน + P&L), งบทดลองหลังปรับปรุง, **รายการปรับปรุง (entries)**, สินทรัพย์ถาวร (ทะเบียน + workpaper 3 ส่วน), เช่าซื้อ/เงินกู้ workpaper, **ปฏิทินงาน (compliance tasks)**, **ประวัตินำเข้า**, **ปิดรอบบัญชี (สถานะ 12 งวด)**, ประวัติการใช้งาน, รายชื่อลูกค้า (รายการ paginated = export หน้าปัจจุบัน)
+- **Verify:** CSV ได้ UTF-8 ไทยถูก (title/subtitle/section/headers + data), Excel ได้ .xlsx zip valid (PK magic, MIME ถูก), typecheck ผ่าน, render ปกติ — ทดสอบจริงทั้ง FA workpaper + ประวัตินำเข้า
+- **เหลือเฉพาะโมดูล stub** (VAT/AR/AP/Payroll/Bank) ที่ยังไม่มีข้อมูลจริง — เพิ่ม `ExportMenu` ได้ทันทีเมื่อโมดูลพร้อม; รายงานภาษี = ComingSoon, ภ.ง.ด.50 เป็นฟอร์ม (ไม่ใช่ตาราง)
+
+### ✅ ชื่อทางการบริษัท + master upsert (2026-06-05)
+แยกชื่อ Express ออกจากชื่อทางการ + เปลี่ยน import เป็น upsert (ไม่ลบทิ้ง) — รองรับเปลี่ยนชื่อ/ที่อยู่บริษัท
+- **ClientCompany เพิ่ม:** `LegalName` (ชื่อทางการ ใช้ออกงบ/แสดงทั้งระบบ — แก้ได้, import **ไม่ทับ**), `EnglishName`, sync `Address` จาก ISINFO; `Name` = ชื่อ Express (sync ทับได้ = reference). unique business key `(TaxId, BranchCode)` filtered `[TaxId]<>'' AND [IsActive]=1`; PK ยังเป็น `Id`
+- **Migration `AddClientLegalNameAndProfile`:** backfill `LegalName=Name`; dedup รายการ active ที่ taxid+branch ซ้ำ (คงตัวที่มีข้อมูล/ไม่ใช่สำเนา, soft-deactivate ตัวที่เหลือ — เคส COPY1 "บริษัท TEST" ปิด, MILLIONT คงไว้); สร้าง unique index
+- **Import = upsert profile:** `StartExpressImport` อ่าน ISINFO refresh `Name/Address/EnglishName` (sync) **คง LegalName**; backfill LegalName ถ้าว่าง; ลง audit `SyncProfile`. ExpressDbfAdapter normalize `\xa0`→space; อ่าน ADDR02/ADDR01
+- **Master upsert:** AccountingPeriods เปลี่ยน wholesale-replace → upsert by (Year,PeriodNo); Accounts upsert อยู่แล้ว (found→update/ไม่ลบ). ExpressDatasetFilter ตัด `COPY*`/X-/Z- (path) เพิ่ม
+- **Display ทั้งระบบ → LegalName:** ~14 handlers (TB/GL/FS/AdjustedTB/FA/Leasing/ClosingPeriod/Compliance/Import/Audit/Dashboard) + ClientList(name=LegalName) + ClientDetail(เพิ่ม legalName) + ฟอร์มแก้ไข edit LegalName (โชว์ชื่อ Express เป็น ref เมื่อต่างกัน)
+- **Historical (snapshot ชื่อ/ที่อยู่ต่อปีที่ล็อกงบ): เลื่อนไป report package (docs/18)** — ออกแบบ schema รองรับแล้ว (LegalName เป็นตัวตั้งต้น snapshot)
+- **Verify:** backfill 72/72, dedup COPY1 ปิด, unique index, แก้ LegalName→report แสดงชื่อใหม่, re-import คง LegalName + sync Name (normalize), edit form + client list ผ่าน Preview ไม่มี error
+
+### ✅ VAT / ภ.พ.30 — เสร็จ (2026-06-05, โมดูล #3 + req v11 "PP30 auto จาก VAT")
+นำเข้ารายงานภาษีซื้อ/ขายจาก Express **ISVAT.DBF** → ออกรายงาน ภ.พ.30 รายเดือน + รายละเอียดรายใบกำกับภาษี
+
+- **Express ISVAT.DBF (ทุกบริษัทที่จด VAT):** `VATREC` แยก **S=ภาษีขาย(Output)** / **P=ภาษีซื้อ(Input)**, `VATPRD`=เดือนภาษี (งวด ภ.พ.30), `AMT01+AMT02`=ฐานภาษี, `VAT01+VAT02`=ภาษี, `AMTRAT0`=ยอดอัตรา 0%, `DOCNUM/DOCDAT/REFNUM/DESCRP/TAXID/PRENAM/LATE`. ตรวจ: ฐาน×7% ตรง VAT01 เป๊ะ
+- **Domain:** `VatEntry` (transactional, ดึงจาก Express 100% ไม่แก้มือ) + enum `VatEntryType` (Output=1/Input=2). migration `AddVatEntries`. config: VatType เก็บเป็น **string** (`HasConversion<string>`) → ห้าม cast `(int)` ใน LINQ-to-SQL projection (materialize ก่อนแล้ว map ใน memory)
+- **Import:** `IExpressDbfAdapter.ReadVatEntriesAsync` (ISVAT optional → ว่างถ้าไม่จด VAT, เฉพาะ VATREC S/P) + `VatEntryImporter.ImportAsync` (แทนที่ทั้งชุดต่อบริษัท = sync ใหม่ทุก import คล้าย JournalEntry/batch) เรียกใน `StartExpressImport` (try/catch แยก, audit `ImportVat`). **ไม่มีปุ่ม import แยก** (หลักการนำเข้ากลาง)
+- **CQRS/API:** `GetVatReportQuery` (ภ.พ.30 รายเดือน ม.ค.–ธ.ค. + ยอดรวมทั้งปี, NetVat=ภาษีขาย−ภาษีซื้อ) / `GetVatEntriesQuery` (รายละเอียด: ตัวกรองเดือน+ประเภท) / `GetVatYearsQuery` (ปีที่มีข้อมูล). `VatController` — `GET /vat/report` · `/vat/years` · `/vat`
+- **Frontend:** เมนู "ภาษีมูลค่าเพิ่ม" → `/vat` 2 แท็บ (ภ.พ.30 รายเดือน + รายละเอียดภาษีซื้อ/ขาย) + ปีจาก /vat/years (auto เลือกปีล่าสุด) + ExportMenu ทั้งสองตาราง
+- **Verify (JSIT2016/JSP CONNX):** import → VAT 863+ รายการ; ภ.พ.30 ปี 2025 ตรงการรวมจาก DBF ทุกเดือนเป๊ะ (ม.ค. ขาย 208,764.08/14,613.50 n17, ซื้อ 175,573.75/12,290.14 n20; รวมขายทั้งปี 3,579,075.16 ≈ รายได้ใน P&L 3,579,157.45 = cross-check ผ่าน); รายละเอียด Jan ขาย 17 รายการ sum VAT ตรงรายงาน; UI ทั้ง 2 แท็บ + ชื่อบริษัทไทยถูกต้อง ผ่าน Preview ไม่มี console error
+- **เครื่องมือ:** `tools/dbf_diag.py` (dump fields + sample จาก DBF ใด ๆ ด้วย cp874) — ใช้ reverse-engineer ISVAT/ISTAX และต่อยอด AR*/AP*/Payroll
 
 ### คำตอบ Open Questions ที่ใช้เป็นฐานพัฒนา (ยืนยัน 2026-06-04)
 1. "เชื่อม DB Express" = **อ่านไฟล์ DBF โดยตรง** (ที่ทำอยู่) → ไม่มีความขัดแย้งกับ pipeline ปัจจุบัน

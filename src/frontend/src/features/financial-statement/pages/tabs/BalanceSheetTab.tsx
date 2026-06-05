@@ -1,7 +1,15 @@
 import { useState } from 'react'
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
+import ExportMenu from '../../../../shared/components/ui/ExportMenu'
 import type { BalanceSheetDto, FsLineDto } from '../../types/financialStatement.types'
+import type { ExportSection } from '../../../../shared/utils/exportTable'
+
+const FS_COLS = [
+  { key: 'refCode', header: 'รหัส' },
+  { key: 'label', header: 'รายการ' },
+  { key: 'amount', header: 'จำนวนเงิน', align: 'right' as const },
+]
 
 function fmt(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -25,10 +33,17 @@ export default function BalanceSheetTab({ data, isLoading, isError, queried }: P
 
   const balanced = Math.abs(data.balanceDifference) < 0.01
 
+  const exportSections = (): ExportSection[] => [
+    { name: 'สินทรัพย์', columns: FS_COLS, rows: data.assets },
+    { name: 'หนี้สิน', columns: FS_COLS, rows: data.liabilities },
+    { name: 'ส่วนของผู้ถือหุ้น', columns: FS_COLS, rows: data.equity },
+  ]
+
   return (
     <div>
-      <Card className="mb-4 px-6 py-4">
-        <p className="font-semibold text-slate-800 text-lg">{data.clientCode} — {data.clientName}</p>
+      <Card className="mb-4 flex items-start justify-between px-6 py-4">
+        <div>
+        <p className="font-semibold text-slate-800 text-lg">{data.clientName}</p>
         <p className="text-sm text-gray-500">งบแสดงฐานะการเงิน ณ วันที่ 31 ธันวาคม {data.fiscalYear}</p>
         {!balanced && (
           <p className="text-red-500 text-xs mt-1 font-medium">
@@ -38,6 +53,11 @@ export default function BalanceSheetTab({ data, isLoading, isError, queried }: P
         {balanced && (
           <p className="text-green-600 text-xs mt-1">✓ งบสมดุล</p>
         )}
+        </div>
+        <ExportMenu
+          meta={{ title: `งบแสดงฐานะการเงิน ปี ${data.fiscalYear}`, subtitle: data.clientName, fileName: `balance-sheet-${data.clientCode}-${data.fiscalYear}` }}
+          getSections={exportSections}
+        />
       </Card>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">

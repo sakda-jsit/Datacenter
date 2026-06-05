@@ -1,7 +1,9 @@
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
+import ExportMenu from '../../../../shared/components/ui/ExportMenu'
 import { ACCOUNT_TYPE_LABEL } from '../../types/adjustment.types'
 import type { AdjustedTrialBalanceReportDto, AdjustedTrialBalanceRowDto } from '../../types/adjustment.types'
+import type { ExportSection } from '../../../../shared/utils/exportTable'
 
 function fmt(n: number) {
   if (n === 0) return '—'
@@ -36,10 +38,26 @@ export default function AdjustedTrialBalanceTab({ data, isLoading, isError, quer
     }, {}),
   )
 
+  const exportSections = (): ExportSection[] => [{
+    name: 'งบทดลองหลังปรับปรุง',
+    columns: [
+      { key: 'accountCode', header: 'รหัสบัญชี' },
+      { key: 'accountName', header: 'ชื่อบัญชี' },
+      { key: 'balanceBeforeDebit', header: 'ก่อนปรับ DR', align: 'right' },
+      { key: 'balanceBeforeCredit', header: 'ก่อนปรับ CR', align: 'right' },
+      { key: 'adjustmentDebit', header: 'ปรับปรุง DR', align: 'right' },
+      { key: 'adjustmentCredit', header: 'ปรับปรุง CR', align: 'right' },
+      { key: 'finalDebit', header: 'หลังปรับ DR', align: 'right' },
+      { key: 'finalCredit', header: 'หลังปรับ CR', align: 'right' },
+    ],
+    rows: data.rows,
+  }]
+
   return (
     <div>
-      <Card className="mb-4 px-6 py-4">
-        <p className="text-lg font-semibold text-slate-800">{data.clientCode} — {data.clientName}</p>
+      <Card className="mb-4 flex items-start justify-between px-6 py-4">
+        <div>
+        <p className="text-lg font-semibold text-slate-800">{data.clientName}</p>
         <p className="text-sm text-gray-500">
           งบทดลองหลังปรับปรุง ปีบัญชี {data.fiscalYear} · {data.rows.length} บัญชี
         </p>
@@ -48,6 +66,11 @@ export default function AdjustedTrialBalanceTab({ data, isLoading, isError, quer
           <BalanceBadge ok={data.adjustmentsBalanced} label="รายการปรับปรุงสมดุล" />
           <BalanceBadge ok={data.balancedAfter} label="ยอดหลังปรับสมดุล" />
         </div>
+        </div>
+        <ExportMenu
+          meta={{ title: `งบทดลองหลังปรับปรุง ปี ${data.fiscalYear}`, subtitle: data.clientName, fileName: `adjusted-tb-${data.clientCode}-${data.fiscalYear}` }}
+          getSections={exportSections}
+        />
       </Card>
 
       <Card className="overflow-x-auto">

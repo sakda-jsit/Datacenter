@@ -25,6 +25,7 @@ public class GetClientListQueryHandler(IApplicationDbContext db, ICompanyAccessG
             query = query.Where(c =>
                 c.Code.ToLower().Contains(search) ||
                 c.Name.ToLower().Contains(search) ||
+                c.LegalName.ToLower().Contains(search) ||
                 c.TaxId.Contains(search));
         }
 
@@ -34,7 +35,7 @@ public class GetClientListQueryHandler(IApplicationDbContext db, ICompanyAccessG
             .OrderBy(c => c.Code)
             .Skip((request.PageNumber - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(c => new ClientListDto(c.Id, c.Code, c.Name, c.TaxId, c.IsActive))
+            .Select(c => new ClientListDto(c.Id, c.Code, c.LegalName, c.TaxId, c.IsActive))
             .ToListAsync(ct);
 
         return PaginatedResult<ClientListDto>.Create(items, total, request.PageNumber, request.PageSize);

@@ -65,7 +65,7 @@ public class GetAuditLogsQueryHandler(IApplicationDbContext db, ICompanyAccessGu
         var companyNames = await db.ClientCompanies
             .AsNoTracking()
             .Where(c => companyIds.Contains(c.Id))
-            .ToDictionaryAsync(c => c.Id, c => c.Name, ct);
+            .ToDictionaryAsync(c => c.Id, c => c.LegalName, ct);
 
         var items = logs.Select(l => new AuditLogDto(
             l.Id,

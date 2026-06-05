@@ -26,6 +26,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AdjustmentEntry> AdjustmentEntries => Set<AdjustmentEntry>();
     public DbSet<AdjustmentEntryLine> AdjustmentEntryLines => Set<AdjustmentEntryLine>();
     public DbSet<LeaseContract> LeaseContracts => Set<LeaseContract>();
+    public DbSet<AssetTypeMaster> AssetTypeMasters => Set<AssetTypeMaster>();
+    public DbSet<FixedAsset> FixedAssets => Set<FixedAsset>();
+    public DbSet<AssetAccountMapping> AssetAccountMappings => Set<AssetAccountMapping>();
+    public DbSet<VatEntry> VatEntries => Set<VatEntry>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -9,6 +9,7 @@ type IconName =
   | 'upload'
   | 'calculator'
   | 'scale'
+  | 'building'
   | 'book'
   | 'receipt'
   | 'bill'
@@ -96,6 +97,7 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/adjustments', icon: 'scale', label: 'กระดาษทำการปิดงบ', desc: 'งบทดลองหลังปรับปรุง' },
       { to: '/leasing', icon: 'bank', label: 'เช่าซื้อ / เงินกู้', desc: 'ตารางตัดบัญชี + ปรับปรุง' },
+      { to: '/fixed-assets', icon: 'building', label: 'สินทรัพย์ถาวร', desc: 'ค่าเสื่อม 2 ชุด + จำหน่าย' },
       { to: '/financial-statement', icon: 'chart', label: 'งบการเงิน', desc: 'กำไรขาดทุนและฐานะการเงิน' },
       { to: '/closing-period', icon: 'lock', label: 'ปิดรอบบัญชี', desc: 'ตรวจสอบและ lock period' },
     ],
@@ -168,6 +170,12 @@ function SidebarIcon({ name, className = 'h-8 w-8' }: { name: IconName; classNam
     scale: (
       <>
         <path d="M12 4v17M5 7h14M7 7l-4 7h8L7 7ZM17 7l-4 7h8l-4-7Z" {...common} />
+      </>
+    ),
+    building: (
+      <>
+        <rect x="4" y="3" width="16" height="18" rx="1.5" {...common} />
+        <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2M10 21v-3h4v3" {...common} />
       </>
     ),
     book: (

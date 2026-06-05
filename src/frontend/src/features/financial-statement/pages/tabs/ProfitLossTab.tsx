@@ -2,8 +2,10 @@ import { useState } from 'react'
 import Button from '../../../../shared/components/ui/Button'
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
+import ExportMenu from '../../../../shared/components/ui/ExportMenu'
 import { useUpsertExternalInput } from '../../hooks/useFinancialStatement'
 import type { FsLineDto, ProfitLossDto } from '../../types/financialStatement.types'
+import type { ExportSection } from '../../../../shared/utils/exportTable'
 
 function fmt(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -50,18 +52,41 @@ export default function ProfitLossTab({ data, isLoading, isError, queried, clien
     <div>
       <Card className="mb-4 flex items-center justify-between px-6 py-4">
         <div>
-          <p className="font-semibold text-slate-800 text-lg">{data.clientCode} — {data.clientName}</p>
+          <p className="font-semibold text-slate-800 text-lg">{data.clientName}</p>
           <p className="text-sm text-gray-500">
             งบกำไรขาดทุน ปี {data.fiscalYear}
             {data.monthFrom && data.monthTo ? ` เดือน ${data.monthFrom}–${data.monthTo}` : ''}
           </p>
         </div>
-        <Button
-          variant="ghost"
-          onClick={() => setShowTaxForm(v => !v)}
-        >
-          ระบุภาษีเงินได้ (X4)
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportMenu
+            meta={{ title: `งบกำไรขาดทุน ปี ${data.fiscalYear}`, subtitle: data.clientName, fileName: `profit-loss-${data.clientCode}-${data.fiscalYear}` }}
+            getSections={(): ExportSection[] => {
+              const cols = [
+                { key: 'refCode', header: 'รหัส' },
+                { key: 'label', header: 'รายการ' },
+                { key: 'amount', header: 'จำนวนเงิน', align: 'right' as const },
+              ]
+              return [{
+                name: 'งบกำไรขาดทุน',
+                columns: cols,
+                rows: [
+                  ...data.incomeLines,
+                  data.costOfGoods,
+                  ...data.expenseLines,
+                  data.financeCost,
+                  data.incomeTax,
+                ].filter(Boolean),
+              }]
+            }}
+          />
+          <Button
+            variant="ghost"
+            onClick={() => setShowTaxForm(v => !v)}
+          >
+            ระบุภาษีเงินได้ (X4)
+          </Button>
+        </div>
       </Card>
 
       {/* Tax input form */}

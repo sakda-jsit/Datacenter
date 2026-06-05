@@ -44,7 +44,7 @@ public class GetImportHistoryQueryHandler(IApplicationDbContext db, ICompanyAcce
                 x.Id,
                 x.ClientCompanyId,
                 x.ClientCompany.Code,
-                x.ClientCompany.Name,
+                x.ClientCompany.LegalName,
                 x.SourceType,
                 x.ImportType,
                 x.FiscalYear,

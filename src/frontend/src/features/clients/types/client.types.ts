@@ -7,6 +7,7 @@ export interface ClientListDto {
 }
 
 export interface ClientDetailDto extends ClientListDto {
+  legalName: string   // ชื่อทางการ (แก้ได้/ใช้ออกงบ); name = ชื่อจาก Express (อ้างอิง)
   branchCode: string
   address?: string
   fiscalYearStartMonth: number
@@ -22,7 +23,7 @@ export interface CreateClientRequest {
 }
 
 export interface UpdateClientRequest {
-  name: string
+  legalName: string
   taxId: string
   branchCode: string
   address?: string

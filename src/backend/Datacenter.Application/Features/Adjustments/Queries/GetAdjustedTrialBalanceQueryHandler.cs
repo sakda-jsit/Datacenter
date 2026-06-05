@@ -85,6 +85,6 @@ public class GetAdjustedTrialBalanceQueryHandler(IApplicationDbContext db)
         }
 
         return new AdjustedTrialBalanceReportDto(
-            client.Id, client.Code, client.Name, request.FiscalYear, rows);
+            client.Id, client.Code, client.LegalName, request.FiscalYear, rows);
     }
 }

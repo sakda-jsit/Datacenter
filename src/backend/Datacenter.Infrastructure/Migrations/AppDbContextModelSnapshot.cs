@@ -268,6 +268,107 @@ namespace Datacenter.Infrastructure.Migrations
                     b.ToTable("AdjustmentEntryLines", (string)null);
                 });
 
+            modelBuilder.Entity("Datacenter.Domain.Entities.AssetAccountMapping", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AccumDepreciationAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("AssetAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CategoryCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("ClientCompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("DepreciationExpenseAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientCompanyId", "CategoryCode")
+                        .IsUnique();
+
+                    b.ToTable("AssetAccountMappings", (string)null);
+                });
+
+            modelBuilder.Entity("Datacenter.Domain.Entities.AssetTypeMaster", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("DefaultBookRatePct")
+                        .HasColumnType("decimal(9,4)");
+
+                    b.Property<decimal>("DefaultTaxRatePct")
+                        .HasColumnType("decimal(9,4)");
+
+                    b.Property<int>("DefaultUsefulLifeYears")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("AssetTypeMasters", (string)null);
+                });
+
             modelBuilder.Entity("Datacenter.Domain.Entities.AuditLog", b =>
                 {
                     b.Property<long>("Id")
@@ -348,11 +449,20 @@ namespace Datacenter.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("EnglishName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<int>("FiscalYearStartMonth")
                         .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<string>("LegalName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<DateTime?>("ModifiedAt")
                         .HasColumnType("datetime2");
@@ -374,6 +484,10 @@ namespace Datacenter.Infrastructure.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("TaxId", "BranchCode")
+                        .IsUnique()
+                        .HasFilter("[TaxId] <> '' AND [IsActive] = 1");
 
                     b.ToTable("ClientCompanies", (string)null);
                 });
@@ -509,6 +623,119 @@ namespace Datacenter.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("ComplianceTasks");
+                });
+
+            modelBuilder.Entity("Datacenter.Domain.Entities.FixedAsset", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccumDepreciationAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("AccumulatedBroughtForward")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("AcquireDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("AssetAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AssetCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("AssetGroupCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("AssetName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int?>("AssetTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AttachmentPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("BookRatePct")
+                        .HasColumnType("decimal(9,4)");
+
+                    b.Property<int>("BroughtForwardYear")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CategoryCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("ClientCompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Cost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DepreciationExpenseAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DisposalDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DisposalNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal?>("DisposalProceeds")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("SalvageValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("TaxRatePct")
+                        .HasColumnType("decimal(9,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssetTypeId");
+
+                    b.HasIndex("ClientCompanyId", "AssetCode")
+                        .IsUnique();
+
+                    b.HasIndex("ClientCompanyId", "IsActive");
+
+                    b.ToTable("FixedAssets", (string)null);
                 });
 
             modelBuilder.Entity("Datacenter.Domain.Entities.FsExternalInput", b =>
@@ -1064,6 +1291,91 @@ namespace Datacenter.Infrastructure.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("Datacenter.Domain.Entities.VatEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("BaseAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ClientCompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CounterpartyPrefix")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("CounterpartyTaxId")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTime?>("DocumentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DocumentNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int?>("ImportBatchId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsLate")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RecordType")
+                        .HasMaxLength(4)
+                        .HasColumnType("nvarchar(4)");
+
+                    b.Property<string>("ReferenceNo")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("TaxPeriod")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("VatAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("VatDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("VatType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<decimal>("ZeroRatedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientCompanyId", "TaxPeriod", "VatType");
+
+                    b.ToTable("VatEntries", (string)null);
+                });
+
             modelBuilder.Entity("Datacenter.Domain.Entities.Account", b =>
                 {
                     b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
@@ -1135,6 +1447,17 @@ namespace Datacenter.Infrastructure.Migrations
                     b.Navigation("AdjustmentEntry");
                 });
 
+            modelBuilder.Entity("Datacenter.Domain.Entities.AssetAccountMapping", b =>
+                {
+                    b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
+                        .WithMany()
+                        .HasForeignKey("ClientCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClientCompany");
+                });
+
             modelBuilder.Entity("Datacenter.Domain.Entities.ClosingPeriod", b =>
                 {
                     b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
@@ -1188,6 +1511,24 @@ namespace Datacenter.Infrastructure.Migrations
                     b.Navigation("ClientCompany");
 
                     b.Navigation("CompletedByUser");
+                });
+
+            modelBuilder.Entity("Datacenter.Domain.Entities.FixedAsset", b =>
+                {
+                    b.HasOne("Datacenter.Domain.Entities.AssetTypeMaster", "AssetType")
+                        .WithMany()
+                        .HasForeignKey("AssetTypeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
+                        .WithMany()
+                        .HasForeignKey("ClientCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssetType");
+
+                    b.Navigation("ClientCompany");
                 });
 
             modelBuilder.Entity("Datacenter.Domain.Entities.FsExternalInput", b =>
@@ -1284,6 +1625,17 @@ namespace Datacenter.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("ImportBatch");
+                });
+
+            modelBuilder.Entity("Datacenter.Domain.Entities.VatEntry", b =>
+                {
+                    b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
+                        .WithMany()
+                        .HasForeignKey("ClientCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClientCompany");
                 });
 
             modelBuilder.Entity("Datacenter.Domain.Entities.AdjustmentEntry", b =>

@@ -35,6 +35,9 @@ public class StartExpressImportCommandHandler(
                 new[] { new FluentValidation.Results.ValidationFailure(
                     "Path", $"ไม่พบไฟล์ ISINFO.DBF ในโฟลเดอร์ '{folderPath}'") });
 
+        // refresh ข้อมูลบริษัทจาก ISINFO (sync ชื่อ Express/ที่อยู่/ชื่ออังกฤษ — คง LegalName ที่แก้เอง)
+        await RefreshCompanyProfileAsync(request.ClientCompanyId, folderPath, ct);
+
         // นิยามรอบบัญชี (ISPRD) เป็น source of truth — ปีที่นำเข้าต้องอยู่ในนิยามนี้เท่านั้น
         IReadOnlyList<Features.Import.DTOs.ExpressAccountingPeriodDto> periods;
         try
@@ -166,6 +169,56 @@ public class StartExpressImportCommandHandler(
                     batch.Message += $" (post อัตโนมัติไม่สำเร็จ: {ex.Message} — กรุณากดปุ่ม Post เข้าบัญชี)";
                     await db.SaveChangesAsync(CancellationToken.None);
                 }
+
+                // นำเข้าทะเบียนสินทรัพย์ถาวรจาก FAMAS.DBF พร้อมกัน (ดึงข้อมูลจาก Express ครบในครั้งเดียว)
+                // แยก try/catch เพื่อไม่ให้ความล้มเหลวของ FA ทำให้ batch หลักเสียหาย
+                try
+                {
+                    var faResult = await FixedAssets.Services.FixedAssetImporter.ImportAsync(
+                        db, dbfAdapter, folderPath, request.ClientCompanyId, request.FiscalYear, currentUser.Username, ct);
+                    if (faResult.Read > 0)
+                    {
+                        batch.Message += $" · {faResult.Message}";
+                        await audit.LogAsync(
+                            action: "ImportFixedAssets",
+                            entityName: "ImportBatch",
+                            entityId: batch.Id.ToString(),
+                            afterValue: faResult.Message,
+                            companyId: request.ClientCompanyId,
+                            cancellationToken: ct);
+                        await db.SaveChangesAsync(ct);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    batch.Message += $" (นำเข้าสินทรัพย์ไม่สำเร็จ: {ex.Message})";
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
+
+                // นำเข้ารายงานภาษีมูลค่าเพิ่ม (ภาษีซื้อ/ขาย) จาก ISVAT.DBF พร้อมกัน
+                // แยก try/catch เพื่อไม่ให้ความล้มเหลวของ VAT ทำให้ batch หลักเสียหาย
+                try
+                {
+                    var vatResult = await Vat.Services.VatEntryImporter.ImportAsync(
+                        db, dbfAdapter, folderPath, request.ClientCompanyId, batch.Id, currentUser.Username, ct);
+                    if (vatResult.Read > 0)
+                    {
+                        batch.Message += $" · {vatResult.Message}";
+                        await audit.LogAsync(
+                            action: "ImportVat",
+                            entityName: "ImportBatch",
+                            entityId: batch.Id.ToString(),
+                            afterValue: vatResult.Message,
+                            companyId: request.ClientCompanyId,
+                            cancellationToken: ct);
+                        await db.SaveChangesAsync(ct);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    batch.Message += $" (นำเข้าภาษีมูลค่าเพิ่มไม่สำเร็จ: {ex.Message})";
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
             }
 
             return batch.Id;
@@ -179,6 +232,56 @@ public class StartExpressImportCommandHandler(
             // but we must still persist the failure status so the batch record is not left as "Running".
             await db.SaveChangesAsync(CancellationToken.None);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// sync ข้อมูลบริษัทจาก ISINFO (upsert profile): อัปเดต Name(Express)/Address/EnglishName ถ้าเปลี่ยน
+    /// แต่ **ไม่แตะ LegalName** (ชื่อทางการที่แก้เอง) — ถ้า LegalName ว่างจึง backfill = ชื่อ Express.
+    /// ไม่ทำให้ import ล้มถ้าอ่าน ISINFO ไม่ได้.
+    /// </summary>
+    private async Task RefreshCompanyProfileAsync(int companyId, string folderPath, CancellationToken ct)
+    {
+        try
+        {
+            var info = await dbfAdapter.ReadCompanyInfoAsync(folderPath, ct);
+            var company = await db.ClientCompanies.FirstOrDefaultAsync(c => c.Id == companyId, ct);
+            if (company is null) return;
+
+            var expressName = !string.IsNullOrWhiteSpace(info.ThaiName) ? info.ThaiName
+                            : !string.IsNullOrWhiteSpace(info.EngName) ? info.EngName
+                            : company.Name;
+            var engName = string.IsNullOrWhiteSpace(info.EngName) ? null : info.EngName;
+
+            var changed = company.Name != expressName
+                       || company.Address != info.Address
+                       || company.EnglishName != engName
+                       || (!string.IsNullOrWhiteSpace(info.TaxId) && company.TaxId != info.TaxId);
+
+            if (changed)
+            {
+                var before = $"{company.Name} / {company.TaxId} / {company.Address}";
+                company.Name = expressName;
+                company.EnglishName = engName;
+                if (info.Address is not null) company.Address = info.Address;
+                if (!string.IsNullOrWhiteSpace(info.TaxId)) company.TaxId = info.TaxId;
+                company.ModifiedBy = currentUser.Username;
+                company.ModifiedAt = DateTime.UtcNow;
+
+                await audit.LogAsync("SyncProfile", "ClientCompany",
+                    entityId: company.Id.ToString(),
+                    beforeValue: before,
+                    afterValue: $"{company.Name} / {company.TaxId} / {company.Address}",
+                    companyId: companyId, cancellationToken: ct);
+            }
+
+            // backfill LegalName ถ้ายังว่าง (เช่น ข้อมูลเก่าก่อนมี column)
+            if (string.IsNullOrWhiteSpace(company.LegalName))
+                company.LegalName = expressName;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // อ่าน ISINFO ไม่ได้ — ข้าม ไม่ให้ import ล้ม
         }
     }
 
@@ -217,7 +320,7 @@ public class StartExpressImportCommandHandler(
     }
 
     /// <summary>
-    /// บันทึก/แทนที่นิยามรอบบัญชีของบริษัทตามปีที่ ISPRD ระบุ และ seed สถานะปิดงวด:
+    /// upsert นิยามรอบบัญชีของบริษัทตามปีที่ ISPRD ระบุ (ไม่ลบทิ้ง — แก้ของเดิม, เพิ่มของใหม่) และ seed สถานะปิดงวด:
     /// งวดที่ Express ระบุ LOCK='Y' จะตั้ง ClosingPeriod เป็น Closed (ถ้ายังเปิดอยู่)
     /// ยังไม่เรียก SaveChanges (รวมไว้กับการบันทึก batch)
     /// </summary>
@@ -230,13 +333,11 @@ public class StartExpressImportCommandHandler(
 
         var years = periods.Select(p => p.EndDate.Year).Distinct().ToList();
 
-        // นิยามรอบบัญชีต้อง mirror ISPRD ปัจจุบันเสมอ → แทนที่ทั้งหมดของบริษัท
-        // (ปีที่หลุดออกจากรอบบัญชีปัจจุบันจะไม่มีนิยาม = ถูกป้องกันไม่ให้ลบ)
+        // upsert by (Year, PeriodNo) — ไม่ทำ wholesale delete เพื่อให้ Id เสถียรและไม่กระทบประวัติ
         var existingPeriods = await db.AccountingPeriods
             .Where(p => p.ClientCompanyId == companyId)
             .ToListAsync(ct);
-        if (existingPeriods.Count > 0)
-            db.AccountingPeriods.RemoveRange(existingPeriods);
+        var periodByKey = existingPeriods.ToDictionary(p => (p.Year, p.PeriodNo));
 
         // ClosingPeriod เดิมของปีเหล่านั้น (ไว้ upsert สถานะตาม LOCK)
         var closingRows = await db.ClosingPeriods
@@ -249,16 +350,27 @@ public class StartExpressImportCommandHandler(
             int year = p.EndDate.Year;
             int periodNo = p.EndDate.Month; // ระบบใช้ Year+Month (1-12) — งวดอิงเดือนของวันสิ้นงวด
 
-            db.AccountingPeriods.Add(new Domain.Entities.AccountingPeriod
+            if (periodByKey.TryGetValue((year, periodNo), out var existingPeriod))
             {
-                ClientCompanyId = companyId,
-                Year = year,
-                PeriodNo = periodNo,
-                BeginDate = p.BeginDate,
-                EndDate = p.EndDate,
-                SourceLocked = p.Locked,
-                CreatedBy = currentUser.Username,
-            });
+                existingPeriod.BeginDate = p.BeginDate;
+                existingPeriod.EndDate = p.EndDate;
+                existingPeriod.SourceLocked = p.Locked;
+                existingPeriod.ModifiedBy = currentUser.Username;
+                existingPeriod.ModifiedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                db.AccountingPeriods.Add(new Domain.Entities.AccountingPeriod
+                {
+                    ClientCompanyId = companyId,
+                    Year = year,
+                    PeriodNo = periodNo,
+                    BeginDate = p.BeginDate,
+                    EndDate = p.EndDate,
+                    SourceLocked = p.Locked,
+                    CreatedBy = currentUser.Username,
+                });
+            }
 
             // seed: งวดที่ล็อกใน Express → ตั้งเป็น Closed (ไม่ downgrade งวดที่ปิด/ล็อกไว้แล้ว)
             if (p.Locked)

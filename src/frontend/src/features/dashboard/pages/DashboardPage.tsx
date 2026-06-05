@@ -106,7 +106,6 @@ export default function DashboardPage() {
           <table className="dc-table">
             <thead>
               <tr>
-                <th>รหัส</th>
                 <th>ชื่อบริษัท</th>
                 <th>สถานะ</th>
               </tr>
@@ -114,7 +113,6 @@ export default function DashboardPage() {
             <tbody>
               {data?.recentClients.map(c => (
                 <tr key={c.id}>
-                  <td className="font-mono font-semibold text-slate-600">{c.code}</td>
                   <td className="font-medium text-slate-800">{c.name}</td>
                   <td>
                     <span className={`dc-pill ${c.isActive ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}>

@@ -5,9 +5,11 @@ import Button from '../../../shared/components/ui/Button'
 import Card from '../../../shared/components/ui/Card'
 import PageHeader from '../../../shared/components/ui/PageHeader'
 import StateMessage from '../../../shared/components/ui/StateMessage'
+import ExportMenu from '../../../shared/components/ui/ExportMenu'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import { useGeneralLedger } from '../hooks/useGeneralLedger'
 import type { GeneralLedgerAccountDto, GeneralLedgerParams } from '../types/generalLedger.types'
+import type { ExportSection } from '../../../shared/utils/exportTable'
 
 function fmt(n: number) {
   if (n === 0) return '—'
@@ -69,9 +71,46 @@ export default function GeneralLedgerPage() {
     setExpandedIds(new Set())
   }
 
+  const exportSections = (): ExportSection[] => {
+    const rows = (report?.accounts ?? []).flatMap((acc) =>
+      acc.lines.map((ln) => ({
+        accountCode: acc.accountCode,
+        accountName: acc.accountName,
+        journalDate: ln.journalDate?.slice(0, 10) ?? '',
+        documentNo: ln.documentNo,
+        description: ln.description,
+        debitAmount: ln.debitAmount,
+        creditAmount: ln.creditAmount,
+        runningBalance: ln.runningBalance,
+      })),
+    )
+    return [{
+      name: 'บัญชีแยกประเภท',
+      columns: [
+        { key: 'accountCode', header: 'รหัสบัญชี' },
+        { key: 'accountName', header: 'ชื่อบัญชี' },
+        { key: 'journalDate', header: 'วันที่' },
+        { key: 'documentNo', header: 'เลขที่เอกสาร' },
+        { key: 'description', header: 'รายละเอียด' },
+        { key: 'debitAmount', header: 'เดบิต', align: 'right' },
+        { key: 'creditAmount', header: 'เครดิต', align: 'right' },
+        { key: 'runningBalance', header: 'ยอดคงเหลือ', align: 'right' },
+      ],
+      rows,
+    }]
+  }
+
   return (
     <div>
-      <PageHeader title="บัญชีแยกประเภท" />
+      <PageHeader
+        title="บัญชีแยกประเภท"
+        action={report ? (
+          <ExportMenu
+            meta={{ title: `บัญชีแยกประเภท ปี ${report.year}`, subtitle: report.clientName, fileName: `general-ledger-${report.clientCode}-${report.year}` }}
+            getSections={exportSections}
+          />
+        ) : undefined}
+      />
 
       <ReportFilterBar
         clients={[]}
@@ -114,7 +153,7 @@ export default function GeneralLedgerPage() {
         <>
           <Card className="mb-4 flex items-center justify-between px-6 py-4">
             <div>
-              <p className="font-semibold text-slate-800 text-lg">{report.clientCode} — {report.clientName}</p>
+              <p className="font-semibold text-slate-800 text-lg">{report.clientName}</p>
               <p className="text-sm text-gray-500">
                 บัญชีแยกประเภท ปี {report.year}
                 {report.monthFrom && report.monthTo ? ` เดือน ${report.monthFrom}–${report.monthTo}` : ''}

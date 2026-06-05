@@ -60,7 +60,7 @@ public class GetClosingPeriodsQueryHandler(IApplicationDbContext db)
             : [];
 
         return new ClosingPeriodOverviewDto(
-            client.Id, client.Code, client.Name, request.Year, isDefined, months);
+            client.Id, client.Code, client.LegalName, request.Year, isDefined, months);
     }
 
     private static string StatusName(PeriodStatus status) => status switch

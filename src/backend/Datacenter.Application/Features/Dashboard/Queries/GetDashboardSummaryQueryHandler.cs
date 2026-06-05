@@ -43,7 +43,7 @@ public class GetDashboardSummaryQueryHandler(
         var recentClients = await companiesQuery
             .OrderByDescending(c => c.Id)
             .Take(5)
-            .Select(c => new ClientStatusDto(c.Id, c.Code, c.Name, c.IsActive))
+            .Select(c => new ClientStatusDto(c.Id, c.Code, c.LegalName, c.IsActive))
             .ToListAsync(ct);
 
         return new DashboardSummaryDto(

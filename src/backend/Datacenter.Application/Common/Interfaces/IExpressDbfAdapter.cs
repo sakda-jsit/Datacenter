@@ -35,4 +35,16 @@ public interface IExpressDbfAdapter
     /// ใช้ ExpressDatasetFilter เพื่อคัดเฉพาะบริษัทปัจจุบัน
     /// </summary>
     Task<IReadOnlyList<ExpressDatasetDto>> ReadCompanyRegistryAsync(string basePath, CancellationToken ct = default);
+
+    /// <summary>
+    /// อ่านทะเบียนสินทรัพย์ถาวรจาก FAMAS.DBF (ข้ามระเบียนที่ไม่มีรหัส/ราคาทุน ≤ 0).
+    /// คืนรายการว่างถ้าไม่มีไฟล์หรือไม่มีข้อมูล (บางบริษัทไม่ใช้โมดูลสินทรัพย์).
+    /// </summary>
+    Task<IReadOnlyList<ExpressFixedAssetDto>> ReadFixedAssetsAsync(string companyFolderPath, CancellationToken ct = default);
+
+    /// <summary>
+    /// อ่านรายงานภาษีมูลค่าเพิ่ม (ภาษีซื้อ/ภาษีขาย) จาก ISVAT.DBF — เฉพาะ VATREC='S'/'P'.
+    /// คืนรายการว่างถ้าไม่มีไฟล์ (บริษัทที่ไม่ได้จด VAT).
+    /// </summary>
+    Task<IReadOnlyList<ExpressVatEntryDto>> ReadVatEntriesAsync(string companyFolderPath, CancellationToken ct = default);
 }

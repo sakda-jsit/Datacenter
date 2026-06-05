@@ -6,9 +6,11 @@ import Pagination from '../../../shared/components/ui/Pagination'
 import SearchInput from '../../../shared/components/ui/SearchInput'
 import StateMessage from '../../../shared/components/ui/StateMessage'
 import StatusBadge from '../../../shared/components/ui/StatusBadge'
+import ExportMenu from '../../../shared/components/ui/ExportMenu'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import { useAuditLogs } from '../hooks/useAuditLog'
 import type { AuditLogDto } from '../types/auditLog.types'
+import type { ExportSection } from '../../../shared/utils/exportTable'
 
 const PAGE_SIZE = 20
 
@@ -107,9 +109,33 @@ export default function AuditLogPage() {
     },
   ]
 
+  const exportSections = (): ExportSection[] => [{
+    name: 'ประวัติการใช้งาน',
+    columns: [
+      { key: 'createdAt', header: 'เวลา', value: (r) => fmtDateTime(r.createdAt) },
+      { key: 'username', header: 'ผู้ใช้', value: (r) => r.username || '' },
+      { key: 'action', header: 'การกระทำ' },
+      { key: 'entityName', header: 'รายการ' },
+      { key: 'entityId', header: 'รหัส' },
+      { key: 'clientName', header: 'บริษัท', value: (r) => r.clientName ?? '' },
+      { key: 'beforeValue', header: 'ก่อน', value: (r) => r.beforeValue ?? '' },
+      { key: 'afterValue', header: 'หลัง', value: (r) => r.afterValue ?? '' },
+    ],
+    rows: data?.items ?? [],
+  }]
+
   return (
     <div>
-      <PageHeader title="ประวัติการใช้งาน" description="Audit log การกระทำสำคัญทั้งหมดในระบบ" />
+      <PageHeader
+        title="ประวัติการใช้งาน"
+        description="Audit log การกระทำสำคัญทั้งหมดในระบบ"
+        action={data && data.items.length > 0 ? (
+          <ExportMenu
+            meta={{ title: 'ประวัติการใช้งาน (Audit Log)', subtitle: `หน้า ${data.pageNumber}/${data.totalPages}`, fileName: 'audit-log' }}
+            getSections={exportSections}
+          />
+        ) : undefined}
+      />
 
       <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg bg-white p-4 shadow">
         <div>

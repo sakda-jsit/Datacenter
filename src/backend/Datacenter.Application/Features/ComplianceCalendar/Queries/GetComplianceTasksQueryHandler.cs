@@ -30,7 +30,7 @@ public class GetComplianceTasksQueryHandler(IApplicationDbContext db)
             t.Id,
             t.ClientCompanyId,
             t.ClientCompany.Code,
-            t.ClientCompany.Name,
+            t.ClientCompany.LegalName,
             t.TaskType,
             ComplianceTaskHelpers.TaskTypeName(t.TaskType),
             t.Year,

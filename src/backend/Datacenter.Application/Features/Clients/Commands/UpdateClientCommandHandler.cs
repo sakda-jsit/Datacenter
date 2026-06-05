@@ -14,9 +14,9 @@ public class UpdateClientCommandHandler(IApplicationDbContext db, ICurrentUserSe
             .FirstOrDefaultAsync(x => x.Id == request.Id, ct)
             ?? throw new NotFoundException("ClientCompany", request.Id);
 
-        var before = client.Name;
+        var before = client.LegalName;
 
-        client.Name = request.Name.Trim();
+        client.LegalName = request.LegalName.Trim();   // ชื่อทางการ (Name = ชื่อ Express คง sync จาก import)
         client.TaxId = request.TaxId.Trim();
         client.BranchCode = request.BranchCode.Trim();
         client.Address = request.Address?.Trim();
@@ -25,7 +25,7 @@ public class UpdateClientCommandHandler(IApplicationDbContext db, ICurrentUserSe
         client.ModifiedBy = currentUser.Username;
 
         await audit.LogAsync("Update", "ClientCompany", client.Id.ToString(),
-            beforeValue: before, afterValue: client.Name, cancellationToken: ct);
+            beforeValue: before, afterValue: client.LegalName, cancellationToken: ct);
 
         await db.SaveChangesAsync(ct);
     }

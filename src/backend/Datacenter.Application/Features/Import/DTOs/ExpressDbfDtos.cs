@@ -16,7 +16,8 @@ public record ExpressCompanyInfoDto(
     string EngName,
     string TaxId,
     decimal VatRate,
-    int YearThai);
+    int YearThai,
+    string? Address = null);
 
 public record ExpressAccountRowDto(
     string AccountCode,
@@ -52,3 +53,45 @@ public record ExpressAccountingPeriodDto(
     DateTime BeginDate,
     DateTime EndDate,
     bool Locked);
+
+/// <summary>
+/// หนึ่งสินทรัพย์จากทะเบียนสินทรัพย์ Express (FAMAS.DBF).
+/// AccumulatedBroughtForward (ACCMBF) = ค่าเสื่อมสะสมยกมาต้นปีปัจจุบันของไฟล์;
+/// Method 1 = เส้นตรง; SaleDate/SaleAmount มีค่าเมื่อจำหน่าย/ขาย.
+/// </summary>
+public record ExpressFixedAssetDto(
+    string AssetCode,
+    string AssetName,
+    string? GroupCode,
+    string? CategoryCode,
+    DateTime? AcquireDate,
+    decimal Cost,
+    decimal Salvage,
+    decimal RatePct,
+    int LifeYears,
+    string Method,
+    decimal AccumulatedBroughtForward,
+    DateTime? SaleDate,
+    decimal SaleAmount,
+    string Status);
+
+/// <summary>
+/// หนึ่งรายการในรายงานภาษีมูลค่าเพิ่มจาก Express ISVAT.DBF.
+/// VatRecType: "S" = ภาษีขาย (Output), "P" = ภาษีซื้อ (Input).
+/// TaxPeriod (VATPRD) = เดือนภาษี; BaseAmount = AMT01+AMT02; VatAmount = VAT01+VAT02; ZeroRated = AMTRAT0.
+/// </summary>
+public record ExpressVatEntryDto(
+    string VatRecType,
+    DateTime? TaxPeriod,
+    DateTime? DocumentDate,
+    DateTime? VatDate,
+    string DocumentNo,
+    string? ReferenceNo,
+    string? Description,
+    string? CounterpartyTaxId,
+    string? CounterpartyPrefix,
+    decimal BaseAmount,
+    decimal VatAmount,
+    decimal ZeroRatedAmount,
+    bool IsLate,
+    string? RecordType);

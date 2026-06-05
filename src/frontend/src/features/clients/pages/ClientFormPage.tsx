@@ -37,7 +37,7 @@ export default function ClientFormPage() {
     if (existing) {
       setValues({
         code: existing.code,
-        name: existing.name,
+        name: existing.legalName,   // แก้ "ชื่อทางการ"; ชื่อ Express (existing.name) แสดงเป็นค่าอ้างอิง
         taxId: existing.taxId,
         branchCode: existing.branchCode,
         address: existing.address ?? '',
@@ -55,7 +55,7 @@ export default function ClientFormPage() {
         await updateMutation.mutateAsync({
           id: clientId,
           data: {
-            name: values.name,
+            legalName: values.name,
             taxId: values.taxId,
             branchCode: values.branchCode,
             address: values.address || undefined,
@@ -97,14 +97,17 @@ export default function ClientFormPage() {
           />
         </Field>
 
-        <Field label="ชื่อบริษัท / ผู้ประกอบการ *" error={errors.name}>
+        <Field label="ชื่อบริษัท (ชื่อทางการสำหรับออกงบ) *" error={errors.legalname || errors.name}>
           <input
             name="name"
             value={values.name}
             onChange={handleChange}
-            placeholder="ชื่อเต็มของลูกค้า"
-            className={inputCls(!!errors.name)}
+            placeholder="ชื่อเต็มของลูกค้าที่ใช้ในงบการเงิน"
+            className={inputCls(!!(errors.legalname || errors.name))}
           />
+          {isEdit && existing && existing.name !== values.name && (
+            <p className="mt-1 text-xs text-gray-400">ชื่อจาก Express: {existing.name}</p>
+          )}
         </Field>
 
         <Field label="เลขประจำตัวผู้เสียภาษี (13 หลัก) *" error={errors.taxid}>

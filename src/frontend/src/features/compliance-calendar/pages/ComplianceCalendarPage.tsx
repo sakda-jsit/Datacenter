@@ -3,8 +3,10 @@ import DataTable, { type DataTableColumn } from '../../../shared/components/tabl
 import Button from '../../../shared/components/ui/Button'
 import Card from '../../../shared/components/ui/Card'
 import StateMessage from '../../../shared/components/ui/StateMessage'
+import ExportMenu from '../../../shared/components/ui/ExportMenu'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import type { ClientListDto } from '../../clients/types/client.types'
+import type { ExportSection } from '../../../shared/utils/exportTable'
 import {
   useComplianceDashboard,
   useComplianceTasks,
@@ -114,7 +116,7 @@ export default function ComplianceCalendarPage({ clients }: Props) {
         <div>
           <p className="text-xs font-medium text-gray-500">บริษัทลูกค้า</p>
           <p className="text-sm font-semibold text-slate-800">
-            {selectedClient ? `${selectedClient.code} — ${selectedClient.name}` : 'เลือกบริษัทที่ header'}
+            {selectedClient ? selectedClient.name : 'เลือกบริษัทที่ header'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -180,12 +182,31 @@ export default function ComplianceCalendarPage({ clients }: Props) {
           {/* Task list */}
           <Card className="overflow-hidden">
             <div className="px-5 py-3 bg-slate-700 text-white flex items-center justify-between">
-              <p className="font-semibold text-sm">
-                {selectedMonth
-                  ? `รายการงาน — ${MONTH_NAMES[selectedMonth]} ${year}`
-                  : `รายการงานทั้งปี ${year}`}
-              </p>
-              {tasksLoading && <span className="text-xs opacity-70">กำลังโหลด...</span>}
+              <div className="flex items-center gap-3">
+                <p className="font-semibold text-sm">
+                  {selectedMonth
+                    ? `รายการงาน — ${MONTH_NAMES[selectedMonth]} ${year}`
+                    : `รายการงานทั้งปี ${year}`}
+                </p>
+                {tasksLoading && <span className="text-xs opacity-70">กำลังโหลด...</span>}
+              </div>
+              {tasks && tasks.length > 0 && (
+                <ExportMenu
+                  meta={{ title: `ปฏิทินงาน (Compliance) ปี ${year}`, fileName: `compliance-${year}` }}
+                  getSections={(): ExportSection[] => [{
+                    name: 'รายการงาน',
+                    columns: [
+                      { key: 'clientName', header: 'บริษัท' },
+                      { key: 'taskTypeName', header: 'ประเภทงาน' },
+                      { key: 'dueDate', header: 'ครบกำหนด', value: (t) => t.dueDate?.slice(0, 10) ?? '' },
+                      { key: 'statusName', header: 'สถานะ' },
+                      { key: 'assignedUserName', header: 'ผู้รับผิดชอบ', value: (t) => t.assignedUserName ?? '' },
+                      { key: 'note', header: 'หมายเหตุ', value: (t) => t.note ?? '' },
+                    ],
+                    rows: tasks,
+                  }]}
+                />
+              )}
             </div>
             {tasks && tasks.length === 0 && (
               <StateMessage centered>ยังไม่มีรายการงาน — กดปุ่ม "สร้าง" บนการ์ดเดือน</StateMessage>

@@ -6,7 +6,7 @@ public class UpdateClientCommandValidator : AbstractValidator<UpdateClientComman
 {
     public UpdateClientCommandValidator()
     {
-        RuleFor(x => x.Name)
+        RuleFor(x => x.LegalName)
             .NotEmpty().WithMessage("กรุณาระบุชื่อลูกค้า")
             .MaximumLength(200).WithMessage("ชื่อลูกค้าต้องไม่เกิน 200 ตัวอักษร");
 

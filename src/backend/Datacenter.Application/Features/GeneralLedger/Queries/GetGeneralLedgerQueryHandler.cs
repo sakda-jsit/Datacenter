@@ -30,7 +30,7 @@ public class GetGeneralLedgerQueryHandler(IApplicationDbContext db)
 
         if (accounts.Count == 0)
             return new GeneralLedgerReportDto(
-                client.Id, client.Code, client.Name,
+                client.Id, client.Code, client.LegalName,
                 request.Year, request.MonthFrom, request.MonthTo, []);
 
         var accountIds = accounts.Select(a => a.Id).ToHashSet();
@@ -100,7 +100,7 @@ public class GetGeneralLedgerQueryHandler(IApplicationDbContext db)
         }
 
         return new GeneralLedgerReportDto(
-            client.Id, client.Code, client.Name,
+            client.Id, client.Code, client.LegalName,
             request.Year, request.MonthFrom, request.MonthTo, glAccounts);
     }
 }

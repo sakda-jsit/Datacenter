@@ -25,6 +25,10 @@ public interface IApplicationDbContext
     DbSet<AdjustmentEntry> AdjustmentEntries { get; }
     DbSet<AdjustmentEntryLine> AdjustmentEntryLines { get; }
     DbSet<LeaseContract> LeaseContracts { get; }
+    DbSet<AssetTypeMaster> AssetTypeMasters { get; }
+    DbSet<FixedAsset> FixedAssets { get; }
+    DbSet<AssetAccountMapping> AssetAccountMappings { get; }
+    DbSet<VatEntry> VatEntries { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

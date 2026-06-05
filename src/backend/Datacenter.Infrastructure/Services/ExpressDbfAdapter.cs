@@ -40,7 +40,11 @@ public class ExpressDbfAdapter : IExpressDbfAdapter
     }
 
     private static string Str(DbfRow rec, string field)
-        => (rec[field]?.ToString() ?? "").Trim();
+        => Normalize(rec[field]?.ToString() ?? "");
+
+    /// <summary>Express ใส่ non-breaking space (0xA0) แทนช่องว่างในชื่อ/ที่อยู่ — แปลงเป็นช่องว่างปกติ</summary>
+    private static string Normalize(string s)
+        => s.Replace((char)0x00A0, ' ').Trim();
 
     private static decimal Dec(DbfRow rec, string field)
         => rec[field] switch
@@ -99,12 +103,19 @@ public class ExpressDbfAdapter : IExpressDbfAdapter
         var r       = records.FirstOrDefault()
                       ?? throw new InvalidOperationException("ISINFO ไม่มีข้อมูล");
 
+        // ที่อยู่: ADDR02 (ไทย) เป็นหลัก, fallback ADDR01
+        var addr2 = Str(r, "ADDR02");
+        var addr1 = Str(r, "ADDR01");
+        var address = !string.IsNullOrWhiteSpace(addr2) ? addr2
+                    : !string.IsNullOrWhiteSpace(addr1) ? addr1 : null;
+
         var dto = new ExpressCompanyInfoDto(
             ThaiName : Str(r, "THINAM"),
             EngName  : Str(r, "ENGNAM"),
             TaxId    : Str(r, "TAXID"),
             VatRate  : Dec(r, "VATRAT"),
-            YearThai : (int)Dec(r, "YEARTHAI"));
+            YearThai : (int)Dec(r, "YEARTHAI"),
+            Address  : address);
 
         return Task.FromResult(dto);
     }
@@ -185,5 +196,88 @@ public class ExpressDbfAdapter : IExpressDbfAdapter
         }
 
         return Task.FromResult<IReadOnlyList<ExpressAccountingPeriodDto>>(result);
+    }
+
+    public Task<IReadOnlyList<ExpressFixedAssetDto>> ReadFixedAssetsAsync(string companyFolderPath, CancellationToken ct = default)
+    {
+        // FAMAS เป็นไฟล์ทางเลือก — บางบริษัทไม่ใช้โมดูลสินทรัพย์ → คืนว่าง
+        List<DbfRow> records;
+        try { records = ReadDbf(companyFolderPath, "FAMAS"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressFixedAssetDto>>([]); }
+
+        var result = new List<ExpressFixedAssetDto>();
+        foreach (var r in records)
+        {
+            var code = Str(r, "FASCOD");
+            var cost = Dec(r, "COSVAL");
+            if (string.IsNullOrWhiteSpace(code) || cost <= 0) continue;
+
+            // ชื่อ: รวม FASDES + FASDES2 (บรรทัดต่อ)
+            var name = Str(r, "FASDES");
+            var name2 = Str(r, "FASDES2");
+            if (!string.IsNullOrWhiteSpace(name2)) name = $"{name} {name2}".Trim();
+
+            // วันเริ่มคิดค่าเสื่อม (STRDAT) เป็นหลัก, fallback วันซื้อ (PURDAT)
+            var acquire = Date(r, "STRDAT") ?? Date(r, "PURDAT");
+            var saleDate = Date(r, "SALDAT");
+
+            result.Add(new ExpressFixedAssetDto(
+                AssetCode: code,
+                AssetName: string.IsNullOrWhiteSpace(name) ? code : name,
+                GroupCode: Str(r, "FASGRP"),
+                CategoryCode: Str(r, "ACCCOD"),
+                AcquireDate: acquire,
+                Cost: Math.Round(cost, 2),
+                Salvage: Math.Round(Dec(r, "SALVAG"), 2),
+                RatePct: Math.Round(Dec(r, "RATE"), 2),
+                LifeYears: (int)Dec(r, "LIFE"),
+                Method: Str(r, "METHOD"),
+                AccumulatedBroughtForward: Math.Round(Dec(r, "ACCMBF"), 2),
+                SaleDate: saleDate,
+                SaleAmount: Math.Round(Dec(r, "SALAMT"), 2),
+                Status: Str(r, "STATUS")));
+        }
+
+        return Task.FromResult<IReadOnlyList<ExpressFixedAssetDto>>(result);
+    }
+
+    public Task<IReadOnlyList<ExpressVatEntryDto>> ReadVatEntriesAsync(string companyFolderPath, CancellationToken ct = default)
+    {
+        // ISVAT เป็นไฟล์ทางเลือก — บริษัทที่ไม่ได้จด VAT จะไม่มี → คืนว่าง
+        List<DbfRow> records;
+        try { records = ReadDbf(companyFolderPath, "ISVAT"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressVatEntryDto>>([]); }
+
+        var result = new List<ExpressVatEntryDto>();
+        foreach (var r in records)
+        {
+            var rec = Str(r, "VATREC").ToUpperInvariant();
+            if (rec != "S" && rec != "P") continue;   // เฉพาะภาษีขาย(S)/ภาษีซื้อ(P)
+
+            var period = Date(r, "VATPRD");
+            if (period is null) continue;              // ไม่มีเดือนภาษี — ข้าม
+
+            var baseAmt = Dec(r, "AMT01") + Dec(r, "AMT02");
+            var vatAmt  = Dec(r, "VAT01") + Dec(r, "VAT02");
+            var zero    = Dec(r, "AMTRAT0");
+
+            result.Add(new ExpressVatEntryDto(
+                VatRecType:        rec,
+                TaxPeriod:         period,
+                DocumentDate:      Date(r, "DOCDAT"),
+                VatDate:           Date(r, "VATDAT"),
+                DocumentNo:        Str(r, "DOCNUM"),
+                ReferenceNo:       Str(r, "REFNUM"),
+                Description:       Str(r, "DESCRP"),
+                CounterpartyTaxId: Str(r, "TAXID"),
+                CounterpartyPrefix: Str(r, "PRENAM"),
+                BaseAmount:        Math.Round(baseAmt, 2),
+                VatAmount:         Math.Round(vatAmt, 2),
+                ZeroRatedAmount:   Math.Round(zero, 2),
+                IsLate:            IsLocked(r, "LATE"),
+                RecordType:        Str(r, "RECTYP")));
+        }
+
+        return Task.FromResult<IReadOnlyList<ExpressVatEntryDto>>(result);
     }
 }

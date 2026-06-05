@@ -3,9 +3,11 @@ import ReportFilterBar from '../../../shared/components/report/ReportFilterBar'
 import Card from '../../../shared/components/ui/Card'
 import PageHeader from '../../../shared/components/ui/PageHeader'
 import StateMessage from '../../../shared/components/ui/StateMessage'
+import ExportMenu from '../../../shared/components/ui/ExportMenu'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import { useTrialBalance } from '../hooks/useTrialBalance'
 import type { TrialBalanceParams, TrialBalanceRowDto } from '../types/trialBalance.types'
+import type { ExportSection } from '../../../shared/utils/exportTable'
 
 const ACCOUNT_TYPE_LABEL: Record<string, string> = {
   Asset: 'สินทรัพย์',
@@ -60,9 +62,32 @@ export default function TrialBalancePage() {
       )
     : []
 
+  const exportSections = (): ExportSection[] => [{
+    name: 'งบทดลอง',
+    columns: [
+      { key: 'accountCode', header: 'รหัสบัญชี' },
+      { key: 'accountName', header: 'ชื่อบัญชี' },
+      { key: 'beginDebit', header: 'ยอดยกมา DR', align: 'right' },
+      { key: 'beginCredit', header: 'ยอดยกมา CR', align: 'right' },
+      { key: 'periodDebit', header: 'เดบิต', align: 'right' },
+      { key: 'periodCredit', header: 'เครดิต', align: 'right' },
+      { key: 'endDebit', header: 'คงเหลือ DR', align: 'right' },
+      { key: 'endCredit', header: 'คงเหลือ CR', align: 'right' },
+    ],
+    rows: report?.rows ?? [],
+  }]
+
   return (
     <div>
-      <PageHeader title="งบทดลอง" />
+      <PageHeader
+        title="งบทดลอง"
+        action={report ? (
+          <ExportMenu
+            meta={{ title: `งบทดลอง ปี ${report.year}`, subtitle: report.clientName, fileName: `trial-balance-${report.clientCode}-${report.year}` }}
+            getSections={exportSections}
+          />
+        ) : undefined}
+      />
 
       <ReportFilterBar
         clients={[]}
@@ -101,7 +126,7 @@ export default function TrialBalancePage() {
         <>
           {/* Header */}
           <Card className="mb-4 px-6 py-4">
-            <p className="font-semibold text-slate-800 text-lg">{report.clientCode} — {report.clientName}</p>
+            <p className="font-semibold text-slate-800 text-lg">{report.clientName}</p>
             <p className="text-sm text-gray-500">
               งบทดลอง ปี {report.year}
               {report.monthFrom && report.monthTo

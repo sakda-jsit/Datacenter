@@ -3,9 +3,11 @@ import Button from '../../../../shared/components/ui/Button'
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
 import AdjustmentFormModal from '../../components/AdjustmentFormModal'
+import ExportMenu from '../../../../shared/components/ui/ExportMenu'
 import { useAdjustmentEntries, useDeleteAdjustment } from '../../hooks/useAdjustments'
 import { SOURCE_TYPE_LABEL } from '../../types/adjustment.types'
 import type { AdjustmentEntryDto } from '../../types/adjustment.types'
+import type { ExportSection } from '../../../../shared/utils/exportTable'
 
 function fmt(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -51,7 +53,26 @@ export default function AdjustmentEntriesTab({ companyId, fiscalYear }: Props) {
           <p className="text-sm font-semibold text-slate-800">รายการปรับปรุง ปีบัญชี {fiscalYear}</p>
           <p className="text-xs text-gray-500">{entries?.length ?? 0} รายการ</p>
         </div>
-        <Button type="button" onClick={openCreate}>+ สร้างรายการปรับปรุง</Button>
+        <div className="flex items-center gap-2">
+          {entries && entries.length > 0 && (
+            <ExportMenu
+              meta={{ title: `รายการปรับปรุงปิดงบ ปี ${fiscalYear}`, fileName: `adjustment-entries-${companyId}-${fiscalYear}` }}
+              getSections={(): ExportSection[] => [{
+                name: 'รายการปรับปรุง',
+                columns: [
+                  { key: 'documentNo', header: 'เลขที่' },
+                  { key: 'entryDate', header: 'วันที่', value: (e) => e.entryDate.slice(0, 10) },
+                  { key: 'sourceType', header: 'ที่มา', value: (e) => SOURCE_TYPE_LABEL[e.sourceType] ?? '' },
+                  { key: 'reason', header: 'เหตุผล' },
+                  { key: 'reference', header: 'อ้างอิง', value: (e) => e.reference ?? '' },
+                  { key: 'totalDebit', header: 'จำนวนเงิน', align: 'right' },
+                ],
+                rows: entries,
+              }]}
+            />
+          )}
+          <Button type="button" onClick={openCreate}>+ สร้างรายการปรับปรุง</Button>
+        </div>
       </Card>
 
       {isError && <StateMessage tone="error">เกิดข้อผิดพลาด กรุณาลองใหม่</StateMessage>}

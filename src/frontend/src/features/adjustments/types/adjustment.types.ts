@@ -9,6 +9,7 @@ export const SourceType = {
   Loan: 2,
   Tax: 3,
   Other: 4,
+  FixedAsset: 5,
 } as const
 
 export type AdjustmentSourceType = (typeof SourceType)[keyof typeof SourceType]
@@ -19,6 +20,7 @@ export const SOURCE_TYPE_LABEL: Record<number, string> = {
   2: 'เงินกู้',
   3: 'ภาษี',
   4: 'อื่น ๆ',
+  5: 'สินทรัพย์ถาวร',
 }
 
 export const SOURCE_TYPE_OPTIONS: { value: AdjustmentSourceType; label: string }[] = [

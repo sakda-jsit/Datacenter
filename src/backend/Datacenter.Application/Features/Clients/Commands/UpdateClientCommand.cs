@@ -5,7 +5,7 @@ namespace Datacenter.Application.Features.Clients.Commands;
 
 public record UpdateClientCommand(
     int Id,
-    string Name,
+    string LegalName,
     string TaxId,
     string BranchCode,
     string? Address,

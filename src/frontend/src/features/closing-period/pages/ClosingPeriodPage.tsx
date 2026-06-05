@@ -7,7 +7,9 @@ import { useAuth } from '../../../shared/hooks/useAuth'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import MonthCard from '../components/MonthCard'
 import ClosingValidationPanel from '../components/ClosingValidationPanel'
+import ExportMenu from '../../../shared/components/ui/ExportMenu'
 import { useClosingPeriods, useClosingValidation, useCloseMutations } from '../hooks/useClosingPeriod'
+import type { ExportSection } from '../../../shared/utils/exportTable'
 
 function apiErrorMessage(err: unknown): string {
   const axiosErr = err as AxiosError<{ title?: string }>
@@ -48,6 +50,24 @@ export default function ClosingPeriodPage() {
         description="ตรวจสอบความพร้อม ปิดงวด ล็อกถาวร และเปิดงวดบัญชีใหม่"
         action={
           <div className="flex items-end gap-2">
+            {overview && overview.months.length > 0 && (
+              <ExportMenu
+                meta={{ title: `สถานะปิดรอบบัญชี ปี ${year}`, subtitle: overview.clientName, fileName: `closing-period-${overview.clientCode}-${year}` }}
+                getSections={(): ExportSection[] => [{
+                  name: 'ปิดรอบบัญชี',
+                  columns: [
+                    { key: 'month', header: 'งวด/เดือน', align: 'right' },
+                    { key: 'statusName', header: 'สถานะ' },
+                    { key: 'beginDate', header: 'วันเริ่มงวด', value: (m) => m.beginDate?.slice(0, 10) ?? '' },
+                    { key: 'endDate', header: 'วันสิ้นงวด', value: (m) => m.endDate?.slice(0, 10) ?? '' },
+                    { key: 'closedAt', header: 'ปิดเมื่อ', value: (m) => m.closedAt?.slice(0, 10) ?? '' },
+                    { key: 'closedByName', header: 'ปิดโดย', value: (m) => m.closedByName ?? '' },
+                    { key: 'sourceLocked', header: 'ล็อกจาก Express', value: (m) => (m.sourceLocked ? 'ใช่' : '') },
+                  ],
+                  rows: overview.months,
+                }]}
+              />
+            )}
             <label className="flex flex-col text-xs font-medium text-slate-600">
               ปีบัญชี (AD)
               <input
@@ -90,7 +110,7 @@ export default function ClosingPeriodPage() {
             <>
               <Card className="mb-4 px-6 py-4">
                 <p className="text-lg font-semibold text-slate-800">
-                  {overview.clientCode} — {overview.clientName}
+                  {overview.clientName}
                 </p>
                 <p className="text-sm text-gray-500">สถานะการปิดงวด ปี {overview.year} · {overview.months.length} งวด</p>
               </Card>

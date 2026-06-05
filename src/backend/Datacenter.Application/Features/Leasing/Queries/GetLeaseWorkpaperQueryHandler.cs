@@ -46,7 +46,7 @@ public class GetLeaseWorkpaperQueryHandler(IApplicationDbContext db)
         var glComparison = await BuildGlComparisonAsync(
             request.ClientCompanyId, request.FiscalYear, liabilityByAcc, deferredByAcc, vatByAcc, ct);
 
-        return new LeaseWorkpaperDto(client.Id, client.Code, client.Name, request.FiscalYear, rows, glComparison);
+        return new LeaseWorkpaperDto(client.Id, client.Code, client.LegalName, request.FiscalYear, rows, glComparison);
     }
 
     private static void Accumulate(Dictionary<int, decimal> map, int accountId, decimal amount)

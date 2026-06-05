@@ -3,6 +3,8 @@ import Button from '../../../../shared/components/ui/Button'
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
 import { useGenerateLeaseAdjustment, useLeaseWorkpaper } from '../../hooks/useLeasing'
+import ExportMenu from '../../../../shared/components/ui/ExportMenu'
+import type { ExportSection } from '../../../../shared/utils/exportTable'
 
 function fmt(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -72,9 +74,41 @@ export default function WorkpaperTab({ companyId, fiscalYear }: Props) {
         <>
           {/* สรุปต่อสัญญา */}
           <Card className="mb-4 overflow-x-auto">
-            <div className="border-b px-4 py-3">
-              <p className="text-sm font-semibold text-slate-800">กระดาษทำการ ณ สิ้นปี {fiscalYear}</p>
-              <p className="text-xs text-gray-500">{data.clientName} ({data.clientCode})</p>
+            <div className="flex items-start justify-between border-b px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">กระดาษทำการ ณ สิ้นปี {fiscalYear}</p>
+                <p className="text-xs text-gray-500">{data.clientName}</p>
+              </div>
+              <ExportMenu
+                meta={{ title: `กระดาษทำการเช่าซื้อ/เงินกู้ ปี ${fiscalYear}`, subtitle: data.clientName, fileName: `leasing-workpaper-${data.clientCode}-${fiscalYear}` }}
+                getSections={(): ExportSection[] => [
+                  {
+                    name: 'รายสัญญา',
+                    columns: [
+                      { key: 'contractNo', header: 'เลขที่สัญญา' },
+                      { key: 'assetName', header: 'ทรัพย์สิน' },
+                      { key: 'liaClose', header: 'หนี้สินคงเหลือ', align: 'right', value: (r) => r.grossLiability.closing },
+                      { key: 'curPortion', header: 'ถึงกำหนด 1 ปี', align: 'right', value: (r) => r.grossLiability.currentPortion },
+                      { key: 'longTerm', header: 'ระยะยาว', align: 'right', value: (r) => r.grossLiability.longTerm },
+                      { key: 'defClose', header: 'ดบ.รอตัดคงเหลือ', align: 'right', value: (r) => r.deferredInterest.closing },
+                      { key: 'interest', header: 'ดอกเบี้ยรับรู้ปีนี้', align: 'right', value: (r) => r.interestRecognizedInYear },
+                    ],
+                    rows: data.rows,
+                  },
+                  {
+                    name: 'เทียบ GL',
+                    columns: [
+                      { key: 'accountCode', header: 'บัญชี' },
+                      { key: 'accountName', header: 'ชื่อบัญชี' },
+                      { key: 'role', header: 'บทบาท' },
+                      { key: 'scheduleClosing', header: 'ตาม schedule', align: 'right' },
+                      { key: 'glClosing', header: 'ตาม GL', align: 'right' },
+                      { key: 'diff', header: 'ผลต่าง', align: 'right' },
+                    ],
+                    rows: data.glComparison,
+                  },
+                ]}
+              />
             </div>
             <table className="w-full text-xs">
               <thead className="bg-slate-50 text-gray-600">

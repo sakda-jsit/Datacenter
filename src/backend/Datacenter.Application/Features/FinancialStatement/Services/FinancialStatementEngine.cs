@@ -78,7 +78,7 @@ public static class FinancialStatementEngine
         decimal totalLE      = totalLiab + totalEquity;
 
         return new BalanceSheetDto(
-            client.Id, client.Code, client.Name, fiscalYear,
+            client.Id, client.Code, client.LegalName, fiscalYear,
             assetLines, liabLines, equityLines,
             totalAssets, totalLiab, totalEquity, totalLE,
             totalAssets - totalLE);
@@ -148,7 +148,7 @@ public static class FinancialStatementEngine
         decimal netProfit = profitBeforeTax - externalTax;
 
         return new ProfitLossDto(
-            client.Id, client.Code, client.Name, fiscalYear, monthFrom, monthTo,
+            client.Id, client.Code, client.LegalName, fiscalYear, monthFrom, monthTo,
             incomeLines, cogLine, expLines, financeLine, taxLine,
             totalIncome, totalExpenses, grossProfit,
             profitBeforeFinance, profitBeforeTax, netProfit);

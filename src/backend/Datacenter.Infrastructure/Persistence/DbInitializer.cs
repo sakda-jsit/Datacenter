@@ -70,13 +70,17 @@ public static class DbInitializer
                         if (await db.ClientCompanies.AnyAsync(c => c.Code == code)) continue;
 
                         var info = await expressAdapter.ReadCompanyInfoAsync(folder);
+                        var expressName = !string.IsNullOrWhiteSpace(info.ThaiName) ? info.ThaiName
+                                        : !string.IsNullOrWhiteSpace(info.EngName) ? info.EngName
+                                        : dataset.CompName;
 
                         db.ClientCompanies.Add(new ClientCompany
                         {
                             Code                 = code,
-                            Name                 = !string.IsNullOrWhiteSpace(info.ThaiName) ? info.ThaiName
-                                                 : !string.IsNullOrWhiteSpace(info.EngName) ? info.EngName
-                                                 : dataset.CompName,
+                            Name                 = expressName,
+                            LegalName            = expressName,   // default = ชื่อ Express; แก้ไขได้ภายหลัง
+                            EnglishName          = string.IsNullOrWhiteSpace(info.EngName) ? null : info.EngName,
+                            Address              = info.Address,
                             TaxId                = info.TaxId,
                             BranchCode           = "00000",
                             FiscalYearStartMonth = 1,
@@ -132,6 +136,14 @@ public static class DbInitializer
             db.StatementLines.AddRange(StatementLineSeed.GetLines());
             await db.SaveChangesAsync();
             logger.LogInformation("Seeded statement lines (FS master reference).");
+        }
+
+        // ── Seed AssetTypeMasters (ประเภทสินทรัพย์ + อัตราค่าเสื่อมมาตรฐาน) ──────
+        if (!await db.AssetTypeMasters.AnyAsync())
+        {
+            db.AssetTypeMasters.AddRange(AssetTypeSeed.GetTypes());
+            await db.SaveChangesAsync();
+            logger.LogInformation("Seeded asset type masters (FA depreciation rates).");
         }
     }
 }
