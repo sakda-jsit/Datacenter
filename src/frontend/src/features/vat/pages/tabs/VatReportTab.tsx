@@ -1,6 +1,7 @@
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
 import ExportMenu from '../../../../shared/components/ui/ExportMenu'
+import DataAsOfBanner from '../../../../shared/components/ui/DataAsOfBanner'
 import { useVatReport } from '../../hooks/useVat'
 import { MONTH_LABEL } from '../../types/vat.types'
 import type { ExportSection } from '../../../../shared/utils/exportTable'
@@ -33,6 +34,8 @@ export default function VatReportTab({ companyId, year }: Props) {
       )}
 
       {data && hasData && (
+        <>
+        <DataAsOfBanner dataAsOf={data.dataAsOf} noun="ภาษีมูลค่าเพิ่ม" />
         <Card className="overflow-x-auto">
           <div className="flex items-start justify-between border-b px-4 py-3">
             <div>
@@ -105,6 +108,7 @@ export default function VatReportTab({ companyId, year }: Props) {
             </tfoot>
           </table>
         </Card>
+        </>
       )}
     </div>
   )

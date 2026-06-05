@@ -50,6 +50,12 @@ public class GetApAgingQueryHandler(IApplicationDbContext db)
             .OrderByDescending(r => r.Total)
             .ToList();
 
-        return new ApAgingReportDto(request.ClientCompanyId, clientName, asOf, groups);
+        // ความสดของข้อมูล: เวลานำเข้าใบตั้งหนี้เจ้าหนี้ล่าสุด
+        DateTime? dataAsOf = await db.ApInvoices
+            .AsNoTracking()
+            .Where(i => i.ClientCompanyId == request.ClientCompanyId)
+            .MaxAsync(i => (DateTime?)i.CreatedAt, ct);
+
+        return new ApAgingReportDto(request.ClientCompanyId, clientName, asOf, groups, dataAsOf);
     }
 }

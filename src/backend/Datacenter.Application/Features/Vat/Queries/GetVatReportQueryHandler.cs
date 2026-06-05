@@ -50,6 +50,12 @@ public class GetVatReportQueryHandler(IApplicationDbContext db)
                 InputCount: input?.Count ?? 0));
         }
 
-        return new VatReportDto(request.ClientCompanyId, client, request.Year, months);
+        // ความสดของข้อมูล: เวลานำเข้า VAT ล่าสุด (ทั้งบริษัท — ไม่จำกัดปี)
+        DateTime? dataAsOf = await db.VatEntries
+            .AsNoTracking()
+            .Where(v => v.ClientCompanyId == request.ClientCompanyId)
+            .MaxAsync(v => (DateTime?)v.CreatedAt, ct);
+
+        return new VatReportDto(request.ClientCompanyId, client, request.Year, months, dataAsOf);
     }
 }

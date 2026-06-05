@@ -37,6 +37,7 @@ export interface VatReport {
   totalNetVat: number
   totalOutputCount: number
   totalInputCount: number
+  dataAsOf?: string
 }
 
 export interface VatEntryItem {

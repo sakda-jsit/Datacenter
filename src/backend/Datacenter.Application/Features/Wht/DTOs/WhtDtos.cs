@@ -18,7 +18,8 @@ public record WhtReportDto(
     int ClientCompanyId,
     string ClientName,
     int Year,
-    IReadOnlyList<WhtMonthlyDto> Months)
+    IReadOnlyList<WhtMonthlyDto> Months,
+    DateTime? DataAsOf = null)   // เวลานำเข้า WHT ล่าสุด (snapshot — ไม่ใช่ real-time)
 {
     public decimal TotalPnd3Base => Months.Sum(m => m.Pnd3Base);
     public decimal TotalPnd3Tax => Months.Sum(m => m.Pnd3Tax);

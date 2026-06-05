@@ -50,8 +50,14 @@ public class GetBankBookQueryHandler(IApplicationDbContext db)
                 deposit, withdrawal, running));
         }
 
+        // ความสดของข้อมูล: เวลานำเข้ารายการเดินบัญชีล่าสุด (ทั้งบริษัท)
+        DateTime? dataAsOf = await db.BankTransactions
+            .AsNoTracking()
+            .Where(t => t.ClientCompanyId == request.ClientCompanyId)
+            .MaxAsync(t => (DateTime?)t.CreatedAt, ct);
+
         return new BankBookDto(
             request.ClientCompanyId, clientName, account.BankAccountCode, account.BankName, account.AccountNumber,
-            request.Year, opening, rows);
+            request.Year, opening, rows, dataAsOf);
     }
 }

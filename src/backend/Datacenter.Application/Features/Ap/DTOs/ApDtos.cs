@@ -47,7 +47,8 @@ public record ApAgingReportDto(
     int ClientCompanyId,
     string ClientName,
     DateTime AsOfDate,
-    IReadOnlyList<ApAgingRowDto> Rows)
+    IReadOnlyList<ApAgingRowDto> Rows,
+    DateTime? DataAsOf = null)   // เวลานำเข้าใบตั้งหนี้เจ้าหนี้ล่าสุด (snapshot)
 {
     public decimal TotalNotDue => Rows.Sum(r => r.NotDue);
     public decimal TotalDays1To30 => Rows.Sum(r => r.Days1To30);

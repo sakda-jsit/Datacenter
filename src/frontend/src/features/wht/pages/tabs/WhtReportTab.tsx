@@ -1,6 +1,7 @@
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
 import ExportMenu from '../../../../shared/components/ui/ExportMenu'
+import DataAsOfBanner from '../../../../shared/components/ui/DataAsOfBanner'
 import { useWhtReport } from '../../hooks/useWht'
 import { MONTH_LABEL } from '../../types/wht.types'
 import type { ExportSection } from '../../../../shared/utils/exportTable'
@@ -33,6 +34,8 @@ export default function WhtReportTab({ companyId, year }: Props) {
       )}
 
       {data && hasData && (
+        <>
+        <DataAsOfBanner dataAsOf={data.dataAsOf} noun="ภาษีหัก ณ ที่จ่าย" />
         <Card className="overflow-x-auto">
           <div className="flex items-start justify-between border-b px-4 py-3">
             <div>
@@ -103,6 +106,7 @@ export default function WhtReportTab({ companyId, year }: Props) {
             </tfoot>
           </table>
         </Card>
+        </>
       )}
     </div>
   )

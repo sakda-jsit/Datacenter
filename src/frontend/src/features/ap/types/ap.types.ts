@@ -54,4 +54,5 @@ export interface ApAgingReport {
   totalDays61To90: number
   totalDays90Plus: number
   grandTotal: number
+  dataAsOf?: string
 }

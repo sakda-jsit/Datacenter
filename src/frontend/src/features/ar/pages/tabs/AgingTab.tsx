@@ -1,6 +1,7 @@
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
 import ExportMenu from '../../../../shared/components/ui/ExportMenu'
+import DataAsOfBanner from '../../../../shared/components/ui/DataAsOfBanner'
 import { useArAging } from '../../hooks/useAr'
 import type { ExportSection } from '../../../../shared/utils/exportTable'
 
@@ -28,6 +29,8 @@ export default function AgingTab({ companyId, asOf }: Props) {
       )}
 
       {data && data.rows.length > 0 && (
+        <>
+        <DataAsOfBanner dataAsOf={data.dataAsOf} noun="ลูกหนี้การค้า" />
         <Card className="overflow-x-auto">
           <div className="flex items-start justify-between border-b px-4 py-3">
             <div>
@@ -92,6 +95,7 @@ export default function AgingTab({ companyId, asOf }: Props) {
             </tfoot>
           </table>
         </Card>
+        </>
       )}
     </div>
   )

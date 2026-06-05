@@ -50,6 +50,12 @@ public class GetArAgingQueryHandler(IApplicationDbContext db)
             .OrderByDescending(r => r.Total)
             .ToList();
 
-        return new ArAgingReportDto(request.ClientCompanyId, clientName, asOf, groups);
+        // ความสดของข้อมูล: เวลานำเข้าใบแจ้งหนี้ลูกหนี้ล่าสุด
+        DateTime? dataAsOf = await db.ArInvoices
+            .AsNoTracking()
+            .Where(i => i.ClientCompanyId == request.ClientCompanyId)
+            .MaxAsync(i => (DateTime?)i.CreatedAt, ct);
+
+        return new ArAgingReportDto(request.ClientCompanyId, clientName, asOf, groups, dataAsOf);
     }
 }

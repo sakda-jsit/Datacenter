@@ -47,6 +47,12 @@ public class GetWhtReportQueryHandler(IApplicationDbContext db)
                 Pnd53Count: p53?.Count ?? 0));
         }
 
-        return new WhtReportDto(request.ClientCompanyId, client, request.Year, months);
+        // ความสดของข้อมูล: เวลานำเข้า WHT ล่าสุด (ทั้งบริษัท — ไม่จำกัดปี)
+        DateTime? dataAsOf = await db.WhtEntries
+            .AsNoTracking()
+            .Where(w => w.ClientCompanyId == request.ClientCompanyId)
+            .MaxAsync(w => (DateTime?)w.CreatedAt, ct);
+
+        return new WhtReportDto(request.ClientCompanyId, client, request.Year, months, dataAsOf);
     }
 }

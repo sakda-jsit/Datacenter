@@ -33,6 +33,7 @@ export interface WhtReport {
   totalPnd53Tax: number
   totalPnd53Count: number
   totalTax: number
+  dataAsOf?: string
 }
 
 export const WhtEmailStatus = {

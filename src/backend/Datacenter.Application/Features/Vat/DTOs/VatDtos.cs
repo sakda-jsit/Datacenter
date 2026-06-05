@@ -20,7 +20,8 @@ public record VatReportDto(
     int ClientCompanyId,
     string ClientName,
     int Year,
-    IReadOnlyList<VatMonthlyDto> Months)
+    IReadOnlyList<VatMonthlyDto> Months,
+    DateTime? DataAsOf = null)   // เวลานำเข้า VAT ล่าสุด (snapshot — ไม่ใช่ real-time)
 {
     public decimal TotalOutputBase => Months.Sum(m => m.OutputBase);
     public decimal TotalOutputVat => Months.Sum(m => m.OutputVat);

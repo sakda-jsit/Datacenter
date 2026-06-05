@@ -1,17 +1,12 @@
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
 import ExportMenu from '../../../../shared/components/ui/ExportMenu'
+import DataAsOfBanner from '../../../../shared/components/ui/DataAsOfBanner'
 import { useStockValuation } from '../../hooks/useStock'
 import type { ExportSection } from '../../../../shared/utils/exportTable'
 
 function fmt(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-function fmtDateTime(s?: string) {
-  if (!s) return null
-  const iso = /[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : s + 'Z' // CreatedAt เป็น UTC
-  return new Date(iso).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 interface Props {
@@ -36,15 +31,7 @@ export default function ValuationTab({ companyId, fiscalYear }: Props) {
       {data && data.items.length > 0 && (
         <>
           {/* ความสดของข้อมูล (snapshot ตอน import — ไม่ใช่ real-time) */}
-          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
-            <span>📌 ข้อมูลสินค้าคงคลังเป็น snapshot ณ ตอนนำเข้า — </span>
-            <span className="font-semibold">
-              {data.dataAsOf ? `นำเข้าล่าสุด ${fmtDateTime(data.dataAsOf)}` : 'ยังไม่มีข้อมูลนำเข้า'}
-            </span>
-            <a href="/import" className="ml-auto rounded border border-amber-300 bg-white px-2 py-0.5 text-amber-700 no-underline hover:bg-amber-100">
-              นำเข้าข้อมูลใหม่
-            </a>
-          </div>
+          <DataAsOfBanner dataAsOf={data.dataAsOf} noun="สินค้าคงคลัง" />
 
           {/* KPI cards */}
           <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">

@@ -34,4 +34,5 @@ export interface BankBook {
   totalDeposit: number
   totalWithdrawal: number
   closingBalance: number
+  dataAsOf?: string
 }

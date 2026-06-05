@@ -31,7 +31,8 @@ public record BankBookDto(
     string? AccountNumber,
     int Year,
     decimal OpeningBalance,
-    IReadOnlyList<BankBookRowDto> Rows)
+    IReadOnlyList<BankBookRowDto> Rows,
+    DateTime? DataAsOf = null)   // เวลานำเข้ารายการเดินบัญชีล่าสุด (snapshot)
 {
     public decimal TotalDeposit => Rows.Sum(r => r.Deposit);
     public decimal TotalWithdrawal => Rows.Sum(r => r.Withdrawal);

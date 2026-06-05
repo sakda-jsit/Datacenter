@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
 import ExportMenu from '../../../../shared/components/ui/ExportMenu'
+import DataAsOfBanner from '../../../../shared/components/ui/DataAsOfBanner'
 import { useBankAccounts, useBankBook } from '../../hooks/useBank'
 import type { ExportSection } from '../../../../shared/utils/exportTable'
 
@@ -53,6 +54,8 @@ export default function BankBookTab({ companyId, year }: Props) {
       )}
 
       {data && data.rows.length > 0 && (
+        <>
+        <DataAsOfBanner dataAsOf={data.dataAsOf} noun="รายการเดินบัญชีธนาคาร" />
         <Card className="overflow-x-auto">
           <div className="flex items-start justify-between border-b px-4 py-3">
             <div>
@@ -116,6 +119,7 @@ export default function BankBookTab({ companyId, year }: Props) {
             </tfoot>
           </table>
         </Card>
+        </>
       )}
     </div>
   )
