@@ -10,6 +10,7 @@ import type { ExportSection } from '../../../../shared/utils/exportTable'
 import PayeeEmailModal, { type PayeeRow } from '../../components/PayeeEmailModal'
 import CertificatePreviewModal from '../../components/CertificatePreviewModal'
 import WhtSendModal from '../../components/WhtSendModal'
+import SignatureModal from '../../components/SignatureModal'
 
 function fmt(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -33,6 +34,7 @@ export default function WhtEntriesTab({ companyId, year }: Props) {
 
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [emailModal, setEmailModal] = useState(false)
+  const [signatureModal, setSignatureModal] = useState(false)
   const [previewIds, setPreviewIds] = useState<number[] | null>(null)
   const [sendOpen, setSendOpen] = useState(false)
   const [sendResult, setSendResult] = useState<WhtSendResult[] | null>(null)
@@ -98,6 +100,9 @@ export default function WhtEntriesTab({ companyId, year }: Props) {
           <div className="flex items-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setEmailModal(true)} disabled={payeeRows.length === 0}>
               อีเมลผู้ถูกหัก
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setSignatureModal(true)}>
+              ลายเซ็น
             </Button>
             <Button type="button" variant="secondary" onClick={() => setPreviewIds([...selected])} disabled={selected.size === 0}>
               Preview หัก ณ ที่จ่าย ({selected.size})
@@ -227,6 +232,9 @@ export default function WhtEntriesTab({ companyId, year }: Props) {
 
       {emailModal && (
         <PayeeEmailModal companyId={companyId} payees={payeeRows} onClose={() => setEmailModal(false)} />
+      )}
+      {signatureModal && (
+        <SignatureModal companyId={companyId} onClose={() => setSignatureModal(false)} />
       )}
       {previewIds && previewIds.length > 0 && (
         <CertificatePreviewModal companyId={companyId} entryIds={previewIds} onClose={() => setPreviewIds(null)} />

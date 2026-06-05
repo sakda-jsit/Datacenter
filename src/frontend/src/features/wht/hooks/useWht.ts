@@ -6,6 +6,7 @@ const keys = {
   years: (companyId: number) => ['wht-years', companyId] as const,
   entries: (companyId: number, year: number, month: number, formType?: number) =>
     ['wht-entries', companyId, year, month, formType ?? 0] as const,
+  signature: (companyId: number) => ['wht-signature', companyId] as const,
 }
 
 export function useWhtReport(companyId: number, year: number, enabled = true) {
@@ -53,5 +54,29 @@ export function useSendWht(companyId: number) {
     mutationFn: (vars: { entryIds: number[]; grouping?: number; recipientEmail?: string }) =>
       whtApi.send(companyId, vars.entryIds, vars.grouping ?? 0, vars.recipientEmail),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['wht-entries', companyId] }),
+  })
+}
+
+export function useWhtSignature(companyId: number) {
+  return useQuery({
+    queryKey: keys.signature(companyId),
+    queryFn: () => whtApi.getSignature(companyId),
+    enabled: companyId > 0,
+  })
+}
+
+export function useUploadSignature(companyId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => whtApi.uploadSignature(companyId, file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.signature(companyId) }),
+  })
+}
+
+export function useDeleteSignature(companyId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => whtApi.deleteSignature(companyId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.signature(companyId) }),
   })
 }

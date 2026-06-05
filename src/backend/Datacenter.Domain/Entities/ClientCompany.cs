@@ -26,5 +26,8 @@ public class ClientCompany : BaseEntity
     public int FiscalYearStartMonth { get; set; } = 1;
     public bool IsActive { get; set; } = true;
 
+    /// <summary>รูปลายเซ็นผู้มีอำนาจ (PNG/JPG) — ใช้แนบในหนังสือรับรองหัก ณ ที่จ่าย ฯลฯ</summary>
+    public byte[]? SignatureImage { get; set; }
+
     public ICollection<CompanyUserAccess> UserAccesses { get; set; } = [];
 }

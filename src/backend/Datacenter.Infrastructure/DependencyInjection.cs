@@ -40,6 +40,7 @@ public static class DependencyInjection
         QuestPDF.Settings.License = LicenseType.Community;
         var certFont = configuration["Wht:CertificateFont"] ?? "Tahoma";
         services.AddSingleton<IWhtCertificatePdfService>(_ => new WhtCertificatePdfService(certFont));
+        services.AddSingleton<ISignatureImageProcessor, SignatureImageProcessor>();
 
         // หมายเหตุประกอบงบ (NOTE2) export Excel รูปแบบงบ — ClosedXML
         services.AddScoped<INote2ExcelExporter, Note2ExcelExporter>();

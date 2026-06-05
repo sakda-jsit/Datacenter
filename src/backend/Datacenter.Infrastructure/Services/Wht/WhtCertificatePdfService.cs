@@ -30,7 +30,7 @@ public class WhtCertificatePdfService(string fontFamily) : IWhtCertificatePdfSer
                 container.Page(page =>
                 {
                     page.Size(PageSizes.A4);
-                    page.Margin(1.4f, Unit.Centimetre);
+                    page.Margin(1.0f, Unit.Centimetre);
                     page.DefaultTextStyle(x => x.FontFamily(_font).FontSize(11).LineHeight(1.25f));
                     page.Content().Element(e => Compose(e, c));
                 });
@@ -41,7 +41,7 @@ public class WhtCertificatePdfService(string fontFamily) : IWhtCertificatePdfSer
     {
         container.Column(col =>
         {
-            // ── หัวเรื่อง + มุมขวา (ฉบับที่ 1) ──
+            // ── หัวเรื่อง ──
             col.Item().Row(row =>
             {
                 row.RelativeItem();
@@ -50,35 +50,39 @@ public class WhtCertificatePdfService(string fontFamily) : IWhtCertificatePdfSer
                     t.Item().AlignCenter().Text("หนังสือรับรองการหักภาษี ณ ที่จ่าย").Bold().FontSize(14);
                     t.Item().AlignCenter().Text("ตามมาตรา 50 ทวิ แห่งประมวลรัษฎากร").FontSize(10);
                 });
-                row.RelativeItem().AlignRight().Text(t =>
+                row.RelativeItem();
+            });
+
+            // ── ลำดับที่ (ชิดซ้าย) | เลขที่ (ชิดขวา) บรรทัดเดียวกัน ──
+            col.Item().PaddingTop(2).Row(r =>
+            {
+                r.RelativeItem().Text($"ลำดับที่ *_________ ในแบบ แบบยื่น {c.FormLabel}").FontSize(10);
+                r.RelativeItem().AlignRight().Text(t =>
                 {
-                    t.Span("ฉบับที่ 1\n").Bold().FontSize(9);
-                    t.Span("สำหรับผู้ถูกหักภาษี ณ ที่จ่าย\nใช้แนบพร้อมกับแบบแสดงรายการภาษี").FontSize(8);
+                    t.Span("เลขที่ ").FontSize(10);
+                    t.Span(c.SequenceNo).Bold().FontSize(10);
                 });
             });
 
-            col.Item().PaddingTop(2).Text(t =>
-            {
-                t.Span("ลำดับที่ *_________ ").FontSize(10);
-                t.Span($"ในแบบยื่น {c.FormLabel}  เลขที่ ").FontSize(10);
-                t.Span(c.SequenceNo).Bold().FontSize(10);
-            });
+            // ── ประโยค "ฉบับที่ 1..." กึ่งกลาง ตัวหนา ──
+            col.Item().PaddingTop(6).AlignCenter().Text(
+                "ฉบับที่ 1. สำหรับผู้ถูกหักภาษี ณ ที่จ่าย ใช้แนบพร้อมกับแบบแสดงรายการภาษี").Bold().FontSize(11);
 
             // ── คู่สัญญา ──
-            col.Item().PaddingTop(6).Element(e => PartyBlock(e,
-                "ผู้มีหน้าที่หักภาษี ณ ที่จ่าย", c.PayerTaxId, c.PayerName, c.PayerAddress));
+            col.Item().PaddingTop(2).Element(e => PartyBlock(e,
+                "ผู้มีหน้าที่หักภาษี ณ ที่จ่าย", c.PayerTaxId, c.PayerName, c.PayerAddress, BranchLabel(c.PayerBranchCode)));
             col.Item().PaddingTop(4).Element(e => PartyBlock(e,
-                "ผู้ถูกหักภาษี ณ ที่จ่าย", c.PayeeTaxId, c.PayeeName, c.PayeeAddress));
+                "ผู้ถูกหักภาษี ณ ที่จ่าย", c.PayeeTaxId, c.PayeeName, c.PayeeAddress, "สำนักงานใหญ่"));
 
             // ── ตารางประเภทเงินได้ (ครบ 1–6 ตามแบบ 50 ทวิ) ──
             col.Item().PaddingTop(6).Table(table =>
             {
                 table.ColumnsDefinition(cd =>
                 {
-                    cd.RelativeColumn(11);
-                    cd.RelativeColumn(3);
-                    cd.RelativeColumn(3);
-                    cd.RelativeColumn(3);
+                    cd.RelativeColumn(19f);   // ประเภทเงินได้พึงประเมินที่จ่าย (กว้าง — ข้อ 5 ไม่ตกบรรทัด)
+                    cd.RelativeColumn(2.4f);  // วันเดือนปีที่จ่าย (พอให้ dd/mm/yy อยู่บรรทัดเดียว)
+                    cd.RelativeColumn(3.3f);  // จำนวนเงินที่จ่าย
+                    cd.RelativeColumn(3.0f);  // ภาษีที่หักและนำส่งไว้ (ขยายให้กว้างขึ้น)
                 });
 
                 table.Header(h =>
@@ -96,10 +100,10 @@ public class WhtCertificatePdfService(string fontFamily) : IWhtCertificatePdfSer
                 Income(table, c, "    (ข) เงินปันผล เงินส่วนแบ่งกำไร ฯลฯ ตามมาตรา 40(4)(ข)", 42);
                 Note(table, "         (1) กรณีผู้ได้รับเงินปันผลได้รับเครดิตภาษี โดยจ่ายจาก");
                 Note(table, "              กำไรสุทธิของกิจการที่ต้องเสียภาษีเงินได้นิติบุคคลในอัตราดังนี้");
-                Note(table, "              (1.1) อัตราร้อยละ 30 ของกำไรสุทธิ");
-                Note(table, "              (1.2) อัตราร้อยละ 25 ของกำไรสุทธิ");
-                Note(table, "              (1.3) อัตราร้อยละ 20 ของกำไรสุทธิ");
-                Note(table, "              (1.4) อัตราอื่นๆ (ระบุ) ........... ของกำไรสุทธิ");
+                Note(table, "              ☐ (1.1) อัตราร้อยละ 30 ของกำไรสุทธิ");
+                Note(table, "              ☐ (1.2) อัตราร้อยละ 25 ของกำไรสุทธิ");
+                Note(table, "              ☐ (1.3) อัตราร้อยละ 20 ของกำไรสุทธิ");
+                Note(table, "              ☐ (1.4) อัตราอื่นๆ (ระบุ) ........... ของกำไรสุทธิ");
                 Note(table, "         (2) กรณีผู้ได้รับเงินปันผลไม่ได้รับเครดิตภาษี เนื่องจากจ่าย");
                 Note(table, "              (2.1) กำไรสุทธิของกิจการที่ได้รับยกเว้นภาษี");
                 Note(table, "              (2.2) เงินปันผลหรือเงินส่วนแบ่งของกำไรที่ได้รับยกเว้น ไม่ต้องนำมารวมคำนวณเป็นรายได้");
@@ -107,7 +111,7 @@ public class WhtCertificatePdfService(string fontFamily) : IWhtCertificatePdfSer
                 Note(table, "              (2.4) กำไรที่รับรู้ทางบัญชีโดยวิธีส่วนได้เสีย (equity method)");
                 Note(table, "              (2.5) อื่นๆ (ระบุ) ........");
                 Income(table, c, "5. การจ่ายเงินได้ที่ต้องหักภาษี ณ ที่จ่ายตามคำสั่งกรมสรรพากร" +
-                    "ที่ออกตามมาตรา 3 เตรส (ระบุ) " + (c.IncomeCategory == 5 ? c.IncomeType : ""), 5);
+                    "ที่ออกตามมาตรา 3 เตรส (ระบุ)" + (c.IncomeCategory == 5 ? "\n       " + c.IncomeType : ""), 5);
                 Note(table, "         (เช่น รางวัล ส่วนลดหรือประโยชน์ใดๆ เนื่องจากการส่งเสริมการขาย รางวัลในการประกวด การแข่งขัน");
                 Note(table, "          การชิงโชค ค่าแสดงของนักแสดงสาธารณะ ค่าขนส่ง ค่าบริการ ค่าเบี้ยประกันวินาศภัย ฯลฯ)");
                 Income(table, c, "6. อื่นๆ (ระบุ) " + (c.IncomeCategory == 6 ? c.IncomeType : ""), 6);
@@ -119,37 +123,45 @@ public class WhtCertificatePdfService(string fontFamily) : IWhtCertificatePdfSer
                 table.Cell().Element(TotalCell).AlignRight().Text(Money(c.TaxAmount)).Bold().FontSize(9);
             });
 
-            col.Item().PaddingTop(4).Text(txt =>
+            col.Item().PaddingTop(3).Text(txt =>
             {
                 txt.Span("รวมเงินภาษีที่หักนำส่ง (ตัวอักษร)  ").Bold();
                 txt.Span($"({c.AmountInWords})");
             });
 
-            // ── ผู้จ่ายเงิน (เงื่อนไขการออกภาษี) ──
-            col.Item().PaddingTop(8).Text(t =>
+            // ── ส่วนท้าย: ผู้จ่ายเงิน (ซ้าย) | ลงชื่อ-ประทับตรา (ขวา) ในกรอบเดียว ──
+            col.Item().PaddingTop(4).Border(0.6f).Row(row =>
             {
-                t.Span("ผู้จ่ายเงิน    ").Bold();
-                t.Span($"{Chk(c.ConditionType == 1)} หักภาษี ณ ที่จ่าย     ");
-                t.Span($"{Chk(c.ConditionType == 2)} ออกภาษีให้ตลอดไป     ");
-                t.Span($"{Chk(c.ConditionType == 3)} ออกภาษีให้ครั้งเดียว     ");
-                t.Span($"{Chk(c.ConditionType == 4)} อื่นๆ (ระบุ) ..............");
-            });
-
-            col.Item().PaddingTop(8).Text("ขอรับรองว่าข้อความและตัวเลขดังกล่าวข้างต้นถูกต้องตรงกับความเป็นจริงทุกประการ").FontSize(10);
-
-            col.Item().PaddingTop(16).Row(row =>
-            {
-                row.RelativeItem();
-                row.ConstantItem(260).Column(s =>
+                // ซ้าย: ผู้จ่ายเงิน + checkbox เรียงลง
+                row.RelativeItem(5).BorderRight(0.6f).PaddingHorizontal(6).PaddingVertical(4).Column(l =>
                 {
-                    s.Item().AlignCenter().Text("ลงชื่อ ......................................................... ผู้มีหน้าที่หักภาษี ณ ที่จ่าย").FontSize(10);
-                    s.Item().AlignCenter().PaddingTop(2).Text("(ประทับตรานิติบุคคล ถ้ามี)").FontSize(8);
-                    s.Item().AlignCenter().PaddingTop(6).Text($"วันเดือนปีที่ออกหนังสือรับรองฯ  {FormatThaiDate(c.IssueDate)}").FontSize(10);
+                    l.Item().Text("ผู้จ่ายเงิน").Bold().FontSize(10);
+                    l.Item().PaddingTop(2).Text($"{Chk(c.ConditionType == 1)} หักภาษี ณ ที่จ่าย").FontSize(10);
+                    l.Item().Text($"{Chk(c.ConditionType == 2)} ออกภาษีให้ตลอดไป").FontSize(10);
+                    l.Item().Text($"{Chk(c.ConditionType == 3)} ออกภาษีให้ครั้งเดียว").FontSize(10);
+                    l.Item().Text($"{Chk(c.ConditionType == 4)} อื่นๆ (ระบุ) ..................").FontSize(10);
+                });
+                // ขวา: ขอรับรอง + ลงชื่อ + ประทับตรา + วันที่
+                row.RelativeItem(6).PaddingHorizontal(8).PaddingVertical(4).Column(r =>
+                {
+                    r.Item().Text("ขอรับรองว่าข้อความและตัวเลขดังกล่าวข้างต้น ถูกต้องตรงกับความเป็นจริงทุกประการ").FontSize(9);
+                    // ลายเซ็น (ถ้ามี) วางเหนือเส้นจุดหลัง "ลงชื่อ" (เยื้องซ้าย) — ไม่มีก็เว้นที่เซ็นมือ
+                    r.Item().PaddingTop(2).PaddingRight(95).Height(34).AlignCenter().AlignBottom().Element(sig =>
+                    {
+                        if (c.PayerSignature is { Length: > 0 })
+                            sig.Image(c.PayerSignature).FitHeight();
+                    });
+                    r.Item().AlignCenter().Text("ลงชื่อ ............................................. ผู้มีหน้าที่หักภาษี ณ ที่จ่าย").FontSize(10);
+                    r.Item().PaddingTop(8).Row(sr =>
+                    {
+                        sr.RelativeItem().AlignCenter().Text($"วันเดือนปีที่ออกหนังสือรับรองฯ\n{FormatThaiDate(c.IssueDate)}").FontSize(9);
+                        sr.ConstantItem(80).AlignCenter().Text("(ประทับตรา\nนิติบุคคล)").FontSize(8).FontColor(Colors.Grey.Darken1);
+                    });
                 });
             });
 
             // ── หมายเหตุ + คำเตือน ──
-            col.Item().PaddingTop(10).Text(
+            col.Item().PaddingTop(6).Text(
                 "หมายเหตุ  * ให้สามารถอ้างอิงหรือสอบยันกันได้ระหว่างลำดับที่ตามหนังสือรับรองฯ กับแบบยื่นรายการภาษีหัก ณ ที่จ่าย")
                 .FontSize(7.5f).FontColor(Colors.Grey.Darken1);
             col.Item().Text(
@@ -160,13 +172,14 @@ public class WhtCertificatePdfService(string fontFamily) : IWhtCertificatePdfSer
     }
 
     /// <summary>แถวประเภทเงินได้ — เติมวันที่/จำนวนเงิน/ภาษี เฉพาะหมวดที่ตรงกับ IncomeCategory</summary>
-    private void Income(TableDescriptor table, WhtCertificateModel c, string label, int category)
+    private void Income(TableDescriptor table, WhtCertificateModel c, string label, int category, float fontSize = 9f)
     {
         bool active = c.IncomeCategory == category;
-        table.Cell().Element(BodyCell).Text(label).FontSize(9);
-        table.Cell().Element(BodyCell).AlignCenter().Text(active ? FormatThaiDate(c.PayDate) : "").FontSize(9);
-        table.Cell().Element(BodyCell).AlignRight().Text(active ? Money(c.Amount) : "").FontSize(9);
-        table.Cell().Element(BodyCell).AlignRight().Text(active ? Money(c.TaxAmount) : "").FontSize(9);
+        table.Cell().Element(BodyCell).Text(label).FontSize(fontSize);
+        // จัดชิดล่าง — กรณี label หลายบรรทัด (ข้อ 5) ข้อมูลจะตรงกับบรรทัดสุดท้าย (ประเภทที่ระบุ)
+        table.Cell().Element(BodyCell).AlignBottom().AlignCenter().Text(active ? FormatThaiDate(c.PayDate) : "").FontSize(9);
+        table.Cell().Element(BodyCell).AlignBottom().AlignRight().Text(active ? Money(c.Amount) : "").FontSize(9);
+        table.Cell().Element(BodyCell).AlignBottom().AlignRight().Text(active ? Money(c.TaxAmount) : "").FontSize(9);
     }
 
     /// <summary>แถวข้อความย่อย (ไม่มีช่องจำนวนเงิน)</summary>
@@ -180,33 +193,48 @@ public class WhtCertificatePdfService(string fontFamily) : IWhtCertificatePdfSer
 
     private static string Chk(bool on) => on ? "☑" : "☐";
 
-    private static void PartyBlock(IContainer container, string title, string taxId, string name, string? address)
+    /// <summary>"00000"/ว่าง = สำนักงานใหญ่ ; อื่นๆ = สาขา {code}</summary>
+    private static string BranchLabel(string? branchCode)
+    {
+        var s = (branchCode ?? "").Trim().TrimStart('0');
+        return s.Length == 0 ? "สำนักงานใหญ่" : $"สาขา {branchCode}";
+    }
+
+    private static void PartyBlock(IContainer container, string title, string taxId, string name, string? address, string branchLabel)
     {
         container.Border(0.6f).PaddingHorizontal(6).PaddingVertical(4).Column(col =>
         {
-            col.Item().Text(txt =>
+            // หัว: ชื่อหน้าที่ (ชิดซ้าย) | เลขประจำตัวผู้เสียภาษี (ชิดขวา)
+            col.Item().Row(r =>
             {
-                txt.Span($"{title}  ").Bold().FontSize(10);
-                txt.Span($"เลขประจำตัวผู้เสียภาษี {taxId}").FontSize(10);
-                txt.Span("     ☑ สำนักงานใหญ่   ☐ สาขา").FontSize(9);
+                r.RelativeItem().Text($"{title} :").Bold().FontSize(10);
+                r.RelativeItem().AlignRight().Text($"เลขประจำตัวผู้เสียภาษี  {taxId}").FontSize(10);
             });
-            col.Item().Text($"ชื่อ  {name}").FontSize(10);
+            // ชื่อ (ซ้าย) | สำนักงานใหญ่/สาขา (ขวา)
+            col.Item().Row(r =>
+            {
+                r.RelativeItem().Text($"ชื่อ  {name}").FontSize(10);
+                r.RelativeItem().AlignRight().Text(branchLabel).FontSize(9);
+            });
             if (!string.IsNullOrWhiteSpace(address))
                 col.Item().Text($"ที่อยู่  {address}").FontSize(9);
         });
     }
 
+    // หัวตาราง: กรอบเต็ม (เส้นบน=ขอบบนตาราง, เส้นล่าง=ใต้หัว) + เส้นแบ่งคอลัมน์
     private static IContainer HeadCell(IContainer c) =>
-        c.Border(0.6f).Background(Colors.Grey.Lighten3).PaddingVertical(3).PaddingHorizontal(4).DefaultTextStyle(t => t.SemiBold());
+        c.Border(0.6f).Background(Colors.Grey.Lighten3).PaddingVertical(4).PaddingHorizontal(4).DefaultTextStyle(t => t.SemiBold());
 
+    // แถวเนื้อหา: เฉพาะเส้นแบ่งคอลัมน์แนวตั้ง (ไม่มีเส้นแนวนอนระหว่างแถว)
     private static IContainer BodyCell(IContainer c) =>
-        c.Border(0.6f).PaddingVertical(3).PaddingHorizontal(4);
+        c.BorderVertical(0.6f).PaddingVertical(2.8f).PaddingHorizontal(4);
 
     private static IContainer NoteCell(IContainer c) =>
-        c.BorderLeft(0.6f).BorderRight(0.6f).PaddingHorizontal(4).PaddingBottom(1);
+        c.BorderVertical(0.6f).PaddingHorizontal(4).PaddingVertical(1.6f);
 
+    // แถวรวม: เส้นบน (ปิดท้ายรายการ) + เส้นล่าง (ขอบล่างตาราง) + เส้นแบ่งคอลัมน์
     private static IContainer TotalCell(IContainer c) =>
-        c.Border(0.6f).Background(Colors.Grey.Lighten4).PaddingVertical(4).PaddingHorizontal(4);
+        c.Border(0.6f).Background(Colors.Grey.Lighten4).PaddingVertical(5).PaddingHorizontal(4);
 
     private static string Money(decimal v) =>
         v.ToString("#,##0.00", CultureInfo.InvariantCulture);

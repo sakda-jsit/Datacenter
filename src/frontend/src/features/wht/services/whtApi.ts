@@ -49,4 +49,26 @@ export const whtApi = {
     apiClient
       .post<WhtSendResult[]>('/wht/send', { clientCompanyId, entryIds, grouping, recipientEmail })
       .then((r) => r.data),
+
+  // ── ลายเซ็นผู้มีอำนาจ (แนบในหนังสือรับรอง) ──
+  getSignature: (clientCompanyId: number) =>
+    apiClient
+      .get<{ hasSignature: boolean; dataUrl: string | null }>('/wht/signature', {
+        params: { clientCompanyId },
+      })
+      .then((r) => r.data),
+
+  uploadSignature: (clientCompanyId: number, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return apiClient
+      .post('/wht/signature', form, {
+        params: { clientCompanyId },
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data)
+  },
+
+  deleteSignature: (clientCompanyId: number) =>
+    apiClient.delete('/wht/signature', { params: { clientCompanyId } }).then((r) => r.data),
 }

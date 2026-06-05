@@ -33,7 +33,9 @@ public static class WhtCertificateBuilder
             AmountInWords: ThaiBahtText.Convert(e.TaxAmount),
             IssueDate:    e.WithholdDate,
             IncomeCategory: ClassifyIncome(e.IncomeType),
-            ConditionType:  ClassifyCondition(e.Condition));
+            ConditionType:  ClassifyCondition(e.Condition),
+            PayerBranchCode: payer.BranchCode,
+            PayerSignature:  payer.SignatureImage);
     }
 
     /// <summary>

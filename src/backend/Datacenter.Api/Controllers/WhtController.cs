@@ -51,4 +51,33 @@ public class WhtController(IMediator mediator) : ControllerBase
     [HttpPost("send")]
     public async Task<IActionResult> Send([FromBody] SendWhtCertificatesCommand command, CancellationToken ct)
         => Ok(await mediator.Send(command, ct));
+
+    /// <summary>GET /api/v1/wht/signature?clientCompanyId=1 — สถานะ/ตัวอย่างลายเซ็นผู้มีอำนาจ</summary>
+    [HttpGet("signature")]
+    public async Task<IActionResult> GetSignature([FromQuery] int clientCompanyId, CancellationToken ct)
+        => Ok(await mediator.Send(new GetClientCompanySignatureQuery(clientCompanyId), ct));
+
+    /// <summary>POST /api/v1/wht/signature?clientCompanyId=1 — อัปโหลดรูปลายเซ็น (multipart: file)</summary>
+    [HttpPost("signature")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    public async Task<IActionResult> UploadSignature([FromQuery] int clientCompanyId, IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { detail = "กรุณาเลือกไฟล์รูปลายเซ็น" });
+        if (file.Length > 2 * 1024 * 1024)
+            return BadRequest(new { detail = "ไฟล์ใหญ่เกิน 2 MB" });
+
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        await mediator.Send(new UpdateClientCompanySignatureCommand(clientCompanyId, ms.ToArray()), ct);
+        return NoContent();
+    }
+
+    /// <summary>DELETE /api/v1/wht/signature?clientCompanyId=1 — ลบรูปลายเซ็น</summary>
+    [HttpDelete("signature")]
+    public async Task<IActionResult> DeleteSignature([FromQuery] int clientCompanyId, CancellationToken ct)
+    {
+        await mediator.Send(new UpdateClientCompanySignatureCommand(clientCompanyId, null), ct);
+        return NoContent();
+    }
 }
