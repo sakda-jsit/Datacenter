@@ -149,7 +149,8 @@ public class WhtCertificatePdfService(string fontFamily) : IWhtCertificatePdfSer
                     r.Item().PaddingTop(2).PaddingRight(95).Height(34).AlignCenter().AlignBottom().Element(sig =>
                     {
                         if (c.PayerSignature is { Length: > 0 })
-                            sig.Image(c.PayerSignature).FitHeight();
+                            // FitArea = พอดีทั้งกว้าง+สูง (กันลายเซ็นกว้างมากล้นเซลล์จน layout error)
+                            sig.Image(c.PayerSignature).FitArea();
                     });
                     r.Item().AlignCenter().Text("ลงชื่อ ............................................. ผู้มีหน้าที่หักภาษี ณ ที่จ่าย").FontSize(10);
                     r.Item().PaddingTop(8).Row(sr =>
