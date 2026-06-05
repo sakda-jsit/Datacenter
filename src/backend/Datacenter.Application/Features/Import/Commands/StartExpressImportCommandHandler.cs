@@ -219,6 +219,30 @@ public class StartExpressImportCommandHandler(
                     batch.Message += $" (นำเข้าภาษีมูลค่าเพิ่มไม่สำเร็จ: {ex.Message})";
                     await db.SaveChangesAsync(CancellationToken.None);
                 }
+
+                // นำเข้ารายการภาษีหัก ณ ที่จ่าย (ภ.ง.ด.3/53) จาก ISTAX.DBF พร้อมกัน
+                try
+                {
+                    var whtResult = await Wht.Services.WhtEntryImporter.ImportAsync(
+                        db, dbfAdapter, folderPath, request.ClientCompanyId, batch.Id, currentUser.Username, ct);
+                    if (whtResult.Read > 0)
+                    {
+                        batch.Message += $" · {whtResult.Message}";
+                        await audit.LogAsync(
+                            action: "ImportWht",
+                            entityName: "ImportBatch",
+                            entityId: batch.Id.ToString(),
+                            afterValue: whtResult.Message,
+                            companyId: request.ClientCompanyId,
+                            cancellationToken: ct);
+                        await db.SaveChangesAsync(ct);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    batch.Message += $" (นำเข้าภาษีหัก ณ ที่จ่ายไม่สำเร็จ: {ex.Message})";
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
             }
 
             return batch.Id;

@@ -47,4 +47,10 @@ public interface IExpressDbfAdapter
     /// คืนรายการว่างถ้าไม่มีไฟล์ (บริษัทที่ไม่ได้จด VAT).
     /// </summary>
     Task<IReadOnlyList<ExpressVatEntryDto>> ReadVatEntriesAsync(string companyFolderPath, CancellationToken ct = default);
+
+    /// <summary>
+    /// อ่านรายการภาษีหัก ณ ที่จ่าย (ภ.ง.ด.3/53) จาก ISTAX.DBF — แตกชุดเงินได้ที่ 2 เป็นรายการแยกเมื่อมีค่า.
+    /// คืนรายการว่างถ้าไม่มีไฟล์ (บริษัทที่ไม่มีการหักภาษี).
+    /// </summary>
+    Task<IReadOnlyList<ExpressWhtEntryDto>> ReadWhtEntriesAsync(string companyFolderPath, CancellationToken ct = default);
 }

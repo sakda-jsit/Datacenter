@@ -29,6 +29,8 @@ public interface IApplicationDbContext
     DbSet<FixedAsset> FixedAssets { get; }
     DbSet<AssetAccountMapping> AssetAccountMappings { get; }
     DbSet<VatEntry> VatEntries { get; }
+    DbSet<WhtEntry> WhtEntries { get; }
+    DbSet<WhtPayee> WhtPayees { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

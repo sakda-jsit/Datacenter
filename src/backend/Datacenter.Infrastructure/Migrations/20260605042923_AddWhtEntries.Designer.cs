@@ -4,6 +4,7 @@ using Datacenter.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Datacenter.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260605042923_AddWhtEntries")]
+    partial class AddWhtEntries
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1406,26 +1409,6 @@ namespace Datacenter.Infrastructure.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
-                    b.Property<string>("EmailError")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("EmailRecipient")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTime?>("EmailSentAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("EmailSentBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("EmailStatus")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
                     b.Property<string>("FormType")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -1447,10 +1430,6 @@ namespace Datacenter.Infrastructure.Migrations
                     b.Property<string>("ModifiedBy")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PayeeAddress")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
                     b.Property<string>("PayeeName")
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
@@ -1467,11 +1446,6 @@ namespace Datacenter.Infrastructure.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
-                    b.Property<string>("SourceKey")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
                     b.Property<decimal>("TaxAmount")
                         .HasColumnType("decimal(18,2)");
 
@@ -1486,57 +1460,9 @@ namespace Datacenter.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClientCompanyId", "SourceKey")
-                        .IsUnique();
-
                     b.HasIndex("ClientCompanyId", "TaxPeriod", "FormType");
 
                     b.ToTable("WhtEntries", (string)null);
-                });
-
-            modelBuilder.Entity("Datacenter.Domain.Entities.WhtPayee", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ClientCompanyId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.Property<string>("TaxId")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClientCompanyId", "TaxId")
-                        .IsUnique();
-
-                    b.ToTable("WhtPayees", (string)null);
                 });
 
             modelBuilder.Entity("Datacenter.Domain.Entities.Account", b =>
@@ -1802,17 +1728,6 @@ namespace Datacenter.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("Datacenter.Domain.Entities.WhtEntry", b =>
-                {
-                    b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
-                        .WithMany()
-                        .HasForeignKey("ClientCompanyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("ClientCompany");
-                });
-
-            modelBuilder.Entity("Datacenter.Domain.Entities.WhtPayee", b =>
                 {
                     b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
                         .WithMany()

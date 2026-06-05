@@ -95,3 +95,26 @@ public record ExpressVatEntryDto(
     decimal ZeroRatedAmount,
     bool IsLate,
     string? RecordType);
+
+/// <summary>
+/// หนึ่งรายการภาษีหัก ณ ที่จ่ายจาก Express ISTAX.DBF.
+/// FormTypeCode: "S03" = ภ.ง.ด.3 (บุคคลธรรมดา), "S53" = ภ.ง.ด.53 (นิติบุคคล).
+/// หนึ่งระเบียน ISTAX อาจมี 2 ชุดเงินได้ (ชุดหลัก + ...2) → adapter แตกเป็น 2 DTO เมื่อชุด 2 มีค่า.
+/// </summary>
+public record ExpressWhtEntryDto(
+    string SourceKey,
+    string FormTypeCode,
+    DateTime? TaxPeriod,
+    DateTime? WithholdDate,
+    string DocumentNo,
+    string? ReferenceNo,
+    string? PayeeName,
+    string? PayeePrefix,
+    string? PayeeTaxId,
+    string? PayeeAddress,
+    string? IncomeType,
+    decimal BaseAmount,
+    decimal TaxRate,
+    decimal TaxAmount,
+    string? Condition,
+    bool IsLate);

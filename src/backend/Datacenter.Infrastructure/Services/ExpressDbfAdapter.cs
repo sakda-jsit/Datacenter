@@ -280,4 +280,85 @@ public class ExpressDbfAdapter : IExpressDbfAdapter
 
         return Task.FromResult<IReadOnlyList<ExpressVatEntryDto>>(result);
     }
+
+    public Task<IReadOnlyList<ExpressWhtEntryDto>> ReadWhtEntriesAsync(string companyFolderPath, CancellationToken ct = default)
+    {
+        // ISTAX เป็นไฟล์ทางเลือก — บริษัทที่ไม่มีการหักภาษี ณ ที่จ่ายจะไม่มี → คืนว่าง
+        List<DbfRow> records;
+        try { records = ReadDbf(companyFolderPath, "ISTAX"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressWhtEntryDto>>([]); }
+
+        var result = new List<ExpressWhtEntryDto>();
+        var ordinal = 0;
+        foreach (var r in records)
+        {
+            ordinal++;
+            var formCode = Str(r, "TAXTYP").ToUpperInvariant();
+            if (formCode != "S03" && formCode != "S53") continue;   // เฉพาะ ภ.ง.ด.3/53
+
+            var period = Date(r, "TAXPRD");
+            if (period is null) continue;
+
+            var docNo  = Str(r, "TAXNUM");
+            var refNo  = Str(r, "REFNUM");
+            var name   = Str(r, "NAME");
+            var prefix = Str(r, "PRENAM");
+            var taxId  = Str(r, "TAXID");
+            var addr   = Str(r, "ADDR");
+            var withhold = Date(r, "TAXDAT");
+            var late   = IsLocked(r, "LATE");
+            var cond   = Str(r, "TAXCOND");
+
+            // base ของ SourceKey: TAXNUM → REFNUM → ลำดับแถว (เสถียรต่อ re-import ของงวดที่ปิดแล้ว)
+            var keyBase = !string.IsNullOrWhiteSpace(docNo) ? docNo
+                        : !string.IsNullOrWhiteSpace(refNo) ? refNo
+                        : $"R{ordinal}";
+
+            // ชุดเงินได้หลัก (line 0)
+            var amt1 = Dec(r, "AMOUNT");
+            var tax1 = Dec(r, "TAXAMT");
+            if (amt1 > 0 || tax1 > 0)
+                result.Add(new ExpressWhtEntryDto(
+                    SourceKey:    $"{keyBase}#0",
+                    FormTypeCode: formCode,
+                    TaxPeriod:    period,
+                    WithholdDate: withhold,
+                    DocumentNo:   docNo,
+                    ReferenceNo:  refNo,
+                    PayeeName:    name,
+                    PayeePrefix:  prefix,
+                    PayeeTaxId:   taxId,
+                    PayeeAddress: addr,
+                    IncomeType:   Str(r, "TAXDES"),
+                    BaseAmount:   Math.Round(amt1, 2),
+                    TaxRate:      Math.Round(Dec(r, "TAXRAT"), 4),
+                    TaxAmount:    Math.Round(tax1, 2),
+                    Condition:    cond,
+                    IsLate:       late));
+
+            // ชุดเงินได้ที่ 2 (line 1) — บางหนังสือรับรองมีหลายประเภทเงินได้
+            var amt2 = Dec(r, "AMOUNT2");
+            var tax2 = Dec(r, "TAXAMT2");
+            if (amt2 > 0 || tax2 > 0)
+                result.Add(new ExpressWhtEntryDto(
+                    SourceKey:    $"{keyBase}#1",
+                    FormTypeCode: formCode,
+                    TaxPeriod:    period,
+                    WithholdDate: Date(r, "TAXDAT2") ?? withhold,
+                    DocumentNo:   docNo,
+                    ReferenceNo:  refNo,
+                    PayeeName:    name,
+                    PayeePrefix:  prefix,
+                    PayeeTaxId:   taxId,
+                    PayeeAddress: addr,
+                    IncomeType:   Str(r, "TAXDES2"),
+                    BaseAmount:   Math.Round(amt2, 2),
+                    TaxRate:      Math.Round(Dec(r, "TAXRAT2"), 4),
+                    TaxAmount:    Math.Round(tax2, 2),
+                    Condition:    Str(r, "TAXCOND2"),
+                    IsLate:       late));
+        }
+
+        return Task.FromResult<IReadOnlyList<ExpressWhtEntryDto>>(result);
+    }
 }

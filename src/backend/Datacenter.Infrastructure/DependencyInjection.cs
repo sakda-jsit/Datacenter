@@ -3,11 +3,14 @@ using Datacenter.Application.Common.Interfaces;
 using Datacenter.Infrastructure.Identity;
 using Datacenter.Infrastructure.Persistence;
 using Datacenter.Infrastructure.Services;
+using Datacenter.Infrastructure.Services.Email;
+using Datacenter.Infrastructure.Services.Wht;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using QuestPDF.Infrastructure;
 
 namespace Datacenter.Infrastructure;
 
@@ -27,6 +30,15 @@ public static class DependencyInjection
         services.AddScoped<IImportStorageService, ImportStorageService>();
         services.AddScoped<IExpressDbfAdapter, ExpressDbfAdapter>();
         services.AddHttpContextAccessor();
+
+        // อีเมล (SMTP) — เจ้าหน้าที่กรอก credential ใน config "EmailSettings" ตอน deploy
+        services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+
+        // หนังสือรับรองหัก ณ ที่จ่าย (QuestPDF) — license ฟรี Community + ฟอนต์ไทยจากระบบ
+        QuestPDF.Settings.License = LicenseType.Community;
+        var certFont = configuration["Wht:CertificateFont"] ?? "Tahoma";
+        services.AddSingleton<IWhtCertificatePdfService>(_ => new WhtCertificatePdfService(certFont));
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>

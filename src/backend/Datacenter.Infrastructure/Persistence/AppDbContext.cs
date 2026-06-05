@@ -30,6 +30,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<FixedAsset> FixedAssets => Set<FixedAsset>();
     public DbSet<AssetAccountMapping> AssetAccountMappings => Set<AssetAccountMapping>();
     public DbSet<VatEntry> VatEntries => Set<VatEntry>();
+    public DbSet<WhtEntry> WhtEntries => Set<WhtEntry>();
+    public DbSet<WhtPayee> WhtPayees => Set<WhtPayee>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
