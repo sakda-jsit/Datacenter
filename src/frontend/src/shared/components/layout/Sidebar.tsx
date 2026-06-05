@@ -66,7 +66,8 @@ const navGroups: NavGroup[] = [
       { to: '/general-ledger', icon: 'book', label: 'บัญชีแยกประเภท', desc: 'รายการบัญชีและ movement' },
       { to: '/ar', icon: 'receipt', label: 'ลูกหนี้', desc: 'ใบแจ้งหนี้และรับชำระ' },
       { to: '/ap', icon: 'bill', label: 'เจ้าหนี้', desc: 'บิลและการจ่ายเงิน' },
-      { to: '/bank-reconciliation', icon: 'bank', label: 'กระทบยอดธนาคาร', desc: 'Bank reconciliation' },
+      { to: '/stock', icon: 'database', label: 'สินค้าคงคลัง', desc: 'มูลค่าคงเหลือ + เทียบ GL' },
+      { to: '/bank-reconciliation', icon: 'bank', label: 'ธนาคาร / สมุดเงินฝาก', desc: 'สมุดเงินฝาก + เดินบัญชี' },
     ],
   },
   {
@@ -100,6 +101,7 @@ const navGroups: NavGroup[] = [
       { to: '/fixed-assets', icon: 'building', label: 'สินทรัพย์ถาวร', desc: 'ค่าเสื่อม 2 ชุด + จำหน่าย' },
       { to: '/financial-statement', icon: 'chart', label: 'งบการเงิน', desc: 'กำไรขาดทุนและฐานะการเงิน' },
       { to: '/closing-period', icon: 'lock', label: 'ปิดรอบบัญชี', desc: 'ตรวจสอบและ lock period' },
+      { to: '/report-packages', icon: 'fileText', label: 'ชุดรายงานงบ', desc: 'เวอร์ชัน + ล็อกงบที่ยื่น' },
     ],
   },
   {

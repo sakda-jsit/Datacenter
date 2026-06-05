@@ -586,6 +586,151 @@ namespace Datacenter.Infrastructure.Migrations
                     b.ToTable("AuditLogs", (string)null);
                 });
 
+            modelBuilder.Entity("Datacenter.Domain.Entities.BankAccount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccountNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("BalanceDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("BalanceForward")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("BankAccountCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("BankName")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<string>("Branch")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<int>("ClientCompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GlAccountCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ShortName")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientCompanyId", "BankAccountCode")
+                        .IsUnique();
+
+                    b.ToTable("BankAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("Datacenter.Domain.Entities.BankTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("BankAccountCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<decimal>("Charge")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ChequeDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ChequeNo")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ChequeStatus")
+                        .HasMaxLength(4)
+                        .HasColumnType("nvarchar(4)");
+
+                    b.Property<int>("ClientCompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CounterpartyName")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ImportBatchId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeposit")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Remark")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTime>("TransactionDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TransactionType")
+                        .HasMaxLength(4)
+                        .HasColumnType("nvarchar(4)");
+
+                    b.Property<string>("Voucher")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientCompanyId", "BankAccountCode", "TransactionDate");
+
+                    b.ToTable("BankTransactions", (string)null);
+                });
+
             modelBuilder.Entity("Datacenter.Domain.Entities.ClientCompany", b =>
                 {
                     b.Property<int>("Id")
@@ -1348,6 +1493,102 @@ namespace Datacenter.Infrastructure.Migrations
                     b.ToTable("LeaseContracts", (string)null);
                 });
 
+            modelBuilder.Entity("Datacenter.Domain.Entities.ReportPackage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClientCompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("FinalizedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FinalizedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("FiscalYear")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LockedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LockedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("NetProfit")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("SnapshotAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("SnapshotBranchCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("SnapshotCompanyName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("SnapshotTaxId")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal?>("TotalAssets")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TotalEquity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TotalLiabilities")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TotalRevenue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientCompanyId", "FiscalYear", "Version")
+                        .IsUnique();
+
+                    b.ToTable("ReportPackages", (string)null);
+                });
+
             modelBuilder.Entity("Datacenter.Domain.Entities.StagingAccount", b =>
                 {
                     b.Property<long>("Id")
@@ -1488,6 +1729,79 @@ namespace Datacenter.Infrastructure.Migrations
                     b.HasKey("RefCode");
 
                     b.ToTable("StatementLines", (string)null);
+                });
+
+            modelBuilder.Entity("Datacenter.Domain.Entities.StockItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CategoryCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("ClientCompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GroupCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int?>("ImportBatchId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ItemType")
+                        .HasMaxLength(4)
+                        .HasColumnType("nvarchar(4)");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("OnHandQty")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("StockCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<decimal>("StockValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientCompanyId", "StockCode")
+                        .IsUnique();
+
+                    b.ToTable("StockItems", (string)null);
                 });
 
             modelBuilder.Entity("Datacenter.Domain.Entities.Supplier", b =>
@@ -1979,6 +2293,28 @@ namespace Datacenter.Infrastructure.Migrations
                     b.Navigation("ClientCompany");
                 });
 
+            modelBuilder.Entity("Datacenter.Domain.Entities.BankAccount", b =>
+                {
+                    b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
+                        .WithMany()
+                        .HasForeignKey("ClientCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClientCompany");
+                });
+
+            modelBuilder.Entity("Datacenter.Domain.Entities.BankTransaction", b =>
+                {
+                    b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
+                        .WithMany()
+                        .HasForeignKey("ClientCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClientCompany");
+                });
+
             modelBuilder.Entity("Datacenter.Domain.Entities.ClosingPeriod", b =>
                 {
                     b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
@@ -2137,6 +2473,17 @@ namespace Datacenter.Infrastructure.Migrations
                     b.Navigation("ClientCompany");
                 });
 
+            modelBuilder.Entity("Datacenter.Domain.Entities.ReportPackage", b =>
+                {
+                    b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
+                        .WithMany()
+                        .HasForeignKey("ClientCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClientCompany");
+                });
+
             modelBuilder.Entity("Datacenter.Domain.Entities.StagingAccount", b =>
                 {
                     b.HasOne("Datacenter.Domain.Entities.ImportBatch", "ImportBatch")
@@ -2157,6 +2504,17 @@ namespace Datacenter.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("ImportBatch");
+                });
+
+            modelBuilder.Entity("Datacenter.Domain.Entities.StockItem", b =>
+                {
+                    b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
+                        .WithMany()
+                        .HasForeignKey("ClientCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClientCompany");
                 });
 
             modelBuilder.Entity("Datacenter.Domain.Entities.Supplier", b =>

@@ -499,6 +499,94 @@ public class ExpressDbfAdapter : IExpressDbfAdapter
         return Task.FromResult<IReadOnlyList<ExpressApInvoiceDto>>(result);
     }
 
+    public Task<IReadOnlyList<ExpressStockItemDto>> ReadStockItemsAsync(string companyFolderPath, CancellationToken ct = default)
+    {
+        List<DbfRow> records;
+        try { records = ReadDbf(companyFolderPath, "STMAS"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressStockItemDto>>([]); }
+
+        var result = new List<ExpressStockItemDto>();
+        foreach (var r in records)
+        {
+            var code = Str(r, "STKCOD");
+            if (string.IsNullOrWhiteSpace(code)) continue;
+
+            var name = Str(r, "STKDES");
+            result.Add(new ExpressStockItemDto(
+                StockCode:    code,
+                Name:         string.IsNullOrWhiteSpace(name) ? code : name,
+                ItemType:     Str(r, "STKTYP"),
+                GroupCode:    Str(r, "STKGRP"),
+                CategoryCode: Str(r, "ACCCOD"),
+                Unit:         Str(r, "QUCOD"),
+                OnHandQty:    Math.Round(Dec(r, "TOTBAL"), 4),
+                UnitCost:     Math.Round(Dec(r, "UNITPR"), 4),
+                StockValue:   Math.Round(Dec(r, "TOTVAL"), 2),
+                IsActive:     Str(r, "STATUS") != "0"));
+        }
+
+        return Task.FromResult<IReadOnlyList<ExpressStockItemDto>>(result);
+    }
+
+    public Task<IReadOnlyList<ExpressBankAccountDto>> ReadBankAccountsAsync(string companyFolderPath, CancellationToken ct = default)
+    {
+        List<DbfRow> records;
+        try { records = ReadDbf(companyFolderPath, "BKMAS"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressBankAccountDto>>([]); }
+
+        var result = new List<ExpressBankAccountDto>();
+        foreach (var r in records)
+        {
+            var code = Str(r, "BNKACC");
+            if (string.IsNullOrWhiteSpace(code)) continue;
+
+            result.Add(new ExpressBankAccountDto(
+                BankAccountCode: code,
+                BankName:        Str(r, "BNKNAM"),
+                Branch:          Str(r, "BRANCH"),
+                ShortName:       Str(r, "SHORTNAM"),
+                AccountNumber:   Str(r, "BNKNUM"),
+                GlAccountCode:   Str(r, "ACCNUM"),
+                BalanceForward:  Math.Round(Dec(r, "BALFWD"), 2),
+                BalanceDate:     Date(r, "BALDAT")));
+        }
+
+        return Task.FromResult<IReadOnlyList<ExpressBankAccountDto>>(result);
+    }
+
+    public Task<IReadOnlyList<ExpressBankTransactionDto>> ReadBankTransactionsAsync(string companyFolderPath, CancellationToken ct = default)
+    {
+        List<DbfRow> records;
+        try { records = ReadDbf(companyFolderPath, "BKTRN"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressBankTransactionDto>>([]); }
+
+        var result = new List<ExpressBankTransactionDto>();
+        foreach (var r in records)
+        {
+            var date = Date(r, "TRNDAT");
+            if (date is null) continue;
+
+            // ทิศทาง: JNLTRNTYP='0' = เงินเข้า (ฝาก/รับ/โอนเข้า), '1' = เงินออก (จ่าย/ถอน/โอนออก)
+            var isDeposit = Str(r, "JNLTRNTYP") == "0";
+
+            result.Add(new ExpressBankTransactionDto(
+                BankAccountCode:  Str(r, "BNKACC"),
+                TransactionDate:  date.Value,
+                TransactionType:  Str(r, "BKTRNTYP"),
+                IsDeposit:        isDeposit,
+                ChequeNo:         Str(r, "CHQNUM"),
+                ChequeDate:       Date(r, "CHQDAT"),
+                CounterpartyName: Str(r, "NAME"),
+                Amount:           Math.Round(Dec(r, "NETAMT"), 2),
+                Charge:           Math.Round(Dec(r, "CHARGE"), 2),
+                Remark:           Str(r, "REMARK"),
+                Voucher:          Str(r, "VOUCHER"),
+                ChequeStatus:     Str(r, "CHQSTAT")));
+        }
+
+        return Task.FromResult<IReadOnlyList<ExpressBankTransactionDto>>(result);
+    }
+
     /// <summary>ดึงอีเมลจากข้อความ (เช่น REMARK "E-MAIL:foo@bar.com") — คืน null ถ้าไม่พบ</summary>
     private static string? ExtractEmail(string text)
     {

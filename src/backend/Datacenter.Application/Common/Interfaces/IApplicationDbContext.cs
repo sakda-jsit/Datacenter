@@ -35,6 +35,10 @@ public interface IApplicationDbContext
     DbSet<ArInvoice> ArInvoices { get; }
     DbSet<Supplier> Suppliers { get; }
     DbSet<ApInvoice> ApInvoices { get; }
+    DbSet<StockItem> StockItems { get; }
+    DbSet<BankAccount> BankAccounts { get; }
+    DbSet<BankTransaction> BankTransactions { get; }
+    DbSet<ReportPackage> ReportPackages { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

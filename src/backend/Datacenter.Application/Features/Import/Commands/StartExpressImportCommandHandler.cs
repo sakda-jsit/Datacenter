@@ -291,6 +291,54 @@ public class StartExpressImportCommandHandler(
                     batch.Message += $" (นำเข้าเจ้าหนี้ไม่สำเร็จ: {ex.Message})";
                     await db.SaveChangesAsync(CancellationToken.None);
                 }
+
+                // นำเข้าสินค้าคงคลัง (STMAS) พร้อมกัน
+                try
+                {
+                    var stResult = await Stock.Services.StockImporter.ImportAsync(
+                        db, dbfAdapter, folderPath, request.ClientCompanyId, batch.Id, currentUser.Username, ct);
+                    if (stResult.Read > 0)
+                    {
+                        batch.Message += $" · {stResult.Message}";
+                        await audit.LogAsync(
+                            action: "ImportStock",
+                            entityName: "ImportBatch",
+                            entityId: batch.Id.ToString(),
+                            afterValue: stResult.Message,
+                            companyId: request.ClientCompanyId,
+                            cancellationToken: ct);
+                        await db.SaveChangesAsync(ct);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    batch.Message += $" (นำเข้าสินค้าคงคลังไม่สำเร็จ: {ex.Message})";
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
+
+                // นำเข้าบัญชีธนาคาร + รายการเดินบัญชี (BKMAS/BKTRN) พร้อมกัน
+                try
+                {
+                    var bkResult = await Bank.Services.BankImporter.ImportAsync(
+                        db, dbfAdapter, folderPath, request.ClientCompanyId, batch.Id, currentUser.Username, ct);
+                    if (bkResult.Accounts > 0 || bkResult.Transactions > 0)
+                    {
+                        batch.Message += $" · {bkResult.Message}";
+                        await audit.LogAsync(
+                            action: "ImportBank",
+                            entityName: "ImportBatch",
+                            entityId: batch.Id.ToString(),
+                            afterValue: bkResult.Message,
+                            companyId: request.ClientCompanyId,
+                            cancellationToken: ct);
+                        await db.SaveChangesAsync(ct);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    batch.Message += $" (นำเข้าธนาคารไม่สำเร็จ: {ex.Message})";
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
             }
 
             return batch.Id;

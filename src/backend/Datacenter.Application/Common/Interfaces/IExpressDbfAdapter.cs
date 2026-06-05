@@ -65,4 +65,13 @@ public interface IExpressDbfAdapter
 
     /// <summary>อ่านใบตั้งหนี้เจ้าหนี้จาก APTRN.DBF (เฉพาะ RECTYP='3' = RR; คืนว่างถ้าไม่มีไฟล์).</summary>
     Task<IReadOnlyList<ExpressApInvoiceDto>> ReadApInvoicesAsync(string companyFolderPath, CancellationToken ct = default);
+
+    /// <summary>อ่านสินค้าคงคลังจาก STMAS.DBF (ยอดคงเหลือ/มูลค่าปัจจุบัน; คืนว่างถ้าไม่มีไฟล์).</summary>
+    Task<IReadOnlyList<ExpressStockItemDto>> ReadStockItemsAsync(string companyFolderPath, CancellationToken ct = default);
+
+    /// <summary>อ่านบัญชีเงินฝากธนาคารจาก BKMAS.DBF (คืนว่างถ้าไม่มีไฟล์).</summary>
+    Task<IReadOnlyList<ExpressBankAccountDto>> ReadBankAccountsAsync(string companyFolderPath, CancellationToken ct = default);
+
+    /// <summary>อ่านรายการเดินบัญชีธนาคารจาก BKTRN.DBF (คืนว่างถ้าไม่มีไฟล์).</summary>
+    Task<IReadOnlyList<ExpressBankTransactionDto>> ReadBankTransactionsAsync(string companyFolderPath, CancellationToken ct = default);
 }

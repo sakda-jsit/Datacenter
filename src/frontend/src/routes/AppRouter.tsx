@@ -15,6 +15,8 @@ import VatPage from '../features/vat/pages/VatPage'
 import WhtPage from '../features/wht/pages/WhtPage'
 import ArPage from '../features/ar/pages/ArPage'
 import ApPage from '../features/ap/pages/ApPage'
+import StockPage from '../features/stock/pages/StockPage'
+import ReportPackagesPage from '../features/report-packages/pages/ReportPackagesPage'
 import PayrollPage from '../features/payroll/pages/PayrollPage'
 import BankReconciliationPage from '../features/bank-reconciliation/pages/BankReconciliationPage'
 import GeneralLedgerPage from '../features/general-ledger/pages/GeneralLedgerPage'
@@ -47,6 +49,7 @@ export default function AppRouter() {
           <Route path="wht" element={<WhtPage />} />
           <Route path="ar" element={<ArPage />} />
           <Route path="ap" element={<ApPage />} />
+          <Route path="stock" element={<StockPage />} />
           <Route path="payroll" element={<PayrollPage />} />
           <Route path="bank-reconciliation" element={<BankReconciliationPage />} />
           <Route path="general-ledger" element={<GeneralLedgerPage />} />
@@ -54,6 +57,7 @@ export default function AppRouter() {
           <Route path="pnd50" element={<Pnd50Page />} />
           <Route path="compliance" element={<ComplianceCalendarRoute />} />
           <Route path="closing-period" element={<ClosingPeriodPage />} />
+          <Route path="report-packages" element={<ReportPackagesPage />} />
           <Route path="audit-log" element={<AuditLogPage />} />
         </Route>
       </Route>

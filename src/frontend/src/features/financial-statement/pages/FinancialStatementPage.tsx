@@ -3,16 +3,18 @@ import ReportFilterBar from '../../../shared/components/report/ReportFilterBar'
 import PageHeader from '../../../shared/components/ui/PageHeader'
 import Tabs from '../../../shared/components/ui/Tabs'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
-import { useBalanceSheet, useProfitLoss } from '../hooks/useFinancialStatement'
+import { useBalanceSheet, useEquityChanges, useProfitLoss } from '../hooks/useFinancialStatement'
 import BalanceSheetTab from './tabs/BalanceSheetTab'
 import ProfitLossTab from './tabs/ProfitLossTab'
+import EquityChangesTab from './tabs/EquityChangesTab'
 import MappingTab from './tabs/MappingTab'
 
-type Tab = 'pl' | 'bs' | 'mapping'
+type Tab = 'pl' | 'bs' | 'cap' | 'mapping'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'pl', label: 'งบกำไรขาดทุน' },
   { key: 'bs', label: 'งบแสดงฐานะการเงิน' },
+  { key: 'cap', label: 'งบส่วนผู้ถือหุ้น' },
   { key: 'mapping', label: 'จัดการ Mapping' },
 ]
 
@@ -32,6 +34,10 @@ export default function FinancialStatementPage() {
   const plQuery = useProfitLoss(
     { clientCompanyId: companyId, fiscalYear: year, monthFrom, monthTo },
     queried && tab === 'pl',
+  )
+  const capQuery = useEquityChanges(
+    { clientCompanyId: companyId, fiscalYear: year },
+    queried && tab === 'cap',
   )
 
   function handleSearch() {
@@ -72,7 +78,7 @@ export default function FinancialStatementPage() {
           onMonthFromChange={setMonthFrom}
           onMonthToChange={setMonthTo}
           onSearch={handleSearch}
-          loading={bsQuery.isLoading || plQuery.isLoading}
+          loading={bsQuery.isLoading || plQuery.isLoading || capQuery.isLoading}
         />
       )}
 
@@ -91,6 +97,14 @@ export default function FinancialStatementPage() {
           data={bsQuery.data}
           isLoading={bsQuery.isLoading}
           isError={bsQuery.isError}
+          queried={queried}
+        />
+      )}
+      {tab === 'cap' && (
+        <EquityChangesTab
+          data={capQuery.data}
+          isLoading={capQuery.isLoading}
+          isError={capQuery.isError}
           queried={queried}
         />
       )}

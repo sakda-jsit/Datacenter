@@ -25,6 +25,17 @@ export function useProfitLoss(
   })
 }
 
+export function useEquityChanges(
+  params: { clientCompanyId: number; fiscalYear: number },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [FS_KEY, 'equity-changes', params],
+    queryFn: () => financialStatementApi.getEquityChanges(params),
+    enabled: enabled && params.clientCompanyId > 0,
+  })
+}
+
 export function useAccountMappings(clientCompanyId: number) {
   return useQuery({
     queryKey: [FS_KEY, 'mappings', clientCompanyId],

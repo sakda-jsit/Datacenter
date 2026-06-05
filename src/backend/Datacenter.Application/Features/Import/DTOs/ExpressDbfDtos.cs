@@ -133,6 +133,45 @@ public record ExpressArInvoiceDto(
     DateTime? VatPeriod,
     string? Reference);
 
+/// <summary>บัญชีเงินฝากธนาคารจาก Express BKMAS.DBF</summary>
+public record ExpressBankAccountDto(
+    string BankAccountCode,
+    string BankName,
+    string? Branch,
+    string? ShortName,
+    string? AccountNumber,
+    string? GlAccountCode,
+    decimal BalanceForward,
+    DateTime? BalanceDate);
+
+/// <summary>รายการเดินบัญชีธนาคารจาก Express BKTRN.DBF</summary>
+public record ExpressBankTransactionDto(
+    string BankAccountCode,
+    DateTime TransactionDate,
+    string? TransactionType,
+    bool IsDeposit,                 // JNLTRNTYP='0' = เงินเข้า
+    string? ChequeNo,
+    DateTime? ChequeDate,
+    string? CounterpartyName,
+    decimal Amount,
+    decimal Charge,
+    string? Remark,
+    string? Voucher,
+    string? ChequeStatus);
+
+/// <summary>สินค้าคงคลังจาก Express STMAS.DBF</summary>
+public record ExpressStockItemDto(
+    string StockCode,
+    string Name,
+    string? ItemType,
+    string? GroupCode,
+    string? CategoryCode,
+    string? Unit,
+    decimal OnHandQty,
+    decimal UnitCost,
+    decimal StockValue,
+    bool IsActive);
+
 /// <summary>ผู้ขายจาก Express APMAS.DBF</summary>
 public record ExpressSupplierDto(
     string SupplierCode,

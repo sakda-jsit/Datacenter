@@ -2,6 +2,7 @@ import apiClient from '../../../shared/services/apiClient'
 import type {
   AccountMappingDto,
   BalanceSheetDto,
+  EquityChangesDto,
   FsExternalInputDto,
   ProfitLossDto,
 } from '../types/financialStatement.types'
@@ -18,6 +19,9 @@ export const financialStatementApi = {
     monthFrom?: number
     monthTo?: number
   }) => apiClient.get<ProfitLossDto>(`${BASE}/profit-loss`, { params }).then((r) => r.data),
+
+  getEquityChanges: (params: { clientCompanyId: number; fiscalYear: number }) =>
+    apiClient.get<EquityChangesDto>(`${BASE}/equity-changes`, { params }).then((r) => r.data),
 
   getMappings: (clientCompanyId: number) =>
     apiClient.get<AccountMappingDto[]>(`${BASE}/mappings`, {

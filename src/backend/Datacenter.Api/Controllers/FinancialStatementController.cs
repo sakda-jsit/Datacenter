@@ -23,6 +23,11 @@ public class FinancialStatementController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetProfitLoss([FromQuery] GetProfitLossQuery query, CancellationToken ct)
         => Ok(await mediator.Send(query, ct));
 
+    /// <summary>GET /api/v1/financial-statement/equity-changes?clientCompanyId=1&amp;fiscalYear=2024 — งบแสดงการเปลี่ยนแปลงส่วนผู้ถือหุ้น (CAP)</summary>
+    [HttpGet("equity-changes")]
+    public async Task<IActionResult> GetEquityChanges([FromQuery] GetEquityChangesQuery query, CancellationToken ct)
+        => Ok(await mediator.Send(query, ct));
+
     // ── Account Mappings ──────────────────────────────────────────────────────
 
     /// <summary>GET /api/v1/financial-statement/mappings?clientCompanyId=1</summary>

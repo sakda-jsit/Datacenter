@@ -63,3 +63,25 @@ export interface FsExternalInputDto {
   amount: number
   note?: string
 }
+
+export interface EquityComponentDto {
+  refCode: string
+  name: string
+  opening: number
+  netProfit: number
+  otherChange: number
+  closing: number
+}
+
+export interface EquityChangesDto {
+  clientCompanyId: number
+  clientName: string
+  fiscalYear: number
+  components: EquityComponentDto[]
+  balanceSheetEquity: number
+  totalOpening: number
+  totalNetProfit: number
+  totalOtherChange: number
+  totalClosing: number
+  tiesToBalanceSheet: boolean
+}

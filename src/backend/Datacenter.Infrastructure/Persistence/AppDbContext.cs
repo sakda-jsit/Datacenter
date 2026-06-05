@@ -36,6 +36,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ArInvoice> ArInvoices => Set<ArInvoice>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<ApInvoice> ApInvoices => Set<ApInvoice>();
+    public DbSet<StockItem> StockItems => Set<StockItem>();
+    public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
+    public DbSet<BankTransaction> BankTransactions => Set<BankTransaction>();
+    public DbSet<ReportPackage> ReportPackages => Set<ReportPackage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
