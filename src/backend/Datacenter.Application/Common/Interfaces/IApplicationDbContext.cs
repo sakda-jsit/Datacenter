@@ -31,6 +31,10 @@ public interface IApplicationDbContext
     DbSet<VatEntry> VatEntries { get; }
     DbSet<WhtEntry> WhtEntries { get; }
     DbSet<WhtPayee> WhtPayees { get; }
+    DbSet<Customer> Customers { get; }
+    DbSet<ArInvoice> ArInvoices { get; }
+    DbSet<Supplier> Suppliers { get; }
+    DbSet<ApInvoice> ApInvoices { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

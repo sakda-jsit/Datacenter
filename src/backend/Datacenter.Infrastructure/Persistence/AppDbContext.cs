@@ -32,6 +32,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<VatEntry> VatEntries => Set<VatEntry>();
     public DbSet<WhtEntry> WhtEntries => Set<WhtEntry>();
     public DbSet<WhtPayee> WhtPayees => Set<WhtPayee>();
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<ArInvoice> ArInvoices => Set<ArInvoice>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
+    public DbSet<ApInvoice> ApInvoices => Set<ApInvoice>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

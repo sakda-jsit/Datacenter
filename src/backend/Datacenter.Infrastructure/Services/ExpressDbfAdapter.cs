@@ -361,4 +361,149 @@ public class ExpressDbfAdapter : IExpressDbfAdapter
 
         return Task.FromResult<IReadOnlyList<ExpressWhtEntryDto>>(result);
     }
+
+    public Task<IReadOnlyList<ExpressCustomerDto>> ReadCustomersAsync(string companyFolderPath, CancellationToken ct = default)
+    {
+        List<DbfRow> records;
+        try { records = ReadDbf(companyFolderPath, "ARMAS"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressCustomerDto>>([]); }
+
+        var result = new List<ExpressCustomerDto>();
+        foreach (var r in records)
+        {
+            var code = Str(r, "CUSCOD");
+            if (string.IsNullOrWhiteSpace(code)) continue;
+
+            var addr = string.Join(" ", new[] { Str(r, "ADDR01"), Str(r, "ADDR02"), Str(r, "ADDR03"), Str(r, "ZIPCOD") }
+                .Where(s => !string.IsNullOrWhiteSpace(s)));
+            var remark = Str(r, "REMARK");
+
+            result.Add(new ExpressCustomerDto(
+                CustomerCode:      code,
+                Prefix:            Str(r, "PRENAM"),
+                Name:              Str(r, "CUSNAM"),
+                TaxId:             Str(r, "TAXID"),
+                Address:           addr,
+                Phone:             Str(r, "TELNUM"),
+                Contact:           Str(r, "CONTACT"),
+                Email:             ExtractEmail(remark),
+                PaymentTermDays:   (int)Dec(r, "PAYTRM"),
+                PaymentCondition:  Str(r, "PAYCOND"),
+                GlAccountCode:     Str(r, "ACCNUM"),
+                Remark:            remark,
+                IsActive:          Str(r, "STATUS").Equals("A", StringComparison.OrdinalIgnoreCase)));
+        }
+
+        return Task.FromResult<IReadOnlyList<ExpressCustomerDto>>(result);
+    }
+
+    public Task<IReadOnlyList<ExpressArInvoiceDto>> ReadArInvoicesAsync(string companyFolderPath, CancellationToken ct = default)
+    {
+        List<DbfRow> records;
+        try { records = ReadDbf(companyFolderPath, "ARTRN"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressArInvoiceDto>>([]); }
+
+        var result = new List<ExpressArInvoiceDto>();
+        foreach (var r in records)
+        {
+            if (Str(r, "RECTYP") != "3") continue;   // เฉพาะใบแจ้งหนี้ (IV); RECTYP 9 = ใบเสร็จ (RE)
+            var docNum = Str(r, "DOCNUM");
+            var docDat = Date(r, "DOCDAT");
+            if (string.IsNullOrWhiteSpace(docNum) || docDat is null) continue;
+
+            result.Add(new ExpressArInvoiceDto(
+                DocumentNo:         docNum,
+                DocumentDate:       docDat.Value,
+                DueDate:            Date(r, "DUEDAT"),
+                CustomerCode:       Str(r, "CUSCOD"),
+                Amount:             Math.Round(Dec(r, "AFTDISC"), 2),
+                VatRate:            Math.Round(Dec(r, "VATRAT"), 4),
+                VatAmount:          Math.Round(Dec(r, "VATAMT"), 2),
+                NetAmount:          Math.Round(Dec(r, "NETAMT"), 2),
+                ReceivedAmount:     Math.Round(Dec(r, "RCVAMT"), 2),
+                OutstandingAmount:  Math.Round(Dec(r, "REMAMT"), 2),
+                IsCompleted:        Str(r, "CMPLAPP").Equals("Y", StringComparison.OrdinalIgnoreCase),
+                VatPeriod:          Date(r, "VATPRD"),
+                Reference:          Str(r, "YOUREF")));
+        }
+
+        return Task.FromResult<IReadOnlyList<ExpressArInvoiceDto>>(result);
+    }
+
+    public Task<IReadOnlyList<ExpressSupplierDto>> ReadSuppliersAsync(string companyFolderPath, CancellationToken ct = default)
+    {
+        List<DbfRow> records;
+        try { records = ReadDbf(companyFolderPath, "APMAS"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressSupplierDto>>([]); }
+
+        var result = new List<ExpressSupplierDto>();
+        foreach (var r in records)
+        {
+            var code = Str(r, "SUPCOD");
+            if (string.IsNullOrWhiteSpace(code)) continue;
+
+            var addr = string.Join(" ", new[] { Str(r, "ADDR01"), Str(r, "ADDR02"), Str(r, "ADDR03"), Str(r, "ZIPCOD") }
+                .Where(s => !string.IsNullOrWhiteSpace(s)));
+            var remark = Str(r, "REMARK");
+
+            result.Add(new ExpressSupplierDto(
+                SupplierCode:      code,
+                Prefix:            Str(r, "PRENAM"),
+                Name:              Str(r, "SUPNAM"),
+                TaxId:             Str(r, "TAXID"),
+                Address:           addr,
+                Phone:             Str(r, "TELNUM"),
+                Contact:           Str(r, "CONTACT"),
+                Email:             ExtractEmail(remark),
+                PaymentTermDays:   (int)Dec(r, "PAYTRM"),
+                PaymentCondition:  Str(r, "PAYCOND"),
+                GlAccountCode:     Str(r, "ACCNUM"),
+                Remark:            remark,
+                IsActive:          Str(r, "STATUS") != "0"));   // AP ใช้รหัสสถานะผสม ('2'/'A'/''); ถือว่า active เว้นแต่ '0'
+        }
+
+        return Task.FromResult<IReadOnlyList<ExpressSupplierDto>>(result);
+    }
+
+    public Task<IReadOnlyList<ExpressApInvoiceDto>> ReadApInvoicesAsync(string companyFolderPath, CancellationToken ct = default)
+    {
+        List<DbfRow> records;
+        try { records = ReadDbf(companyFolderPath, "APTRN"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressApInvoiceDto>>([]); }
+
+        var result = new List<ExpressApInvoiceDto>();
+        foreach (var r in records)
+        {
+            if (Str(r, "RECTYP") != "3") continue;   // เฉพาะใบตั้งหนี้ซื้อ (RR); 9=จ่าย(PS), 7=OE, 1=HP
+            var docNum = Str(r, "DOCNUM");
+            var docDat = Date(r, "DOCDAT");
+            if (string.IsNullOrWhiteSpace(docNum) || docDat is null) continue;
+
+            var yourRef = Str(r, "YOUREF");
+            result.Add(new ExpressApInvoiceDto(
+                DocumentNo:         docNum,
+                DocumentDate:       docDat.Value,
+                DueDate:            Date(r, "DUEDAT"),
+                SupplierCode:       Str(r, "SUPCOD"),
+                Amount:             Math.Round(Dec(r, "AFTDISC"), 2),
+                VatRate:            Math.Round(Dec(r, "VATRAT"), 4),
+                VatAmount:          Math.Round(Dec(r, "VATAMT"), 2),
+                NetAmount:          Math.Round(Dec(r, "NETAMT"), 2),
+                PaidAmount:         Math.Round(Dec(r, "PAYAMT"), 2),
+                OutstandingAmount:  Math.Round(Dec(r, "REMAMT"), 2),
+                IsCompleted:        Str(r, "CMPLAPP").Equals("Y", StringComparison.OrdinalIgnoreCase),
+                VatPeriod:          Date(r, "VATPRD"),
+                Reference:          string.IsNullOrWhiteSpace(yourRef) ? Str(r, "REFNUM") : yourRef));
+        }
+
+        return Task.FromResult<IReadOnlyList<ExpressApInvoiceDto>>(result);
+    }
+
+    /// <summary>ดึงอีเมลจากข้อความ (เช่น REMARK "E-MAIL:foo@bar.com") — คืน null ถ้าไม่พบ</summary>
+    private static string? ExtractEmail(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var m = System.Text.RegularExpressions.Regex.Match(text, @"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}");
+        return m.Success ? m.Value : null;
+    }
 }

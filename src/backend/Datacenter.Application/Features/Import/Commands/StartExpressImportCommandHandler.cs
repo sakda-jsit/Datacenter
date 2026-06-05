@@ -243,6 +243,54 @@ public class StartExpressImportCommandHandler(
                     batch.Message += $" (นำเข้าภาษีหัก ณ ที่จ่ายไม่สำเร็จ: {ex.Message})";
                     await db.SaveChangesAsync(CancellationToken.None);
                 }
+
+                // นำเข้าลูกค้า + ใบแจ้งหนี้ลูกหนี้ (ARMAS/ARTRN) พร้อมกัน
+                try
+                {
+                    var arResult = await Ar.Services.ArImporter.ImportAsync(
+                        db, dbfAdapter, folderPath, request.ClientCompanyId, batch.Id, currentUser.Username, ct);
+                    if (arResult.Customers > 0 || arResult.Invoices > 0)
+                    {
+                        batch.Message += $" · {arResult.Message}";
+                        await audit.LogAsync(
+                            action: "ImportAr",
+                            entityName: "ImportBatch",
+                            entityId: batch.Id.ToString(),
+                            afterValue: arResult.Message,
+                            companyId: request.ClientCompanyId,
+                            cancellationToken: ct);
+                        await db.SaveChangesAsync(ct);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    batch.Message += $" (นำเข้าลูกหนี้ไม่สำเร็จ: {ex.Message})";
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
+
+                // นำเข้าผู้ขาย + ใบตั้งหนี้เจ้าหนี้ (APMAS/APTRN) พร้อมกัน
+                try
+                {
+                    var apResult = await Ap.Services.ApImporter.ImportAsync(
+                        db, dbfAdapter, folderPath, request.ClientCompanyId, batch.Id, currentUser.Username, ct);
+                    if (apResult.Suppliers > 0 || apResult.Invoices > 0)
+                    {
+                        batch.Message += $" · {apResult.Message}";
+                        await audit.LogAsync(
+                            action: "ImportAp",
+                            entityName: "ImportBatch",
+                            entityId: batch.Id.ToString(),
+                            afterValue: apResult.Message,
+                            companyId: request.ClientCompanyId,
+                            cancellationToken: ct);
+                        await db.SaveChangesAsync(ct);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    batch.Message += $" (นำเข้าเจ้าหนี้ไม่สำเร็จ: {ex.Message})";
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
             }
 
             return batch.Id;

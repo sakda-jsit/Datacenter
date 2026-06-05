@@ -101,6 +101,70 @@ public record ExpressVatEntryDto(
 /// FormTypeCode: "S03" = ภ.ง.ด.3 (บุคคลธรรมดา), "S53" = ภ.ง.ด.53 (นิติบุคคล).
 /// หนึ่งระเบียน ISTAX อาจมี 2 ชุดเงินได้ (ชุดหลัก + ...2) → adapter แตกเป็น 2 DTO เมื่อชุด 2 มีค่า.
 /// </summary>
+/// <summary>ลูกค้าจาก Express ARMAS.DBF</summary>
+public record ExpressCustomerDto(
+    string CustomerCode,
+    string? Prefix,
+    string Name,
+    string? TaxId,
+    string? Address,
+    string? Phone,
+    string? Contact,
+    string? Email,
+    int PaymentTermDays,
+    string? PaymentCondition,
+    string? GlAccountCode,
+    string? Remark,
+    bool IsActive);
+
+/// <summary>ใบแจ้งหนี้ลูกหนี้จาก Express ARTRN.DBF (RECTYP='3')</summary>
+public record ExpressArInvoiceDto(
+    string DocumentNo,
+    DateTime DocumentDate,
+    DateTime? DueDate,
+    string CustomerCode,
+    decimal Amount,
+    decimal VatRate,
+    decimal VatAmount,
+    decimal NetAmount,
+    decimal ReceivedAmount,
+    decimal OutstandingAmount,
+    bool IsCompleted,
+    DateTime? VatPeriod,
+    string? Reference);
+
+/// <summary>ผู้ขายจาก Express APMAS.DBF</summary>
+public record ExpressSupplierDto(
+    string SupplierCode,
+    string? Prefix,
+    string Name,
+    string? TaxId,
+    string? Address,
+    string? Phone,
+    string? Contact,
+    string? Email,
+    int PaymentTermDays,
+    string? PaymentCondition,
+    string? GlAccountCode,
+    string? Remark,
+    bool IsActive);
+
+/// <summary>ใบตั้งหนี้เจ้าหนี้จาก Express APTRN.DBF (RECTYP='3')</summary>
+public record ExpressApInvoiceDto(
+    string DocumentNo,
+    DateTime DocumentDate,
+    DateTime? DueDate,
+    string SupplierCode,
+    decimal Amount,
+    decimal VatRate,
+    decimal VatAmount,
+    decimal NetAmount,
+    decimal PaidAmount,
+    decimal OutstandingAmount,
+    bool IsCompleted,
+    DateTime? VatPeriod,
+    string? Reference);
+
 public record ExpressWhtEntryDto(
     string SourceKey,
     string FormTypeCode,

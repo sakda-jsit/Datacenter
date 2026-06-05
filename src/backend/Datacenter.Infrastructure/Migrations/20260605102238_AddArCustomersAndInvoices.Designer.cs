@@ -4,6 +4,7 @@ using Datacenter.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Datacenter.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260605102238_AddArCustomersAndInvoices")]
+    partial class AddArCustomersAndInvoices
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -266,90 +269,6 @@ namespace Datacenter.Infrastructure.Migrations
                     b.HasIndex("AdjustmentEntryId");
 
                     b.ToTable("AdjustmentEntryLines", (string)null);
-                });
-
-            modelBuilder.Entity("Datacenter.Domain.Entities.ApInvoice", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("ClientCompanyId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("DocumentDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DocumentNo")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime?>("DueDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("ImportBatchId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsCompleted")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("NetAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("OutstandingAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("PaidAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Reference")
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
-
-                    b.Property<string>("SupplierCode")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("SupplierName")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<decimal>("VatAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("VatPeriod")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("VatRate")
-                        .HasColumnType("decimal(9,4)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClientCompanyId", "DocumentDate");
-
-                    b.HasIndex("ClientCompanyId", "SupplierCode");
-
-                    b.ToTable("ApInvoices", (string)null);
                 });
 
             modelBuilder.Entity("Datacenter.Domain.Entities.ArInvoice", b =>
@@ -1490,90 +1409,6 @@ namespace Datacenter.Infrastructure.Migrations
                     b.ToTable("StatementLines", (string)null);
                 });
 
-            modelBuilder.Entity("Datacenter.Domain.Entities.Supplier", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Address")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<int>("ClientCompanyId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Contact")
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("GlAccountCode")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("PaymentCondition")
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
-
-                    b.Property<int>("PaymentTermDays")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Phone")
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
-                    b.Property<string>("Prefix")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Remark")
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.Property<string>("SupplierCode")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("TaxId")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClientCompanyId", "SupplierCode")
-                        .IsUnique();
-
-                    b.ToTable("Suppliers", (string)null);
-                });
-
             modelBuilder.Entity("Datacenter.Domain.Entities.User", b =>
                 {
                     b.Property<int>("Id")
@@ -1946,17 +1781,6 @@ namespace Datacenter.Infrastructure.Migrations
                     b.Navigation("AdjustmentEntry");
                 });
 
-            modelBuilder.Entity("Datacenter.Domain.Entities.ApInvoice", b =>
-                {
-                    b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
-                        .WithMany()
-                        .HasForeignKey("ClientCompanyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("ClientCompany");
-                });
-
             modelBuilder.Entity("Datacenter.Domain.Entities.ArInvoice", b =>
                 {
                     b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
@@ -2157,17 +1981,6 @@ namespace Datacenter.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("ImportBatch");
-                });
-
-            modelBuilder.Entity("Datacenter.Domain.Entities.Supplier", b =>
-                {
-                    b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
-                        .WithMany()
-                        .HasForeignKey("ClientCompanyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("ClientCompany");
                 });
 
             modelBuilder.Entity("Datacenter.Domain.Entities.VatEntry", b =>

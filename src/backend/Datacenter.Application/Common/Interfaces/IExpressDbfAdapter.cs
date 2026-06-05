@@ -53,4 +53,16 @@ public interface IExpressDbfAdapter
     /// คืนรายการว่างถ้าไม่มีไฟล์ (บริษัทที่ไม่มีการหักภาษี).
     /// </summary>
     Task<IReadOnlyList<ExpressWhtEntryDto>> ReadWhtEntriesAsync(string companyFolderPath, CancellationToken ct = default);
+
+    /// <summary>อ่านลูกค้าจาก ARMAS.DBF (คืนว่างถ้าไม่มีไฟล์).</summary>
+    Task<IReadOnlyList<ExpressCustomerDto>> ReadCustomersAsync(string companyFolderPath, CancellationToken ct = default);
+
+    /// <summary>อ่านใบแจ้งหนี้ลูกหนี้จาก ARTRN.DBF (เฉพาะ RECTYP='3' = IV; คืนว่างถ้าไม่มีไฟล์).</summary>
+    Task<IReadOnlyList<ExpressArInvoiceDto>> ReadArInvoicesAsync(string companyFolderPath, CancellationToken ct = default);
+
+    /// <summary>อ่านผู้ขายจาก APMAS.DBF (คืนว่างถ้าไม่มีไฟล์).</summary>
+    Task<IReadOnlyList<ExpressSupplierDto>> ReadSuppliersAsync(string companyFolderPath, CancellationToken ct = default);
+
+    /// <summary>อ่านใบตั้งหนี้เจ้าหนี้จาก APTRN.DBF (เฉพาะ RECTYP='3' = RR; คืนว่างถ้าไม่มีไฟล์).</summary>
+    Task<IReadOnlyList<ExpressApInvoiceDto>> ReadApInvoicesAsync(string companyFolderPath, CancellationToken ct = default);
 }
