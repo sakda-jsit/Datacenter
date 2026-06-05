@@ -28,6 +28,38 @@ public class FinancialStatementController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetEquityChanges([FromQuery] GetEquityChangesQuery query, CancellationToken ct)
         => Ok(await mediator.Send(query, ct));
 
+    // ── NOTE2 (หมายเหตุประกอบงบการเงิน) ────────────────────────────────────────
+
+    /// <summary>GET /api/v1/financial-statement/notes?clientCompanyId=1&amp;fiscalYear=2024 — NOTE2 ฉบับเต็ม</summary>
+    [HttpGet("notes")]
+    public async Task<IActionResult> GetNotes([FromQuery] GetNotesToFsQuery query, CancellationToken ct)
+        => Ok(await mediator.Send(query, ct));
+
+    /// <summary>GET /api/v1/financial-statement/notes/excel?clientCompanyId=1&amp;fiscalYear=2024 — NOTE2 รูปแบบงบ (.xlsx)</summary>
+    [HttpGet("notes/excel")]
+    public async Task<IActionResult> GetNotesExcel([FromQuery] GetNotesExcelQuery query, CancellationToken ct)
+    {
+        var bytes = await mediator.Send(query, ct);
+        return File(bytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"NOTE2-{query.ClientCompanyId}-{query.FiscalYear}.xlsx");
+    }
+
+    /// <summary>GET /api/v1/financial-statement/note-templates?clientCompanyId=1&amp;fiscalYear=2024 — ข้อความ template ที่มีผล (สำหรับแก้ไข)</summary>
+    [HttpGet("note-templates")]
+    public async Task<IActionResult> GetNoteTemplates([FromQuery] GetNoteTemplateSectionsQuery query, CancellationToken ct)
+        => Ok(await mediator.Send(query, ct));
+
+    /// <summary>PUT /api/v1/financial-statement/note-templates — บันทึกข้อความ NOTE2 เฉพาะบริษัท (override)</summary>
+    [HttpPut("note-templates")]
+    public async Task<IActionResult> UpsertNoteTemplate([FromBody] UpsertNoteTemplateSectionCommand command, CancellationToken ct)
+        => Ok(new { id = await mediator.Send(command, ct) });
+
+    /// <summary>POST /api/v1/financial-statement/note-templates/reset — ลบ override กลับไปใช้ template กลาง</summary>
+    [HttpPost("note-templates/reset")]
+    public async Task<IActionResult> ResetNoteTemplate([FromBody] ResetNoteTemplateSectionCommand command, CancellationToken ct)
+        => Ok(new { reset = await mediator.Send(command, ct) });
+
     // ── Account Mappings ──────────────────────────────────────────────────────
 
     /// <summary>GET /api/v1/financial-statement/mappings?clientCompanyId=1</summary>

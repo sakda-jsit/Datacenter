@@ -4,6 +4,7 @@ using Datacenter.Infrastructure.Identity;
 using Datacenter.Infrastructure.Persistence;
 using Datacenter.Infrastructure.Services;
 using Datacenter.Infrastructure.Services.Email;
+using Datacenter.Infrastructure.Services.Notes;
 using Datacenter.Infrastructure.Services.Wht;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -39,6 +40,9 @@ public static class DependencyInjection
         QuestPDF.Settings.License = LicenseType.Community;
         var certFont = configuration["Wht:CertificateFont"] ?? "Tahoma";
         services.AddSingleton<IWhtCertificatePdfService>(_ => new WhtCertificatePdfService(certFont));
+
+        // หมายเหตุประกอบงบ (NOTE2) export Excel รูปแบบงบ — ClosedXML
+        services.AddScoped<INote2ExcelExporter, Note2ExcelExporter>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>

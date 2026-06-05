@@ -39,6 +39,7 @@ public interface IApplicationDbContext
     DbSet<BankAccount> BankAccounts { get; }
     DbSet<BankTransaction> BankTransactions { get; }
     DbSet<ReportPackage> ReportPackages { get; }
+    DbSet<NoteTemplateSection> NoteTemplateSections { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

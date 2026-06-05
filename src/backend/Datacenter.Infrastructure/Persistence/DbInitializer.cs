@@ -138,6 +138,14 @@ public static class DbInitializer
             logger.LogInformation("Seeded statement lines (FS master reference).");
         }
 
+        // ── Seed NoteTemplateSections (ข้อความหมายเหตุประกอบงบ TFRS-NPAEs, master กลาง) ──
+        if (!await db.NoteTemplateSections.AnyAsync())
+        {
+            db.NoteTemplateSections.AddRange(NoteTemplateSeed.GetSections());
+            await db.SaveChangesAsync();
+            logger.LogInformation("Seeded NOTE2 template sections (financial statement notes).");
+        }
+
         // ── Seed AssetTypeMasters (ประเภทสินทรัพย์ + อัตราค่าเสื่อมมาตรฐาน) ──────
         if (!await db.AssetTypeMasters.AnyAsync())
         {

@@ -4,6 +4,8 @@ import type {
   BalanceSheetDto,
   EquityChangesDto,
   FsExternalInputDto,
+  NotesToFsDto,
+  NoteTemplateSectionDto,
   ProfitLossDto,
 } from '../types/financialStatement.types'
 
@@ -48,4 +50,30 @@ export const financialStatementApi = {
     amount: number
     note?: string
   }) => apiClient.put(`${BASE}/external-inputs`, data),
+
+  // ── NOTE2 ──
+  getNotes: (params: { clientCompanyId: number; fiscalYear: number }) =>
+    apiClient.get<NotesToFsDto>(`${BASE}/notes`, { params }).then((r) => r.data),
+
+  // NOTE2 รูปแบบงบ (.xlsx จาก backend ClosedXML) — ดึงเป็น blob (แนบ JWT ผ่าน axios)
+  getNotesExcel: (params: { clientCompanyId: number; fiscalYear: number; directorName?: string }) =>
+    apiClient.get(`${BASE}/notes/excel`, { params, responseType: 'blob' }).then((r) => r.data as Blob),
+
+  getNoteTemplates: (params: { clientCompanyId: number; fiscalYear: number }) =>
+    apiClient.get<NoteTemplateSectionDto[]>(`${BASE}/note-templates`, { params }).then((r) => r.data),
+
+  upsertNoteTemplate: (data: {
+    clientCompanyId: number
+    effectiveYear: number
+    noteKey: string
+    title: string
+    bodyText: string
+    sortOrder: number
+  }) => apiClient.put(`${BASE}/note-templates`, data),
+
+  resetNoteTemplate: (data: {
+    clientCompanyId: number
+    effectiveYear: number
+    noteKey: string
+  }) => apiClient.post(`${BASE}/note-templates/reset`, data),
 }

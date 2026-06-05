@@ -7,14 +7,16 @@ import { useBalanceSheet, useEquityChanges, useProfitLoss } from '../hooks/useFi
 import BalanceSheetTab from './tabs/BalanceSheetTab'
 import ProfitLossTab from './tabs/ProfitLossTab'
 import EquityChangesTab from './tabs/EquityChangesTab'
+import NotesTab from './tabs/NotesTab'
 import MappingTab from './tabs/MappingTab'
 
-type Tab = 'pl' | 'bs' | 'cap' | 'mapping'
+type Tab = 'pl' | 'bs' | 'cap' | 'notes' | 'mapping'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'pl', label: 'งบกำไรขาดทุน' },
   { key: 'bs', label: 'งบแสดงฐานะการเงิน' },
   { key: 'cap', label: 'งบส่วนผู้ถือหุ้น' },
+  { key: 'notes', label: 'หมายเหตุประกอบงบ (NOTE2)' },
   { key: 'mapping', label: 'จัดการ Mapping' },
 ]
 
@@ -107,6 +109,9 @@ export default function FinancialStatementPage() {
           isError={capQuery.isError}
           queried={queried}
         />
+      )}
+      {tab === 'notes' && (
+        <NotesTab companyId={companyId} fiscalYear={year} queried={queried} />
       )}
       {tab === 'mapping' && (
         <MappingTab

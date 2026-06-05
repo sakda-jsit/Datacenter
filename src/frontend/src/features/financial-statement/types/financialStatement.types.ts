@@ -85,3 +85,87 @@ export interface EquityChangesDto {
   totalClosing: number
   tiesToBalanceSheet: boolean
 }
+
+// ── NOTE2 (หมายเหตุประกอบงบการเงิน) ──────────────────────────────────────────
+
+export interface NoteNarrativeDto {
+  noteNo: string
+  title: string
+  body: string
+  sortOrder: number
+  effectiveYear: number
+  isCompanyOverride: boolean
+}
+
+export interface NoteRowDto {
+  label: string
+  currentYear: number
+  priorYear: number
+}
+
+export interface NoteScheduleDto {
+  noteNo: string
+  title: string
+  sortOrder: number
+  rows: NoteRowDto[]
+  totalCurrent: number
+  totalPrior: number
+}
+
+export interface NoteMovementRowDto {
+  label: string
+  opening: number
+  additions: number
+  disposals: number
+  closing: number
+}
+
+export interface NoteMovementDto {
+  noteNo: string
+  title: string
+  sortOrder: number
+  costRows: NoteMovementRowDto[]
+  costTotal: NoteMovementRowDto
+  accumRows: NoteMovementRowDto[]
+  accumTotal: NoteMovementRowDto
+  netOpening: number
+  netClosing: number
+  chargeForYear: number
+}
+
+export interface NoteCostOfSalesDto {
+  noteNo: string
+  title: string
+  sortOrder: number
+  openingInventoryCurrent: number
+  openingInventoryPrior: number
+  components: NoteRowDto[]
+  closingInventoryCurrent: number
+  closingInventoryPrior: number
+  totalCurrent: number
+  totalPrior: number
+}
+
+export interface NotesToFsDto {
+  clientCompanyId: number
+  clientName: string
+  taxId: string
+  address?: string
+  fiscalYear: number
+  priorYear: number
+  periodLabel: string
+  narratives: NoteNarrativeDto[]
+  schedules: NoteScheduleDto[]
+  movements: NoteMovementDto[]
+  costOfSales?: NoteCostOfSalesDto | null
+}
+
+export interface NoteTemplateSectionDto {
+  id: number
+  clientCompanyId?: number | null
+  effectiveYear: number
+  noteKey: string
+  title: string
+  bodyText: string
+  sortOrder: number
+}

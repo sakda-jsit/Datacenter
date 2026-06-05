@@ -40,6 +40,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
     public DbSet<BankTransaction> BankTransactions => Set<BankTransaction>();
     public DbSet<ReportPackage> ReportPackages => Set<ReportPackage>();
+    public DbSet<NoteTemplateSection> NoteTemplateSections => Set<NoteTemplateSection>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

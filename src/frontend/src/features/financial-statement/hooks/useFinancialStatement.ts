@@ -79,3 +79,49 @@ export function useUpsertExternalInput() {
     onSuccess: () => qc.invalidateQueries({ queryKey: [FS_KEY] }),
   })
 }
+
+// ── NOTE2 ──
+
+export function useNotesToFs(
+  params: { clientCompanyId: number; fiscalYear: number },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [FS_KEY, 'notes', params],
+    queryFn: () => financialStatementApi.getNotes(params),
+    enabled: enabled && params.clientCompanyId > 0,
+  })
+}
+
+export function useNoteTemplates(
+  params: { clientCompanyId: number; fiscalYear: number },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [FS_KEY, 'note-templates', params],
+    queryFn: () => financialStatementApi.getNoteTemplates(params),
+    enabled: enabled && params.clientCompanyId > 0,
+  })
+}
+
+export function useUpsertNoteTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: financialStatementApi.upsertNoteTemplate,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [FS_KEY, 'notes'] })
+      qc.invalidateQueries({ queryKey: [FS_KEY, 'note-templates'] })
+    },
+  })
+}
+
+export function useResetNoteTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: financialStatementApi.resetNoteTemplate,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [FS_KEY, 'notes'] })
+      qc.invalidateQueries({ queryKey: [FS_KEY, 'note-templates'] })
+    },
+  })
+}
