@@ -6,9 +6,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Datacenter.Application.Features.FixedAssets.Queries;
 
 public class GetFixedAssetsQueryHandler(IApplicationDbContext db)
-    : IRequestHandler<GetFixedAssetsQuery, IReadOnlyList<FixedAssetListItemDto>>
+    : IRequestHandler<GetFixedAssetsQuery, FixedAssetListDto>
 {
-    public async Task<IReadOnlyList<FixedAssetListItemDto>> Handle(GetFixedAssetsQuery request, CancellationToken ct)
+    public async Task<FixedAssetListDto> Handle(GetFixedAssetsQuery request, CancellationToken ct)
     {
         var assets = await db.FixedAssets
             .AsNoTracking()
@@ -17,6 +17,14 @@ public class GetFixedAssetsQueryHandler(IApplicationDbContext db)
             .OrderBy(x => x.AssetCode)
             .ToListAsync(ct);
 
-        return assets.Select(a => FixedAssetMapper.ToListItem(a, a.AssetType?.Name)).ToList();
+        var items = assets.Select(a => FixedAssetMapper.ToListItem(a, a.AssetType?.Name)).ToList();
+
+        // ความสดของข้อมูล: เวลานำเข้าทะเบียนสินทรัพย์ล่าสุด (FAMAS) — ทั้งบริษัท
+        DateTime? dataAsOf = await db.FixedAssets
+            .AsNoTracking()
+            .Where(x => x.ClientCompanyId == request.ClientCompanyId)
+            .MaxAsync(x => (DateTime?)x.CreatedAt, ct);
+
+        return new FixedAssetListDto(items, dataAsOf);
     }
 }

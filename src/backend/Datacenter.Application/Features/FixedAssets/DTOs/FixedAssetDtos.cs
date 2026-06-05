@@ -27,6 +27,11 @@ public record FixedAssetListItemDto(
     FixedAssetStatus Status,
     bool IsActive);
 
+/// <summary>ทะเบียนสินทรัพย์ + ความสดของข้อมูล (snapshot เวลานำเข้า FAMAS ล่าสุด)</summary>
+public record FixedAssetListDto(
+    IReadOnlyList<FixedAssetListItemDto> Items,
+    DateTime? DataAsOf);
+
 public record FixedAssetDto(
     int Id,
     int ClientCompanyId,

@@ -60,6 +60,11 @@ export interface FixedAssetListItem {
   isActive: boolean
 }
 
+export interface FixedAssetList {
+  items: FixedAssetListItem[]
+  dataAsOf?: string
+}
+
 export interface FixedAsset {
   id: number
   clientCompanyId: number

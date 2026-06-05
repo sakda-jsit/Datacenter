@@ -6,4 +6,4 @@ namespace Datacenter.Application.Features.FixedAssets.Queries;
 
 /// <summary>รายการสินทรัพย์ถาวรของบริษัท</summary>
 public record GetFixedAssetsQuery(int ClientCompanyId, bool IncludeInactive = false)
-    : IRequest<IReadOnlyList<FixedAssetListItemDto>>, IRequireCompanyAccess;
+    : IRequest<FixedAssetListDto>, IRequireCompanyAccess;

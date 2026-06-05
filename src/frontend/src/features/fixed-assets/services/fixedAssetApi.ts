@@ -7,7 +7,7 @@ import type {
   FixedAsset,
   FixedAssetDetail,
   FixedAssetInput,
-  FixedAssetListItem,
+  FixedAssetList,
   FixedAssetWorkpaper,
 } from '../types/fixedAsset.types'
 
@@ -17,7 +17,7 @@ export const fixedAssetApi = {
 
   list: (clientCompanyId: number, includeInactive = false) =>
     apiClient
-      .get<FixedAssetListItem[]>('/fixed-assets', { params: { clientCompanyId, includeInactive } })
+      .get<FixedAssetList>('/fixed-assets', { params: { clientCompanyId, includeInactive } })
       .then((r) => r.data),
 
   get: (id: number, clientCompanyId: number, fiscalYear: number) =>

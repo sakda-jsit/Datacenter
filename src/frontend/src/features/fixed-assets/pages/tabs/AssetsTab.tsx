@@ -6,6 +6,7 @@ import FixedAssetFormModal from '../../components/FixedAssetFormModal'
 import DepreciationScheduleModal from '../../components/DepreciationScheduleModal'
 import AccountMappingModal from '../../components/AccountMappingModal'
 import ExportMenu from '../../../../shared/components/ui/ExportMenu'
+import DataAsOfBanner from '../../../../shared/components/ui/DataAsOfBanner'
 import { useDeleteFixedAsset, useFixedAssets } from '../../hooks/useFixedAssets'
 import { AssetStatus, STATUS_LABEL } from '../../types/fixedAsset.types'
 import type { FixedAssetListItem } from '../../types/fixedAsset.types'
@@ -27,7 +28,8 @@ interface Props {
 }
 
 export default function AssetsTab({ companyId, fiscalYear }: Props) {
-  const { data: assets, isLoading, isError } = useFixedAssets(companyId)
+  const { data, isLoading, isError } = useFixedAssets(companyId)
+  const assets = data?.items
   const del = useDeleteFixedAsset(companyId)
   const [formOpen, setFormOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -78,6 +80,8 @@ export default function AssetsTab({ companyId, fiscalYear }: Props) {
           <Button type="button" variant="secondary" onClick={() => setMappingOpen(true)}>แมพบัญชี</Button>
         </div>
       </Card>
+
+      {data && <DataAsOfBanner dataAsOf={data.dataAsOf} noun="สินทรัพย์ถาวร" />}
 
       {isError && <StateMessage tone="error">เกิดข้อผิดพลาด กรุณาลองใหม่</StateMessage>}
       {isLoading && <StateMessage>กำลังโหลด...</StateMessage>}
