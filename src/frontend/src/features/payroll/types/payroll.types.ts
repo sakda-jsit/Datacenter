@@ -93,6 +93,31 @@ export interface EmployeeDetail {
   ssoEnrollments: SsoEnrollment[]
 }
 
+export interface PayrollRateConfig {
+  id: number
+  clientCompanyId?: number | null
+  isGlobal: boolean
+  effectiveFrom: string
+  ssoEmployeePct: number
+  ssoEmployerPct: number
+  ssoWageFloor: number
+  ssoWageCap: number
+  wcfRatePct: number
+  wcfWageCapPerYear: number
+  note?: string | null
+}
+
+export interface PayrollRateConfigInput {
+  effectiveFrom: string
+  ssoEmployeePct: number
+  ssoEmployerPct: number
+  ssoWageFloor: number
+  ssoWageCap: number
+  wcfRatePct: number
+  wcfWageCapPerYear: number
+  note?: string
+}
+
 export interface EmployeeInput {
   employeeCode: string
   nationalId: string

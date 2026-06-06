@@ -88,3 +88,28 @@ public record EmployeeInput(
 
 /// <summary>เนื้อไฟล์เอกสาร (สำหรับดาวน์โหลด — มี audit PDPA)</summary>
 public record EmployeeDocumentContentDto(string FileName, string ContentType, byte[] Content);
+
+// ── อัตราเงินสมทบ ปกส./กองทุนทดแทน (effective-dated) ───────────────────────────
+
+public record PayrollRateConfigDto(
+    int Id,
+    int? ClientCompanyId,   // null = ค่ากลาง
+    bool IsGlobal,
+    DateTime EffectiveFrom,
+    decimal SsoEmployeePct,
+    decimal SsoEmployerPct,
+    decimal SsoWageFloor,
+    decimal SsoWageCap,
+    decimal WcfRatePct,
+    decimal WcfWageCapPerYear,
+    string? Note);
+
+public record PayrollRateConfigInput(
+    DateTime EffectiveFrom,
+    decimal SsoEmployeePct,
+    decimal SsoEmployerPct,
+    decimal SsoWageFloor,
+    decimal SsoWageCap,
+    decimal WcfRatePct,
+    decimal WcfWageCapPerYear,
+    string? Note);

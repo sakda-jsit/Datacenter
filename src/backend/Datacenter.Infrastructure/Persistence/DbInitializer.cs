@@ -153,5 +153,22 @@ public static class DbInitializer
             await db.SaveChangesAsync();
             logger.LogInformation("Seeded asset type masters (FA depreciation rates).");
         }
+
+        // ── Seed อัตราเงินสมทบ ปกส./กองทุนทดแทน (ค่ากลาง effective-dated) ──────────
+        if (!await db.PayrollRateConfigs.AnyAsync())
+        {
+            db.PayrollRateConfigs.Add(new PayrollRateConfig
+            {
+                ClientCompanyId = null,                 // ค่ากลางทุกบริษัท
+                EffectiveFrom = new DateTime(2024, 1, 1),
+                SsoEmployeePct = 5m, SsoEmployerPct = 5m,
+                SsoWageFloor = 1650m, SsoWageCap = 15000m,
+                WcfRatePct = 0.2m, WcfWageCapPerYear = 240000m,
+                Note = "อัตรามาตรฐาน (ปรับ/เพิ่มแถวมีผลตามวันที่ได้)",
+                CreatedBy = "system",
+            });
+            await db.SaveChangesAsync();
+            logger.LogInformation("Seeded default payroll rate config (SSO/WCF).");
+        }
     }
 }

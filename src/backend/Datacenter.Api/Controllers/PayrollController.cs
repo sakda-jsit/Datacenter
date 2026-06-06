@@ -100,4 +100,36 @@ public class PayrollController(IMediator mediator) : ControllerBase
 
     public record CreateEnrollmentBody(int EmployeeId, SsoEnrollmentType Type, DateTime EventDate, string? Note);
     public record UpdateEnrollmentBody(DateTime? SubmittedDate, SsoEnrollmentStatus Status, int? ProofDocumentId, string? Note);
+
+    // ── อัตราเงินสมทบ ปกส./กองทุนทดแทน (effective-dated) ──────────────────────
+    /// <summary>GET /api/v1/payroll/config?clientCompanyId=1 — ค่ากลาง + ของบริษัท</summary>
+    [HttpGet("config")]
+    public async Task<IActionResult> GetConfigs([FromQuery] int clientCompanyId, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPayrollConfigsQuery(clientCompanyId), ct));
+
+    /// <summary>GET /api/v1/payroll/config/effective?clientCompanyId=1&amp;asOf=2025-06-01 — อัตราที่มีผล</summary>
+    [HttpGet("config/effective")]
+    public async Task<IActionResult> GetEffectiveConfig([FromQuery] int clientCompanyId, [FromQuery] DateTime asOf, CancellationToken ct)
+        => Ok(await mediator.Send(new GetEffectivePayrollConfigQuery(clientCompanyId, asOf), ct));
+
+    /// <summary>POST /api/v1/payroll/config?clientCompanyId=1 (body: PayrollRateConfigInput) — เพิ่มอัตราของบริษัท</summary>
+    [HttpPost("config")]
+    public async Task<IActionResult> CreateConfig([FromQuery] int clientCompanyId, [FromBody] PayrollRateConfigInput data, CancellationToken ct)
+        => Ok(new { id = await mediator.Send(new UpsertPayrollConfigCommand(clientCompanyId, null, data), ct) });
+
+    /// <summary>PUT /api/v1/payroll/config/{id}?clientCompanyId=1 (body: PayrollRateConfigInput)</summary>
+    [HttpPut("config/{id:int}")]
+    public async Task<IActionResult> UpdateConfig(int id, [FromQuery] int clientCompanyId, [FromBody] PayrollRateConfigInput data, CancellationToken ct)
+    {
+        await mediator.Send(new UpsertPayrollConfigCommand(clientCompanyId, id, data), ct);
+        return NoContent();
+    }
+
+    /// <summary>DELETE /api/v1/payroll/config/{id}?clientCompanyId=1</summary>
+    [HttpDelete("config/{id:int}")]
+    public async Task<IActionResult> DeleteConfig(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+    {
+        await mediator.Send(new DeletePayrollConfigCommand(clientCompanyId, id), ct);
+        return NoContent();
+    }
 }

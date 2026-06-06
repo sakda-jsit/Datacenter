@@ -43,6 +43,7 @@ public interface IApplicationDbContext
     DbSet<Employee> Employees { get; }
     DbSet<EmployeeDocument> EmployeeDocuments { get; }
     DbSet<SsoEnrollment> SsoEnrollments { get; }
+    DbSet<PayrollRateConfig> PayrollRateConfigs { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

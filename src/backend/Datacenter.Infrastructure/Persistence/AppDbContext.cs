@@ -44,6 +44,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
     public DbSet<SsoEnrollment> SsoEnrollments => Set<SsoEnrollment>();
+    public DbSet<PayrollRateConfig> PayrollRateConfigs => Set<PayrollRateConfig>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

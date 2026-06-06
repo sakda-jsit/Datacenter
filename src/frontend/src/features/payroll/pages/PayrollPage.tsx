@@ -5,9 +5,13 @@ import Card from '../../../shared/components/ui/Card'
 import StateMessage from '../../../shared/components/ui/StateMessage'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import EmployeesTab from './tabs/EmployeesTab'
+import RateConfigTab from './tabs/RateConfigTab'
 
-type Tab = 'employees'
-const TABS: { key: Tab; label: string }[] = [{ key: 'employees', label: 'ทะเบียนพนักงาน' }]
+type Tab = 'employees' | 'config'
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'employees', label: 'ทะเบียนพนักงาน' },
+  { key: 'config', label: 'อัตรา ปกส./กองทุน' },
+]
 
 export default function PayrollPage() {
   const { companyId } = useCurrentCompany()
@@ -23,7 +27,10 @@ export default function PayrollPage() {
       {!companyId ? (
         <Card><StateMessage centered>เลือกบริษัทที่ header ก่อน</StateMessage></Card>
       ) : (
-        tab === 'employees' && <EmployeesTab companyId={companyId} />
+        <>
+          {tab === 'employees' && <EmployeesTab companyId={companyId} />}
+          {tab === 'config' && <RateConfigTab companyId={companyId} />}
+        </>
       )}
     </div>
   )
