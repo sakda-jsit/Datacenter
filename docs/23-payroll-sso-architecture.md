@@ -124,7 +124,9 @@ ExpressMatchStatus(Pending/Matched/Diff), ExpressDocNoRef?, Note`
 
 ## 7. แผนสร้าง (phasing)
 - **P1 ทะเบียน + คลังหลักฐาน — ✅ DONE (2026-06-06, commit add56dd+e3fc87e):** Employee master + EmployeeDocument(รูปบัตร/หลักฐาน, blob+PDPA audit) + SsoEnrollment (แจ้งเข้า-ออก, แจ้งแล้ว→auto ปรับ SsoStatus). CQRS+controller (/payroll/employees,/documents,/sso-enrollments) + frontend (PayrollPage/EmployeesTab/EmployeeFormModal). กรอกมือ. enum int. verify e2e curl + UI. **ยังไม่ทำ:** import xlsx (กรอกมือตามมติ), checklist dashboard รวม (P6)
-- **P2 งวดเงินเดือนรายเดือน:** PayrollRun/Item (กรอก detail ตาม slip) + คำนวณ ปกส./ภาษี (ไฮบริด cross-check) + แนบ slip
+- **P2 งวดเงินเดือนรายเดือน — ✅ DONE (2026-06-06):**
+  - **P2a อัตรา ปกส./กองทุน (commit d83e9a2/c5b57ba):** `PayrollRateConfig` **ค่ากลางของระบบ** (ไม่แยกบริษัท) effective-dated เปลี่ยนรายเดือนได้ ปรับไม่ย้อนหลัง; อยู่เมนูระบบ `/settings/payroll-rates` (`PayrollRatesController`, global ไม่ผูก company); `PayrollRates.ResolveEffective`
+  - **P2b งวด + คำนวณ (commit 76a4f07/1115ba9):** `PayrollRun`(บริษัท+ปี+เดือน,status) + `PayrollItem`(รายได้/หักจาก slip กรอกมือ) + `PayrollCalculator` (Gross/Net, ปกส.=clamp(ฐาน,floor,cap)×อัตรา, ภาษีขั้นบันได annualize เป็น **ตัวเทียบ**). CreateRun auto สร้างรายการพนักงาน Active + prefill จากทะเบียน. UI: แท็บ "งวดเงินเดือน" → grid แก้ไขรายคน + คอลัมน์ "ปกส./ภาษีคำนวณ" ไฮไลต์ diff. verify e2e: gross/net/ปกส.calc/ภาษีcalc ถูกต้อง
 - **P3 ยื่น ปกส.:** SsoMonthlyFiling + generate สปส.1-10 + แนบแบบ/ใบเสร็จ + reconcile
 - **P4 Express integration:** generate/กระทบยอดรายการค่าใช้จ่าย+ใบเสร็จกับ GL
 - **P5 รายปี:** ภ.ง.ด.1/1ก + 50 ทวิ + กท.20
