@@ -102,6 +102,7 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
               <th className="px-2 py-2 text-right font-medium">ภาษี</th>
               <th className="px-2 py-2 text-right font-medium text-sky-700">ภาษีคำนวณ</th>
               <th className="px-2 py-2 text-right font-medium">ขาดงาน</th>
+              <th className="px-2 py-2 text-right font-medium">เบิกล่วงหน้า</th>
               <th className="px-2 py-2 text-right font-medium bg-slate-100">สุทธิ</th>
             </tr>
           </thead>
@@ -127,6 +128,7 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
                   <td className="px-2 py-1 text-right font-mono">{fmt(it.withholdingTax)}</td>
                   <td className={`px-2 py-1 text-right font-mono ${taxMismatch ? 'bg-amber-50 text-amber-700' : 'text-gray-400'}`} title="ประมาณการ">{fmt(it.taxCalc)}</td>
                   <td className="px-2 py-1 text-right font-mono">{fmt(it.absence)}</td>
+                  <td className="px-2 py-1 text-right font-mono">{fmt(it.advance)}</td>
                   <td className="px-2 py-1 text-right font-mono font-semibold bg-slate-50">{fmt(it.netPay)}</td>
                 </tr>
               )
@@ -140,7 +142,7 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
               <td colSpan={2} className="px-2 py-2 text-right font-mono">{fmt(d.totalSsoEmployee)}</td>
               <td />
               <td className="px-2 py-2 text-right font-mono">{fmt(d.totalTax)}</td>
-              <td colSpan={2} />
+              <td colSpan={3} />
               <td className="px-2 py-2 text-right font-mono">{fmt(d.totalNet)}</td>
             </tr>
           </tfoot>

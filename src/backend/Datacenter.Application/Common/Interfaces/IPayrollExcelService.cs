@@ -17,6 +17,7 @@ public record PayrollExcelRow(
     decimal SsoEmployee,
     decimal WithholdingTax,
     decimal Absence,
+    decimal Advance,
     decimal OtherDeduction);
 
 /// <summary>สร้าง/อ่าน Excel template งวดเงินเดือน (กรอกรายได้+รายการหักนอกระบบแล้วอัปโหลด)</summary>

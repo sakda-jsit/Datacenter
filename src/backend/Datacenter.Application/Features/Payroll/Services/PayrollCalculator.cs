@@ -15,9 +15,9 @@ public static class PayrollCalculator
         it.Salary + it.DailyWageDays * it.DailyWageRate + it.HousingAllowance + it.FoodAllowance
         + it.Overtime + it.Diligence + it.Bonus + it.OtherIncome);
 
-    /// <summary>เงินสุทธิ = รวมรายได้ − ขาดงาน − ปกส. − ภาษี − หักอื่น</summary>
+    /// <summary>เงินสุทธิ = รวมรายได้ − ขาดงาน − ปกส. − ภาษี − เบิกล่วงหน้า − หักอื่น</summary>
     public static decimal Net(PayrollItem it) => Round2(
-        it.GrossIncome - it.Absence - it.SsoEmployee - it.WithholdingTax - it.OtherDeduction);
+        it.GrossIncome - it.Absence - it.SsoEmployee - it.WithholdingTax - it.Advance - it.OtherDeduction);
 
     /// <summary>คำนวณ GrossIncome แล้วตามด้วย NetPay (เรียกหลังแก้ค่า)</summary>
     public static void Recompute(PayrollItem it)

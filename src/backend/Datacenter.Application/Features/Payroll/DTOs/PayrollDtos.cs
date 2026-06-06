@@ -125,7 +125,7 @@ public record PayrollItemDto(
     decimal HousingAllowance, decimal FoodAllowance, decimal Overtime, decimal Diligence,
     decimal Bonus, decimal OtherIncome, decimal GrossIncome,
     decimal SsoWageBase, decimal SsoEmployee, decimal WithholdingTax,
-    decimal Absence, decimal OtherDeduction, decimal NetPay,
+    decimal Absence, decimal Advance, decimal OtherDeduction, decimal NetPay,
     // ── ระบบคำนวณเทียบ ──
     decimal SsoEmployeeCalc, decimal SsoEmployerCalc, decimal SsoDiff,
     decimal TaxCalc, decimal TaxDiff,
@@ -144,4 +144,4 @@ public record PayrollItemInput(
     decimal HousingAllowance, decimal FoodAllowance, decimal Overtime, decimal Diligence,
     decimal Bonus, decimal OtherIncome,
     decimal SsoWageBase, decimal SsoEmployee, decimal WithholdingTax,
-    decimal Absence, decimal OtherDeduction, string? Note);
+    decimal Absence, decimal Advance, decimal OtherDeduction, string? Note);

@@ -152,6 +152,7 @@ export interface PayrollItemRow {
   ssoEmployee: number
   withholdingTax: number
   absence: number
+  advance: number
   otherDeduction: number
   netPay: number
   ssoEmployeeCalc: number
@@ -196,6 +197,7 @@ export interface PayrollItemInput {
   ssoEmployee: number
   withholdingTax: number
   absence: number
+  advance: number
   otherDeduction: number
   note?: string | null
 }

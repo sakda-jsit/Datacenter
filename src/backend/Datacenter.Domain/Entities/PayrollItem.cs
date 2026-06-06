@@ -32,6 +32,7 @@ public class PayrollItem : BaseEntity
     // ── ภาษี + หักอื่น ──
     public decimal WithholdingTax { get; set; }    // ภาษีหัก ณ ที่จ่าย (TAX)
     public decimal Absence { get; set; }           // ขาดงาน/มาสาย
+    public decimal Advance { get; set; }           // เบิกล่วงหน้า (หักคืน)
     public decimal OtherDeduction { get; set; }    // หักอื่นๆ
     public decimal NetPay { get; set; }            // เงินสุทธิ (คำนวณ)
 

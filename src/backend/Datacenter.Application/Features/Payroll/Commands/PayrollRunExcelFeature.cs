@@ -30,7 +30,7 @@ public class GetPayrollRunTemplateQueryHandler(IApplicationDbContext db, IPayrol
             ((i.Employee.Prefix ?? "") + " " + i.Employee.FirstName + " " + i.Employee.LastName).Trim(),
             i.Salary, i.DailyWageDays, i.DailyWageRate, i.HousingAllowance, i.FoodAllowance, i.Overtime,
             i.Diligence, i.Bonus, i.OtherIncome, i.SsoWageBase, i.SsoEmployee, i.WithholdingTax,
-            i.Absence, i.OtherDeduction)).ToList();
+            i.Absence, i.Advance, i.OtherDeduction)).ToList();
 
         return excel.BuildTemplate(run.Year, run.Month, company, rows);
     }
@@ -67,7 +67,7 @@ public class ImportPayrollRunCommandHandler(IApplicationDbContext db, IPayrollEx
             it.HousingAllowance = row.HousingAllowance; it.FoodAllowance = row.FoodAllowance; it.Overtime = row.Overtime;
             it.Diligence = row.Diligence; it.Bonus = row.Bonus; it.OtherIncome = row.OtherIncome;
             it.SsoWageBase = row.SsoWageBase; it.SsoEmployee = row.SsoEmployee; it.WithholdingTax = row.WithholdingTax;
-            it.Absence = row.Absence; it.OtherDeduction = row.OtherDeduction;
+            it.Absence = row.Absence; it.Advance = row.Advance; it.OtherDeduction = row.OtherDeduction;
             PayrollCalculator.Recompute(it);
             updated++;
         }

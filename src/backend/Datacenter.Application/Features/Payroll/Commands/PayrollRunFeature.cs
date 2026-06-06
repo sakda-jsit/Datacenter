@@ -59,7 +59,7 @@ public class GetPayrollRunQueryHandler(IApplicationDbContext db)
                 (int)i.Employee.SalaryType,
                 i.Salary, i.DailyWageDays, i.DailyWageRate, i.HousingAllowance, i.FoodAllowance, i.Overtime,
                 i.Diligence, i.Bonus, i.OtherIncome, i.GrossIncome, i.SsoWageBase, i.SsoEmployee, i.WithholdingTax,
-                i.Absence, i.OtherDeduction, i.NetPay,
+                i.Absence, i.Advance, i.OtherDeduction, i.NetPay,
                 ssoEmpCalc, ssoErCalc, PayrollCalculator.Round2(i.SsoEmployee - ssoEmpCalc),
                 taxCalc, PayrollCalculator.Round2(i.WithholdingTax - taxCalc), i.Note);
         }).ToList();
@@ -143,7 +143,7 @@ public class SavePayrollItemsCommandHandler(IApplicationDbContext db)
             it.HousingAllowance = inp.HousingAllowance; it.FoodAllowance = inp.FoodAllowance; it.Overtime = inp.Overtime;
             it.Diligence = inp.Diligence; it.Bonus = inp.Bonus; it.OtherIncome = inp.OtherIncome;
             it.SsoWageBase = inp.SsoWageBase; it.SsoEmployee = inp.SsoEmployee; it.WithholdingTax = inp.WithholdingTax;
-            it.Absence = inp.Absence; it.OtherDeduction = inp.OtherDeduction; it.Note = inp.Note;
+            it.Absence = inp.Absence; it.Advance = inp.Advance; it.OtherDeduction = inp.OtherDeduction; it.Note = inp.Note;
             PayrollCalculator.Recompute(it);
         }
         await db.SaveChangesAsync(ct);

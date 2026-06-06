@@ -38,8 +38,8 @@ public class PayrollItemConfiguration : IEntityTypeConfiguration<PayrollItem>
                      nameof(PayrollItem.HousingAllowance), nameof(PayrollItem.FoodAllowance), nameof(PayrollItem.Overtime),
                      nameof(PayrollItem.Diligence), nameof(PayrollItem.Bonus), nameof(PayrollItem.OtherIncome),
                      nameof(PayrollItem.GrossIncome), nameof(PayrollItem.SsoWageBase), nameof(PayrollItem.SsoEmployee),
-                     nameof(PayrollItem.WithholdingTax), nameof(PayrollItem.Absence), nameof(PayrollItem.OtherDeduction),
-                     nameof(PayrollItem.NetPay),
+                     nameof(PayrollItem.WithholdingTax), nameof(PayrollItem.Absence), nameof(PayrollItem.Advance),
+                     nameof(PayrollItem.OtherDeduction), nameof(PayrollItem.NetPay),
                  })
             builder.Property(p).HasColumnType("decimal(18,2)");
 

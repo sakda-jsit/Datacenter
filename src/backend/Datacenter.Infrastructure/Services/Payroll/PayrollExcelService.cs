@@ -12,7 +12,7 @@ public class PayrollExcelService : IPayrollExcelService
         "รหัสพนักงาน", "ชื่อ-สกุล",
         "เงินเดือน", "วันทำงาน", "ค่าจ้าง/วัน", "ค่าที่พัก", "ค่าอาหาร", "ค่าล่วงเวลา",
         "เบี้ยขยัน", "โบนัส", "รายได้อื่น",
-        "ฐานยื่น ปกส.", "หัก ปกส.", "ภาษีหัก ณ ที่จ่าย", "ขาดงาน", "หักอื่นๆ",
+        "ฐานยื่น ปกส.", "หัก ปกส.", "ภาษีหัก ณ ที่จ่าย", "ขาดงาน", "เบิกล่วงหน้า", "หักอื่นๆ",
     ];
 
     public byte[] BuildTemplate(int year, int month, string companyName, IReadOnlyList<PayrollExcelRow> rows)
@@ -41,7 +41,7 @@ public class PayrollExcelService : IPayrollExcelService
             [
                 row.Salary, row.DailyWageDays, row.DailyWageRate, row.HousingAllowance, row.FoodAllowance,
                 row.Overtime, row.Diligence, row.Bonus, row.OtherIncome,
-                row.SsoWageBase, row.SsoEmployee, row.WithholdingTax, row.Absence, row.OtherDeduction,
+                row.SsoWageBase, row.SsoEmployee, row.WithholdingTax, row.Absence, row.Advance, row.OtherDeduction,
             ];
             for (int i = 0; i < vals.Length; i++)
                 ws.Cell(r, 3 + i).Value = vals[i];
@@ -77,7 +77,7 @@ public class PayrollExcelService : IPayrollExcelService
             result.Add(new PayrollExcelRow(
                 code, ws.Cell(r, 2).GetString().Trim(),
                 D(3), D(4), D(5), D(6), D(7), D(8), D(9), D(10), D(11),
-                D(12), D(13), D(14), D(15), D(16)));
+                D(12), D(13), D(14), D(15), D(16), D(17)));
         }
         return result;
     }
