@@ -84,7 +84,7 @@ Requirement v11 เพิ่มขอบเขตจาก workbook ปิดง
 | NOTE2 (หมายเหตุประกอบงบ) | ✅ เสร็จ (2026-06-05) | ไม่ | NoteTemplateSection (ข้อความแก้ได้/EffectiveYear) + NotesEngine (data binding ปีปัจจุบัน/ปีก่อน ดึงจาก TB) + แท็บ NOTE2 ในงบการเงิน — ดูหัวข้อด้านล่าง |
 | DBD group-code taxonomy | 🟡 มี StatementLines ต่อบริษัท | ไม่ | ยังไม่มี master taxonomy มาตรฐาน |
 | Fixed Asset Register | ✅ เสร็จ (2026-06-05) | ไม่ (import ได้) | FixedAsset + AssetTypeMaster + DepreciationEngine (เส้นตรง 2 ชุด) + disposal กำไร/ขาดทุน auto + **import จาก Express FAMAS.DBF** + เมนู "สินทรัพย์ถาวร" `/fixed-assets` → generate adjustment เข้า TB — ดูหัวข้อด้านล่าง |
-| Prepaid Schedule | ❌ ยังไม่เริ่ม | ไม่ | pattern เดียวกลาง (docs/14) |
+| Prepaid Schedule | ✅ เสร็จ (2026-06-06) | ไม่ | PrepaidExpense + ตัดจ่ายเส้นตรงตามวัน + เทียบ GL + generate adjustment; เมนู "ค่าใช้จ่ายจ่ายล่วงหน้า" `/prepaid` |
 | Stock / FG↔TB | ✅ เสร็จ (2026-06-05) | ไม่ | นำเข้า STMAS + valuation + เทียบ GL + **data-as-of indicator** (ปิด open question ความสดของข้อมูล) — ดูหัวข้อด้านล่าง |
 | Cash Count / Interest Income | ❌ ยังไม่เริ่ม | ไม่ | docs/13, docs/17 |
 | AR (ลูกหนี้) จาก ARMAS/ARTRN | ✅ เสร็จ (2026-06-05) | ไม่ | ลูกค้า + ใบแจ้งหนี้ + aging — ดูหัวข้อด้านล่าง |
