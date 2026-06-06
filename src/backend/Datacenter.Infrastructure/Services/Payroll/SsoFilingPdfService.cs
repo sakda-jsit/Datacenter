@@ -50,6 +50,7 @@ public class SsoFilingPdfService(string fontFamily) : ISsoFilingPdfService
         {
             col.Item().Row(r =>
             {
+                r.ConstantItem(120);
                 r.RelativeItem().AlignCenter().Text("แบบรายการแสดงการส่งเงินสมทบ").FontSize(15).Bold();
                 r.ConstantItem(120).AlignRight().Text("สปส. 1-10 (ส่วนที่ 1)").FontSize(10);
             });
@@ -118,6 +119,7 @@ public class SsoFilingPdfService(string fontFamily) : ISsoFilingPdfService
         {
             col.Item().Row(r =>
             {
+                r.ConstantItem(120);
                 r.RelativeItem().AlignCenter().Text("แบบรายการแสดงการส่งเงินสมทบ").FontSize(15).Bold();
                 r.ConstantItem(120).AlignRight().Text("สปส.1-10 (ส่วนที่ 2)").FontSize(10);
             });
