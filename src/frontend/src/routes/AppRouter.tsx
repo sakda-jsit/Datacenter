@@ -18,6 +18,7 @@ import ApPage from '../features/ap/pages/ApPage'
 import StockPage from '../features/stock/pages/StockPage'
 import ReportPackagesPage from '../features/report-packages/pages/ReportPackagesPage'
 import PayrollPage from '../features/payroll/pages/PayrollPage'
+import PayrollRatesPage from '../features/settings/pages/PayrollRatesPage'
 import BankReconciliationPage from '../features/bank-reconciliation/pages/BankReconciliationPage'
 import GeneralLedgerPage from '../features/general-ledger/pages/GeneralLedgerPage'
 import TaxReportPage from '../features/tax-report/pages/TaxReportPage'
@@ -59,6 +60,7 @@ export default function AppRouter() {
           <Route path="closing-period" element={<ClosingPeriodPage />} />
           <Route path="report-packages" element={<ReportPackagesPage />} />
           <Route path="audit-log" element={<AuditLogPage />} />
+          <Route path="settings/payroll-rates" element={<PayrollRatesPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

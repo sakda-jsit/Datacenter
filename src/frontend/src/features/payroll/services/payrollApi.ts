@@ -1,11 +1,5 @@
 import apiClient from '../../../shared/services/apiClient'
-import type {
-  EmployeeDetail,
-  EmployeeInput,
-  EmployeeListItem,
-  PayrollRateConfig,
-  PayrollRateConfigInput,
-} from '../types/payroll.types'
+import type { EmployeeDetail, EmployeeInput, EmployeeListItem } from '../types/payroll.types'
 
 export const payrollApi = {
   employees: (clientCompanyId: number, includeResigned = true) =>
@@ -73,21 +67,4 @@ export const payrollApi = {
     apiClient
       .put(`/payroll/sso-enrollments/${id}`, body, { params: { clientCompanyId } })
       .then((r) => r.data),
-
-  // อัตรา ปกส./กองทุนทดแทน (effective-dated)
-  configs: (clientCompanyId: number) =>
-    apiClient
-      .get<PayrollRateConfig[]>('/payroll/config', { params: { clientCompanyId } })
-      .then((r) => r.data),
-
-  createConfig: (clientCompanyId: number, data: PayrollRateConfigInput) =>
-    apiClient
-      .post<{ id: number }>('/payroll/config', data, { params: { clientCompanyId } })
-      .then((r) => r.data),
-
-  updateConfig: (id: number, clientCompanyId: number, data: PayrollRateConfigInput) =>
-    apiClient.put(`/payroll/config/${id}`, data, { params: { clientCompanyId } }).then((r) => r.data),
-
-  deleteConfig: (id: number, clientCompanyId: number) =>
-    apiClient.delete(`/payroll/config/${id}`, { params: { clientCompanyId } }).then((r) => r.data),
 }

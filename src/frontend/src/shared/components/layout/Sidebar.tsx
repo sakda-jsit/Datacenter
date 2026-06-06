@@ -107,8 +107,9 @@ const navGroups: NavGroup[] = [
   {
     title: 'ระบบ',
     icon: 'history',
-    desc: 'Audit และการควบคุม',
+    desc: 'ตั้งค่ากลาง · Audit',
     items: [
+      { to: '/settings/payroll-rates', icon: 'shield', label: 'อัตราเงินสมทบ ปกส.', desc: 'ค่ากลาง ปกส./กองทุนทดแทน' },
       { to: '/audit-log', icon: 'history', label: 'ประวัติการใช้งาน', desc: 'Audit log' },
     ],
   },

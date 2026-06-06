@@ -95,8 +95,6 @@ export interface EmployeeDetail {
 
 export interface PayrollRateConfig {
   id: number
-  clientCompanyId?: number | null
-  isGlobal: boolean
   effectiveFrom: string
   ssoEmployeePct: number
   ssoEmployerPct: number

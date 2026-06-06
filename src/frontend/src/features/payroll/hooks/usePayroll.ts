@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { payrollApi } from '../services/payrollApi'
-import type { EmployeeInput, PayrollRateConfigInput } from '../types/payroll.types'
+import type { EmployeeInput } from '../types/payroll.types'
 
 const keys = {
   employees: (companyId: number, includeResigned: boolean) =>
@@ -84,31 +84,5 @@ export function useUpdateEnrollment(companyId: number, employeeId: number) {
       body: { submittedDate?: string | null; status: number; proofDocumentId?: number | null; note?: string }
     }) => payrollApi.updateEnrollment(vars.id, companyId, vars.body),
     onSuccess: () => invalidateEmployee(companyId, employeeId)(qc),
-  })
-}
-
-// ── อัตรา ปกส./กองทุนทดแทน ─────────────────────────────────────────────────────
-export function usePayrollConfigs(companyId: number) {
-  return useQuery({
-    queryKey: ['payroll-config', companyId],
-    queryFn: () => payrollApi.configs(companyId),
-    enabled: companyId > 0,
-  })
-}
-
-export function useSavePayrollConfig(companyId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (vars: { id: number | null; data: PayrollRateConfigInput }) =>
-      vars.id ? payrollApi.updateConfig(vars.id, companyId, vars.data) : payrollApi.createConfig(companyId, vars.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-config', companyId] }),
-  })
-}
-
-export function useDeletePayrollConfig(companyId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (id: number) => payrollApi.deleteConfig(id, companyId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-config', companyId] }),
   })
 }

@@ -93,8 +93,6 @@ public record EmployeeDocumentContentDto(string FileName, string ContentType, by
 
 public record PayrollRateConfigDto(
     int Id,
-    int? ClientCompanyId,   // null = ค่ากลาง
-    bool IsGlobal,
     DateTime EffectiveFrom,
     decimal SsoEmployeePct,
     decimal SsoEmployerPct,
