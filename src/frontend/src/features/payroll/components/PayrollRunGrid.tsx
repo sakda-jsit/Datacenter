@@ -129,7 +129,7 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
         </Card>
       )}
       <p className="mt-2 text-xs text-gray-400">
-        คอลัมน์จัดกลุ่มตาม sheet “รายได้ทั้งปี” · คอลัมน์ <span className="text-sky-700">สีฟ้า</span> = ระบบคำนวณเทียบ (ปกส.คำนวณ/นายจ้างสมทบ) · ช่องแดง = ปกส.จริงต่างจากที่คำนวณ ควรตรวจ
+        คอลัมน์จัดกลุ่มตาม sheet “รายได้ทั้งปี” · ตารางแยกตามฝ่าย แสดงคอลัมน์ “ค่าจ้างวัน” เฉพาะฝ่ายที่มีพนักงานรายวัน
       </p>
     </div>
   )
@@ -179,9 +179,7 @@ const DEPT_COLS: DeptCol[] = [
   { label: 'ส่วนที่เกิน 20,000', group: 'wcf', val: (i) => Math.max(i.ssoWageBase - 20000, 0) },
   // รายการหัก
   { label: 'รายได้ยื่นปกส.', group: 'deduct', val: (i) => i.ssoWageBase },
-  { label: 'คำนวณหักปกส.ได้', group: 'deduct', val: (i) => i.ssoEmployeeCalc, calc: true },
-  { label: 'ผลต่าง (ขาดไป)', group: 'deduct', val: (i) => Math.max(i.ssoEmployeeCalc - i.ssoEmployee, 0), calc: true },
-  { label: 'หักปกส.จริง', group: 'deduct', val: (i) => i.ssoEmployee, ssoCheck: true },
+  { label: 'หักปกส.จริง', group: 'deduct', val: (i) => i.ssoEmployee },
   { label: 'TAX', group: 'deduct', val: (i) => i.withholdingTax },
   { label: 'ขาดงาน', group: 'deduct', val: (i) => i.absence },
   { label: 'เบิกล่วงหน้า', group: 'deduct', val: (i) => i.advance },

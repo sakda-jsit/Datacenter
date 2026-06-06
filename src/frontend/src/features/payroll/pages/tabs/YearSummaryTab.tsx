@@ -31,8 +31,6 @@ const COLS: { key: keyof PayrollSummaryRow; label: string; strong?: boolean; cal
   { key: 'wageOver20000', label: 'ค่าจ้างส่วนที่เกิน 20,000' },
   // รายการหัก
   { key: 'ssoReportable', label: 'รายได้ยื่นปกส.' },
-  { key: 'ssoCalc', label: 'คำนวณหักปกส.ได้', calc: true },
-  { key: 'ssoShortfall', label: 'ผลต่าง (ขาดไป)', calc: true },
   { key: 'ssoActual', label: 'หักปกส.จริง' },
   { key: 'tax', label: 'TAX' },
   { key: 'absence', label: 'ขาดงาน' },
@@ -47,8 +45,8 @@ const COLS: { key: keyof PayrollSummaryRow; label: string; strong?: boolean; cal
 const GROUPS: { label: string; span: number; cls: string }[] = [
   { label: 'รายได้', span: 10, cls: 'bg-emerald-50 text-emerald-800' },
   { label: 'กรอกในแบบ กท.20 ก', span: 2, cls: 'bg-violet-50 text-violet-800' },
-  { label: 'รายการหัก', span: 7, cls: 'bg-rose-50 text-rose-800' },
-  { label: 'รวม', span: 3, cls: 'bg-slate-100 text-slate-800' },
+  { label: 'รายการหัก', span: 5, cls: 'bg-rose-50 text-rose-800' },
+  { label: 'รวม', span: 4, cls: 'bg-slate-100 text-slate-800' },
 ]
 
 export default function YearSummaryTab({ companyId }: Props) {
@@ -74,7 +72,7 @@ export default function YearSummaryTab({ companyId }: Props) {
         <div>
           <p className="text-sm font-semibold text-slate-800">สรุปรายได้ทั้งปี</p>
           <p className="text-xs text-gray-500">
-            รวมทุกงวด/ทุกพนักงานเป็นรายเดือน · คอลัมน์ตาม sheet “รายได้ทั้งปี” · คอลัมน์ <span className="text-sky-700">สีฟ้า</span> = ระบบคำนวณเทียบ
+            รวมทุกงวด/ทุกพนักงานเป็นรายเดือน · คอลัมน์ตาม sheet “รายได้ทั้งปี”
           </p>
         </div>
         <label className="flex items-center gap-2 text-xs text-gray-600">
@@ -111,7 +109,7 @@ export default function YearSummaryTab({ companyId }: Props) {
               <tr className="bg-slate-50 text-gray-600">
                 {COLS.map((c, idx) => {
                   // เส้นแบ่งกลุ่ม (คอลัมน์แรกของแต่ละกลุ่ม)
-                  const groupStart = [0, 10, 12, 19].includes(idx)
+                  const groupStart = [0, 10, 12, 17].includes(idx)
                   return (
                     <th key={c.key} className={`border-b px-2 py-2 text-right align-bottom font-medium ${groupStart ? 'border-l' : ''}`}>
                       {c.label}
