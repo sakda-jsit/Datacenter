@@ -19,8 +19,8 @@ public class GetPayrollAccountMappingsQueryHandler(IApplicationDbContext db)
     public async Task<IReadOnlyList<PayrollAccountMappingDto>> Handle(GetPayrollAccountMappingsQuery request, CancellationToken ct)
         => await db.PayrollAccountMappings.AsNoTracking()
             .Where(m => m.ClientCompanyId == request.ClientCompanyId)
-            .OrderBy(m => m.AccountCode)
-            .Select(m => new PayrollAccountMappingDto(m.Id, m.AccountCode, m.Department, m.Note))
+            .OrderBy(m => m.Role).ThenBy(m => m.AccountCode)
+            .Select(m => new PayrollAccountMappingDto(m.Id, m.AccountCode, (int)m.Role, m.Department, m.Note))
             .ToListAsync(ct);
 }
 
@@ -33,7 +33,11 @@ public class UpsertPayrollAccountMappingCommandHandler(IApplicationDbContext db,
     public async Task<int> Handle(UpsertPayrollAccountMappingCommand request, CancellationToken ct)
     {
         var code = request.Data.AccountCode.Trim();
-        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(request.Data.Department))
+        var role = (Datacenter.Domain.Enums.PayrollPostingRole)request.Data.Role;
+        // ฝ่ายจำเป็นเฉพาะบทบาทที่แยกฝ่าย (เงินเดือน/ค่าจ้าง/เบี้ยเลี้ยง/นายจ้างสมทบ/หักพนักงาน/สุทธิ)
+        bool deptRequired = role is not (Datacenter.Domain.Enums.PayrollPostingRole.SsoPayable
+            or Datacenter.Domain.Enums.PayrollPostingRole.WhtPayable);
+        if (string.IsNullOrWhiteSpace(code) || (deptRequired && string.IsNullOrWhiteSpace(request.Data.Department)))
             throw new ValidationException(new[] { new FluentValidation.Results.ValidationFailure(
                 "AccountCode", "กรุณาระบุรหัสบัญชีและฝ่าย") });
 
@@ -53,7 +57,8 @@ public class UpsertPayrollAccountMappingCommandHandler(IApplicationDbContext db,
             db.PayrollAccountMappings.Add(m);
         }
         m.AccountCode = code;
-        m.Department = request.Data.Department.Trim();
+        m.Role = role;
+        m.Department = string.IsNullOrWhiteSpace(request.Data.Department) ? null : request.Data.Department.Trim();
         m.Note = request.Data.Note;
         m.ModifiedBy = currentUser.Username;
         m.ModifiedAt = DateTime.UtcNow;

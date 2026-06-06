@@ -17,8 +17,9 @@ public static class PayrollEmployeeImporter
         int companyId, string username, CancellationToken ct)
     {
         var map = await db.PayrollAccountMappings.AsNoTracking()
-            .Where(m => m.ClientCompanyId == companyId)
-            .ToDictionaryAsync(m => m.AccountCode.Trim(), m => m.Department, ct);
+            .Where(m => m.ClientCompanyId == companyId && m.Department != null
+                && (m.Role == PayrollPostingRole.SalaryExpense || m.Role == PayrollPostingRole.DailyWageExpense))
+            .ToDictionaryAsync(m => m.AccountCode.Trim(), m => m.Department!, ct);
         if (map.Count == 0) return 0; // ยังไม่ได้แมพบัญชีเงินเดือน → ข้าม
 
         var emps = await adapter.ReadPayrollEmployeesAsync(folderPath, map, ct);

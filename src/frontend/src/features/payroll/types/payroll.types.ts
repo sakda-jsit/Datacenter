@@ -277,11 +277,50 @@ export interface PayrollItemInput {
   note?: string | null
 }
 
+// บทบาทบัญชีในใบสำคัญลงบัญชีเงินเดือน
+export const PAYROLL_POSTING_ROLE: Record<number, string> = {
+  1: 'เงินเดือน',
+  2: 'ค่าจ้างรายวัน',
+  3: 'เบี้ยเลี้ยง/OT/โบนัส',
+  4: 'เงินสมทบนายจ้าง ปกส.',
+  10: 'เงินประกันสังคมรอนำส่ง',
+  11: 'ภาษีหัก ณ ที่จ่ายค้างจ่าย',
+  12: 'หักจากพนักงาน (ขาดงาน/เบิกล่วงหน้า)',
+  13: 'เงินเดือน/ค่าจ้างสุทธิค้างจ่าย',
+}
+// บทบาทที่ไม่ต้องระบุฝ่าย (ทั้งบริษัท)
+export const PAYROLL_POSTING_ROLE_COMPANYWIDE = [10, 11]
+
 export interface PayrollAccountMapping {
   id: number
   accountCode: string
-  department: string
+  role: number
+  department?: string | null
   note?: string | null
+}
+
+export interface PayrollPostingLine {
+  role: number
+  roleLabel: string
+  department?: string | null
+  accountCode?: string | null
+  accountName?: string | null
+  mapped: boolean
+  debit: number
+  credit: number
+  glMovement: number
+  diff: number
+}
+
+export interface PayrollPosting {
+  runId: number
+  year: number
+  month: number
+  balanced: boolean
+  totalDebit: number
+  totalCredit: number
+  lines: PayrollPostingLine[]
+  warnings: string[]
 }
 
 export interface EmployeeInput {

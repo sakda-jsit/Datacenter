@@ -104,6 +104,14 @@ export function usePayrollYearSummary(companyId: number, year: number) {
   })
 }
 
+export function usePayrollPosting(companyId: number, runId: number | null) {
+  return useQuery({
+    queryKey: ['payroll-posting', companyId, runId ?? 0],
+    queryFn: () => payrollApi.posting(runId!, companyId),
+    enabled: companyId > 0 && !!runId,
+  })
+}
+
 export function useSsoFiling(companyId: number, runId: number | null) {
   return useQuery({
     queryKey: ['sso-filing', companyId, runId ?? 0],
@@ -166,7 +174,7 @@ export function usePayrollAccountMappings(companyId: number) {
 export function useSaveAccountMapping(companyId: number) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (vars: { id: number | null; data: { accountCode: string; department: string; note?: string } }) =>
+    mutationFn: (vars: { id: number | null; data: { accountCode: string; role: number; department?: string | null; note?: string } }) =>
       vars.id ? payrollApi.updateAccountMapping(vars.id, companyId, vars.data) : payrollApi.createAccountMapping(companyId, vars.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-acct-map', companyId] }),
   })

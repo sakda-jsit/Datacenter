@@ -11,7 +11,8 @@ public class PayrollAccountMappingConfiguration : IEntityTypeConfiguration<Payro
         builder.ToTable("PayrollAccountMappings");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.AccountCode).HasMaxLength(20).IsRequired();
-        builder.Property(x => x.Department).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Role).HasConversion<int>().HasDefaultValue(Datacenter.Domain.Enums.PayrollPostingRole.SalaryExpense);
+        builder.Property(x => x.Department).HasMaxLength(100);
         builder.Property(x => x.Note).HasMaxLength(300);
 
         builder.HasOne<ClientCompany>()

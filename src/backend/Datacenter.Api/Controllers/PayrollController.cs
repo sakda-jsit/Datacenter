@@ -146,6 +146,11 @@ public class PayrollController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>GET /api/v1/payroll/runs/{id}/posting?clientCompanyId=1 — ใบสำคัญลงบัญชี + กระทบยอด GL</summary>
+    [HttpGet("runs/{id:int}/posting")]
+    public async Task<IActionResult> GetPosting(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPayrollPostingQuery(clientCompanyId, id), ct));
+
     /// <summary>GET /api/v1/payroll/runs/{id}/sso-filing?clientCompanyId=1 — ข้อมูล สปส.1-10 ต่องวด</summary>
     [HttpGet("runs/{id:int}/sso-filing")]
     public async Task<IActionResult> GetSsoFiling(int id, [FromQuery] int clientCompanyId, CancellationToken ct)

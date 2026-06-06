@@ -117,8 +117,23 @@ public record PayrollRateConfigInput(
     string? Note);
 
 // ── แมพบัญชีเงินเดือน (Express GL → ฝ่าย) สำหรับ import พนักงาน ───────────────────
-public record PayrollAccountMappingDto(int Id, string AccountCode, string Department, string? Note);
-public record PayrollAccountMappingInput(string AccountCode, string Department, string? Note);
+public record PayrollAccountMappingDto(int Id, string AccountCode, int Role, string? Department, string? Note);
+public record PayrollAccountMappingInput(string AccountCode, int Role, string? Department, string? Note);
+
+// ── ใบสำคัญลงบัญชีเงินเดือน + กระทบยอด GL ────────────────────────────────────────
+/// <summary>หนึ่งบรรทัดในใบสำคัญ (Dr/Cr) + กระทบยอดกับ GL จริงเดือนนั้น</summary>
+public record PayrollPostingLine(
+    int Role, string RoleLabel, string? Department,
+    string? AccountCode, string? AccountName, bool Mapped,
+    decimal Debit, decimal Credit,
+    // กระทบยอด: ความเคลื่อนไหวจริงใน GL (เดือนนั้น) ของบัญชีนี้ + ผลต่าง
+    decimal GlMovement, decimal Diff);
+
+public record PayrollPostingDto(
+    int RunId, int Year, int Month, bool Balanced,
+    decimal TotalDebit, decimal TotalCredit,
+    IReadOnlyList<PayrollPostingLine> Lines,
+    IReadOnlyList<string> Warnings);
 
 // ── งวดเงินเดือนรายเดือน ─────────────────────────────────────────────────────────
 

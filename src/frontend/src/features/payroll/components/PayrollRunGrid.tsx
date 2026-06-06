@@ -6,6 +6,7 @@ import { payrollApi } from '../services/payrollApi'
 import { useImportPayrollRun, usePayrollRun, useSetRunStatus } from '../hooks/usePayroll'
 import { MONTH_TH, PAYROLL_RUN_STATUS_LABEL, type PayrollItemRow } from '../types/payroll.types'
 import SsoFilingModal from './SsoFilingModal'
+import PayrollPostingModal from './PayrollPostingModal'
 
 interface Props {
   companyId: number
@@ -25,6 +26,7 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
   const [msg, setMsg] = useState('')
   const [error, setError] = useState('')
   const [ssoOpen, setSsoOpen] = useState(false)
+  const [postOpen, setPostOpen] = useState(false)
 
   async function download() {
     setMsg(''); setError('')
@@ -90,6 +92,7 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
           <Button type="button" onClick={() => fileRef.current?.click()} disabled={importRun.isPending}>
             {importRun.isPending ? 'กำลังอัปโหลด...' : '⬆ อัปโหลดไฟล์'}
           </Button>
+          <Button type="button" variant="secondary" onClick={() => setPostOpen(true)}>📒 ลงบัญชี/กระทบยอด</Button>
           <Button type="button" variant="secondary" onClick={() => setSsoOpen(true)}>📋 สปส.1-10</Button>
           {d.status === 0 && <Button type="button" variant="secondary" onClick={() => setStatus.mutate({ runId, status: 1 })}>บันทึกแล้ว</Button>}
           {d.status === 1 && <Button type="button" variant="secondary" onClick={() => setStatus.mutate({ runId, status: 0 })}>กลับเป็นร่าง</Button>}
@@ -97,6 +100,7 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
       </div>
 
       {ssoOpen && <SsoFilingModal companyId={companyId} runId={runId} onClose={() => setSsoOpen(false)} />}
+      {postOpen && <PayrollPostingModal companyId={companyId} runId={runId} onClose={() => setPostOpen(false)} />}
 
       <div className="mb-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-xs text-sky-800">
         📋 กรอกข้อมูลรายได้/รายการหักใน <b>Template Excel</b> (ดาวน์โหลด → กรอก → อัปโหลด) — แก้ไขข้อมูลทำได้โดย<b>อัปโหลดไฟล์ใหม่ทับ</b> (คอลัมน์รหัสพนักงานใช้จับคู่ ห้ามแก้)

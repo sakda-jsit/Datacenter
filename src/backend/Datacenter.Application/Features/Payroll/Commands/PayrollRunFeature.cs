@@ -244,6 +244,122 @@ public class GetSsoFilingPdfQueryHandler(ISender sender, ISsoFilingPdfService pd
         => pdf.Generate(await sender.Send(new GetSsoFilingQuery(req.ClientCompanyId, req.RunId), ct));
 }
 
+// ── ใบสำคัญลงบัญชีเงินเดือน + กระทบยอด GL (ไม่โพสต์ทับ GL ที่ import จาก Express) ──
+public record GetPayrollPostingQuery(int ClientCompanyId, int RunId)
+    : IRequest<PayrollPostingDto>, IRequireCompanyAccess;
+
+public class GetPayrollPostingQueryHandler(IApplicationDbContext db)
+    : IRequestHandler<GetPayrollPostingQuery, PayrollPostingDto>
+{
+    private static readonly Dictionary<PayrollPostingRole, string> RoleLabels = new()
+    {
+        [PayrollPostingRole.SalaryExpense] = "เงินเดือน",
+        [PayrollPostingRole.DailyWageExpense] = "ค่าจ้างรายวัน",
+        [PayrollPostingRole.AllowanceExpense] = "เบี้ยเลี้ยง/OT/โบนัส",
+        [PayrollPostingRole.EmployerSsoExpense] = "เงินสมทบนายจ้าง ปกส.",
+        [PayrollPostingRole.SsoPayable] = "เงินประกันสังคมรอนำส่ง",
+        [PayrollPostingRole.WhtPayable] = "ภาษีหัก ณ ที่จ่ายค้างจ่าย",
+        [PayrollPostingRole.EmployeeDeductionCredit] = "หักจากพนักงาน (ขาดงาน/เบิกล่วงหน้า/อื่น)",
+        [PayrollPostingRole.NetPayCredit] = "เงินเดือน/ค่าจ้างสุทธิค้างจ่าย",
+    };
+
+    public async Task<PayrollPostingDto> Handle(GetPayrollPostingQuery req, CancellationToken ct)
+    {
+        var run = await db.PayrollRuns.AsNoTracking()
+            .Include(r => r.Items).ThenInclude(i => i.Employee)
+            .FirstOrDefaultAsync(r => r.Id == req.RunId && r.ClientCompanyId == req.ClientCompanyId, ct)
+            ?? throw new NotFoundException("PayrollRun", req.RunId);
+
+        var maps = await db.PayrollAccountMappings.AsNoTracking()
+            .Where(m => m.ClientCompanyId == req.ClientCompanyId).ToListAsync(ct);
+        var mapDict = maps.ToDictionary(m => (m.Role, m.Department ?? ""), m => m);
+        var accNames = await db.Accounts.AsNoTracking()
+            .Where(a => a.ClientCompanyId == req.ClientCompanyId)
+            .ToDictionaryAsync(a => a.AccountCode, a => a.AccountName, ct);
+
+        // ความเคลื่อนไหวจริงใน GL (debit-credit) ต่อบัญชี เดือนนั้น
+        var mStart = new DateTime(run.Year, run.Month, 1);
+        var mEnd = mStart.AddMonths(1);
+        var glMove = await (from l in db.JournalEntryLines.AsNoTracking()
+                            join e in db.JournalEntries.AsNoTracking() on l.JournalEntryId equals e.Id
+                            join a in db.Accounts.AsNoTracking() on l.AccountId equals a.Id
+                            where e.ClientCompanyId == req.ClientCompanyId && e.JournalDate >= mStart && e.JournalDate < mEnd
+                            group (l.DebitAmount - l.CreditAmount) by a.AccountCode into g
+                            select new { Code = g.Key, Move = g.Sum() })
+                           .ToDictionaryAsync(x => x.Code, x => x.Move, ct);
+
+        var byDept = run.Items.GroupBy(i => string.IsNullOrWhiteSpace(i.Employee!.Department) ? "ไม่ระบุฝ่าย" : i.Employee!.Department!)
+            .OrderBy(g => rankDept(g.Key)).ThenBy(g => g.Key, StringComparer.Ordinal)
+            .ToList();
+
+        var lines = new List<PayrollPostingLine>();
+        var warnings = new List<string>();
+        var expectedByAcc = new Dictionary<string, decimal>();
+
+        bool Has(PayrollPostingRole role, string? dept) => mapDict.ContainsKey((role, dept ?? ""));
+        void Add(PayrollPostingRole role, string? dept, decimal debit, decimal credit)
+        {
+            if (debit == 0 && credit == 0) return;
+            mapDict.TryGetValue((role, dept ?? ""), out var m);
+            var code = m?.AccountCode;
+            var mapped = m != null;
+            if (mapped) expectedByAcc[code!] = expectedByAcc.GetValueOrDefault(code!) + (debit - credit);
+            else warnings.Add($"ยังไม่ได้แมพบัญชี: {RoleLabels[role]}{(string.IsNullOrEmpty(dept) ? "" : $" ({dept})")}");
+            lines.Add(new PayrollPostingLine((int)role, RoleLabels[role], dept, code,
+                code != null && accNames.TryGetValue(code, out var n) ? n : null, mapped,
+                PayrollCalculator.Round2(debit), PayrollCalculator.Round2(credit), 0, 0));
+        }
+
+        foreach (var g in byDept)
+        {
+            var dept = g.Key;
+            var salary = g.Sum(i => i.Salary);
+            var allow = g.Sum(i => i.HousingAllowance + i.FoodAllowance + i.Overtime + i.Diligence + i.Bonus + i.OtherIncome);
+            // ค่าจ้างรายวัน = ส่วนที่เหลือจากรวมรายได้ (อิงยอดบันทึกจริง ให้ salary+daily+allow = Gross เป๊ะ ดุลพอดี)
+            var daily = g.Sum(i => i.GrossIncome - i.Salary - i.HousingAllowance - i.FoodAllowance - i.Overtime - i.Diligence - i.Bonus - i.OtherIncome);
+            var employerSso = g.Sum(i => i.SsoEmployee); // 1:1
+            var ded = g.Sum(i => i.Absence + i.Advance + i.OtherDeduction);
+            var net = g.Sum(i => i.NetPay);
+
+            decimal salaryDr = salary;
+            if (Has(PayrollPostingRole.DailyWageExpense, dept)) Add(PayrollPostingRole.DailyWageExpense, dept, daily, 0); else salaryDr += daily;
+            if (Has(PayrollPostingRole.AllowanceExpense, dept)) Add(PayrollPostingRole.AllowanceExpense, dept, allow, 0); else salaryDr += allow;
+            bool dedMapped = Has(PayrollPostingRole.EmployeeDeductionCredit, dept);
+            if (!dedMapped) salaryDr -= ded; // พับหักพนักงานเข้าค่าใช้จ่าย (ลดเดบิต) ให้ดุล
+            Add(PayrollPostingRole.SalaryExpense, dept, salaryDr, 0);
+            Add(PayrollPostingRole.EmployerSsoExpense, dept, employerSso, 0);
+            if (dedMapped) Add(PayrollPostingRole.EmployeeDeductionCredit, dept, 0, ded);
+            Add(PayrollPostingRole.NetPayCredit, dept, 0, net);
+        }
+
+        var empSsoTotal = run.Items.Sum(i => i.SsoEmployee);
+        Add(PayrollPostingRole.SsoPayable, null, 0, empSsoTotal * 2); // ลูกจ้าง+นายจ้าง
+        Add(PayrollPostingRole.WhtPayable, null, 0, run.Items.Sum(i => i.WithholdingTax));
+
+        // กระทบยอด: แนบ GL movement ต่อบัญชี (แสดงครั้งเดียวต่อบัญชี)
+        var shown = new HashSet<string>();
+        for (int i = 0; i < lines.Count; i++)
+        {
+            var ln = lines[i];
+            if (ln.AccountCode is { } code && shown.Add(code))
+            {
+                var gl = glMove.GetValueOrDefault(code);
+                lines[i] = ln with { GlMovement = PayrollCalculator.Round2(gl), Diff = PayrollCalculator.Round2(expectedByAcc[code] - gl) };
+            }
+        }
+
+        var totalDr = lines.Sum(l => l.Debit);
+        var totalCr = lines.Sum(l => l.Credit);
+        return new PayrollPostingDto(run.Id, run.Year, run.Month,
+            Math.Abs(totalDr - totalCr) < 0.01m, PayrollCalculator.Round2(totalDr), PayrollCalculator.Round2(totalCr),
+            lines, warnings.Distinct().ToList());
+    }
+
+    private static int rankDept(string name) =>
+        System.Text.RegularExpressions.Regex.IsMatch(name, "บริการ|บริหาร|สำนักงาน") ? 0
+        : System.Text.RegularExpressions.Regex.IsMatch(name, "ผลิต") ? 1 : 2;
+}
+
 // ── สร้างงวด + auto สร้างรายการจากพนักงาน Active ─────────────────────────────────
 public record CreatePayrollRunCommand(int ClientCompanyId, int Year, int Month)
     : IRequest<int>, IRequireCompanyAccess;

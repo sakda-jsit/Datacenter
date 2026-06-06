@@ -8,8 +8,11 @@ import type {
   PayrollRunDetail,
   PayrollRunListItem,
   PayrollYearSummary,
+  PayrollPosting,
   SsoFiling,
 } from '../types/payroll.types'
+
+type MappingInput = { accountCode: string; role: number; department?: string | null; note?: string }
 
 export const payrollApi = {
   employees: (clientCompanyId: number, includeResigned = true) =>
@@ -112,6 +115,12 @@ export const payrollApi = {
   deleteRun: (runId: number, clientCompanyId: number) =>
     apiClient.delete(`/payroll/runs/${runId}`, { params: { clientCompanyId } }).then((r) => r.data),
 
+  // ใบสำคัญลงบัญชี + กระทบยอด
+  posting: (runId: number, clientCompanyId: number) =>
+    apiClient
+      .get<PayrollPosting>(`/payroll/runs/${runId}/posting`, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
   // สปส.1-10
   ssoFiling: (runId: number, clientCompanyId: number) =>
     apiClient
@@ -149,11 +158,11 @@ export const payrollApi = {
     apiClient
       .get<PayrollAccountMapping[]>('/payroll/account-mappings', { params: { clientCompanyId } })
       .then((r) => r.data),
-  createAccountMapping: (clientCompanyId: number, data: { accountCode: string; department: string; note?: string }) =>
+  createAccountMapping: (clientCompanyId: number, data: MappingInput) =>
     apiClient
       .post<{ id: number }>('/payroll/account-mappings', data, { params: { clientCompanyId } })
       .then((r) => r.data),
-  updateAccountMapping: (id: number, clientCompanyId: number, data: { accountCode: string; department: string; note?: string }) =>
+  updateAccountMapping: (id: number, clientCompanyId: number, data: MappingInput) =>
     apiClient.put(`/payroll/account-mappings/${id}`, data, { params: { clientCompanyId } }).then((r) => r.data),
   deleteAccountMapping: (id: number, clientCompanyId: number) =>
     apiClient.delete(`/payroll/account-mappings/${id}`, { params: { clientCompanyId } }).then((r) => r.data),
