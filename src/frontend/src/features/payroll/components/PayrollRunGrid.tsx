@@ -188,7 +188,7 @@ const DEPT_COLS: DeptCol[] = [
   // รวม
   { label: 'รวมรายการหัก', group: 'total', val: (i) => i.absence + i.ssoEmployee + i.withholdingTax + i.advance + i.otherDeduction, strong: true },
   { label: 'รายได้ยื่น ภงด.1', group: 'total', val: (i) => i.grossIncome - i.absence },
-  { label: 'นายจ้างสมทบ', group: 'total', val: (i) => i.ssoEmployerCalc, calc: true },
+  { label: 'นายจ้างสมทบ', group: 'total', val: (i) => i.ssoEmployee },
   { label: 'เงินสุทธิ', group: 'total', val: (i) => i.netPay, strong: true },
 ]
 

@@ -40,7 +40,7 @@ const COLS: { key: keyof PayrollSummaryRow; label: string; strong?: boolean; cal
   // รวม
   { key: 'totalDeduction', label: 'รวมรายการหัก', strong: true },
   { key: 'pnd1Income', label: 'รายได้ยื่น ภงด.1 ประจำเดือน' },
-  { key: 'employerSso', label: 'นายจ้างสมทบ', calc: true },
+  { key: 'employerSso', label: 'นายจ้างสมทบ' },
   { key: 'netPay', label: 'เงินสุทธิ', strong: true },
 ]
 

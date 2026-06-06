@@ -132,7 +132,7 @@ public class GetPayrollYearSummaryQueryHandler(IApplicationDbContext db)
             ssoActual += i.SsoEmployee;
             tax += i.WithholdingTax;
             advance += i.Advance;
-            employerSso += PayrollCalculator.SsoEmployer(i, cfg);
+            employerSso += i.SsoEmployee; // นายจ้างสมทบ = ยอดหักลูกจ้างจริง (จับคู่ 1:1 ตามกฎ ปกส.)
         }
         var netSalary = salary - absence;
         var netAfterAbsence = totalIncome - absence;                 // รายได้สุทธิหลังหักลา (ภงด.1ก)
