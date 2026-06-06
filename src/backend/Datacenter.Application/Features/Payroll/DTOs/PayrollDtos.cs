@@ -163,6 +163,19 @@ public record PayrollSummaryRow(
 
 public record PayrollYearSummaryDto(int Year, IReadOnlyList<PayrollSummaryRow> Months, PayrollSummaryRow Total);
 
+// ── สปส.1-10 (แบบรายการแสดงการส่งเงินสมทบ) ─────────────────────────────────────
+public record SsoFilingRow(
+    int Seq, string NationalId, string Prefix, string FirstName, string LastName,
+    decimal Wage, decimal Contribution);
+
+public record SsoFilingDto(
+    int RunId, int Year, int Month,
+    string CompanyName, string? Address, string? PostalCode, string? Phone,
+    string SsoAccountNo, string SsoBranchCode, decimal RatePct,
+    IReadOnlyList<SsoFilingRow> Rows,
+    decimal TotalWage, decimal TotalEmployee, decimal TotalEmployer, decimal GrandTotal,
+    int InsuredCount, string GrandTotalText);
+
 /// <summary>ค่าที่กรอกต่อรายการ (key = ItemId)</summary>
 public record PayrollItemInput(
     int Id,

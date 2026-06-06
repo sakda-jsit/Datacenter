@@ -26,6 +26,14 @@ public class ClientCompany : BaseEntity
     public int FiscalYearStartMonth { get; set; } = 1;
     public bool IsActive { get; set; } = true;
 
+    // ── ข้อมูลประกันสังคม (นายจ้าง) สำหรับ สปส.1-10 ──
+    /// <summary>เลขที่บัญชีนายจ้าง ปกส. (10 หลัก เช่น 2000398553)</summary>
+    public string? SsoAccountNo { get; set; }
+    /// <summary>ลำดับที่สาขา ปกส. (6 หลัก, สำนักงานใหญ่ = 000000)</summary>
+    public string? SsoBranchCode { get; set; }
+    public string? Phone { get; set; }
+    public string? PostalCode { get; set; }
+
     /// <summary>รูปลายเซ็นผู้มีอำนาจ (PNG/JPG) — ใช้แนบในหนังสือรับรองหัก ณ ที่จ่าย ฯลฯ</summary>
     public byte[]? SignatureImage { get; set; }
 

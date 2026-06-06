@@ -146,6 +146,27 @@ public class PayrollController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>GET /api/v1/payroll/runs/{id}/sso-filing?clientCompanyId=1 — ข้อมูล สปส.1-10 ต่องวด</summary>
+    [HttpGet("runs/{id:int}/sso-filing")]
+    public async Task<IActionResult> GetSsoFiling(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+        => Ok(await mediator.Send(new GetSsoFilingQuery(clientCompanyId, id), ct));
+
+    /// <summary>GET /api/v1/payroll/runs/{id}/sso-filing/excel?clientCompanyId=1 — ไฟล์อัปโหลด e-Service</summary>
+    [HttpGet("runs/{id:int}/sso-filing/excel")]
+    public async Task<IActionResult> GetSsoFilingExcel(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+    {
+        var bytes = await mediator.Send(new GetSsoFilingExcelQuery(clientCompanyId, id), ct);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"sso1-10-{id}.xlsx");
+    }
+
+    /// <summary>GET /api/v1/payroll/runs/{id}/sso-filing/pdf?clientCompanyId=1 — ฟอร์ม สปส.1-10 (PDF)</summary>
+    [HttpGet("runs/{id:int}/sso-filing/pdf")]
+    public async Task<IActionResult> GetSsoFilingPdf(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+    {
+        var bytes = await mediator.Send(new GetSsoFilingPdfQuery(clientCompanyId, id), ct);
+        return File(bytes, "application/pdf", $"sso1-10-{id}.pdf");
+    }
+
     /// <summary>GET /api/v1/payroll/runs/{id}/template?clientCompanyId=1 — ดาวน์โหลด Excel template ไปกรอก</summary>
     [HttpGet("runs/{id:int}/template")]
     public async Task<IActionResult> GetRunTemplate(int id, [FromQuery] int clientCompanyId, CancellationToken ct)

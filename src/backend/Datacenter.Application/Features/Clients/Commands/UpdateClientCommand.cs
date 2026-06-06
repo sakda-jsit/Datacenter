@@ -9,7 +9,11 @@ public record UpdateClientCommand(
     string TaxId,
     string BranchCode,
     string? Address,
-    int FiscalYearStartMonth)
+    int FiscalYearStartMonth,
+    string? SsoAccountNo = null,
+    string? SsoBranchCode = null,
+    string? Phone = null,
+    string? PostalCode = null)
     : IRequest, IRequireCompanyAccess
 {
     public int ClientCompanyId => Id;

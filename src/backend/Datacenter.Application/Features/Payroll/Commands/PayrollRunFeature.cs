@@ -1,3 +1,4 @@
+using Datacenter.Application.Common;
 using Datacenter.Application.Common.Exceptions;
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Common.Security;
@@ -174,6 +175,73 @@ public class GetPayrollYearSummaryQueryHandler(IApplicationDbContext db)
             };
         return t;
     }
+}
+
+// ── สปส.1-10 (แบบรายการแสดงการส่งเงินสมทบ) ต่องวด ────────────────────────────────
+public record GetSsoFilingQuery(int ClientCompanyId, int RunId)
+    : IRequest<SsoFilingDto>, IRequireCompanyAccess;
+
+public class GetSsoFilingQueryHandler(IApplicationDbContext db)
+    : IRequestHandler<GetSsoFilingQuery, SsoFilingDto>
+{
+    public async Task<SsoFilingDto> Handle(GetSsoFilingQuery request, CancellationToken ct)
+    {
+        var run = await db.PayrollRuns.AsNoTracking()
+            .Include(r => r.Items).ThenInclude(i => i.Employee)
+            .FirstOrDefaultAsync(r => r.Id == request.RunId && r.ClientCompanyId == request.ClientCompanyId, ct)
+            ?? throw new NotFoundException("PayrollRun", request.RunId);
+
+        var company = await db.ClientCompanies.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == request.ClientCompanyId, ct)
+            ?? throw new NotFoundException("ClientCompany", request.ClientCompanyId);
+
+        var cfg = PayrollRates.ResolveEffective(
+            await db.PayrollRateConfigs.AsNoTracking().ToListAsync(ct), new DateTime(run.Year, run.Month, 1));
+
+        // เฉพาะผู้ประกันตนที่มีค่าจ้างยื่น ปกส.เดือนนั้น เรียงตามเลขบัตร ปชช.
+        var rows = run.Items
+            .Where(i => i.SsoWageBase > 0 && i.Employee != null)
+            .Select(i => new
+            {
+                Nat = Digits(i.Employee!.NationalId),
+                i.Employee.Prefix, i.Employee.FirstName, i.Employee.LastName,
+                Wage = PayrollCalculator.Round2(i.SsoWageBase),
+                Contribution = PayrollCalculator.Round2(i.SsoEmployee),
+            })
+            .OrderBy(x => x.Nat, StringComparer.Ordinal)
+            .Select((x, idx) => new SsoFilingRow(
+                idx + 1, x.Nat, x.Prefix ?? "", x.FirstName, x.LastName, x.Wage, x.Contribution))
+            .ToList();
+
+        var totalWage = rows.Sum(r => r.Wage);
+        var totalEmp = rows.Sum(r => r.Contribution);
+        var grand = totalEmp * 2; // นายจ้างสมทบเท่าลูกจ้าง
+
+        return new SsoFilingDto(
+            run.Id, run.Year, run.Month,
+            string.IsNullOrWhiteSpace(company.LegalName) ? company.Name : company.LegalName,
+            company.Address, company.PostalCode, company.Phone,
+            company.SsoAccountNo ?? "", company.SsoBranchCode ?? "000000", cfg?.SsoEmployeePct ?? 0,
+            rows, totalWage, totalEmp, totalEmp, grand, rows.Count, ThaiBahtText.Convert(grand));
+    }
+
+    private static string Digits(string s) => System.Text.RegularExpressions.Regex.Replace(s ?? "", @"\D", "");
+}
+
+public record GetSsoFilingExcelQuery(int ClientCompanyId, int RunId) : IRequest<byte[]>, IRequireCompanyAccess;
+public class GetSsoFilingExcelQueryHandler(ISender sender, ISsoFilingExcelService excel)
+    : IRequestHandler<GetSsoFilingExcelQuery, byte[]>
+{
+    public async Task<byte[]> Handle(GetSsoFilingExcelQuery req, CancellationToken ct)
+        => excel.BuildEServiceFile(await sender.Send(new GetSsoFilingQuery(req.ClientCompanyId, req.RunId), ct));
+}
+
+public record GetSsoFilingPdfQuery(int ClientCompanyId, int RunId) : IRequest<byte[]>, IRequireCompanyAccess;
+public class GetSsoFilingPdfQueryHandler(ISender sender, ISsoFilingPdfService pdf)
+    : IRequestHandler<GetSsoFilingPdfQuery, byte[]>
+{
+    public async Task<byte[]> Handle(GetSsoFilingPdfQuery req, CancellationToken ct)
+        => pdf.Generate(await sender.Send(new GetSsoFilingQuery(req.ClientCompanyId, req.RunId), ct));
 }
 
 // ── สร้างงวด + auto สร้างรายการจากพนักงาน Active ─────────────────────────────────

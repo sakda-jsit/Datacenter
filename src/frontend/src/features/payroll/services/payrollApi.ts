@@ -8,6 +8,7 @@ import type {
   PayrollRunDetail,
   PayrollRunListItem,
   PayrollYearSummary,
+  SsoFiling,
 } from '../types/payroll.types'
 
 export const payrollApi = {
@@ -110,6 +111,22 @@ export const payrollApi = {
 
   deleteRun: (runId: number, clientCompanyId: number) =>
     apiClient.delete(`/payroll/runs/${runId}`, { params: { clientCompanyId } }).then((r) => r.data),
+
+  // สปส.1-10
+  ssoFiling: (runId: number, clientCompanyId: number) =>
+    apiClient
+      .get<SsoFiling>(`/payroll/runs/${runId}/sso-filing`, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  downloadSsoExcel: (runId: number, clientCompanyId: number) =>
+    apiClient
+      .get(`/payroll/runs/${runId}/sso-filing/excel`, { params: { clientCompanyId }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
+
+  downloadSsoPdf: (runId: number, clientCompanyId: number) =>
+    apiClient
+      .get(`/payroll/runs/${runId}/sso-filing/pdf`, { params: { clientCompanyId }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
 
   downloadTemplate: (runId: number, clientCompanyId: number) =>
     apiClient

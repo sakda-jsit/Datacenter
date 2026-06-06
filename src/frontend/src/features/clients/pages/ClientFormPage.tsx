@@ -19,6 +19,10 @@ const emptyForm: CreateClientRequest = {
   branchCode: '00000',
   address: '',
   fiscalYearStartMonth: 1,
+  ssoAccountNo: '',
+  ssoBranchCode: '000000',
+  phone: '',
+  postalCode: '',
 }
 
 export default function ClientFormPage() {
@@ -42,6 +46,10 @@ export default function ClientFormPage() {
         branchCode: existing.branchCode,
         address: existing.address ?? '',
         fiscalYearStartMonth: existing.fiscalYearStartMonth,
+        ssoAccountNo: existing.ssoAccountNo ?? '',
+        ssoBranchCode: existing.ssoBranchCode ?? '000000',
+        phone: existing.phone ?? '',
+        postalCode: existing.postalCode ?? '',
       })
     }
   }, [existing])
@@ -60,6 +68,10 @@ export default function ClientFormPage() {
             branchCode: values.branchCode,
             address: values.address || undefined,
             fiscalYearStartMonth: values.fiscalYearStartMonth,
+            ssoAccountNo: values.ssoAccountNo || undefined,
+            ssoBranchCode: values.ssoBranchCode || undefined,
+            phone: values.phone || undefined,
+            postalCode: values.postalCode || undefined,
           },
         })
       } else {
@@ -154,6 +166,26 @@ export default function ClientFormPage() {
             ))}
           </select>
         </Field>
+
+        {isEdit && (
+          <div className="space-y-4 rounded-lg border border-slate-100 bg-slate-50/50 p-4">
+            <p className="text-sm font-semibold text-slate-700">ประกันสังคม (นายจ้าง) — สำหรับ สปส.1-10</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="เลขที่บัญชีนายจ้าง ปกส. (10 หลัก)" error={errors.ssoaccountno}>
+                <input name="ssoAccountNo" value={values.ssoAccountNo ?? ''} onChange={handleChange} placeholder="2000398553" maxLength={15} className={inputCls(false)} />
+              </Field>
+              <Field label="ลำดับที่สาขา ปกส. (6 หลัก)" error={errors.ssobranchcode}>
+                <input name="ssoBranchCode" value={values.ssoBranchCode ?? ''} onChange={handleChange} placeholder="000000" maxLength={6} className={inputCls(false)} />
+              </Field>
+              <Field label="โทรศัพท์" error={errors.phone}>
+                <input name="phone" value={values.phone ?? ''} onChange={handleChange} className={inputCls(false)} />
+              </Field>
+              <Field label="รหัสไปรษณีย์" error={errors.postalcode}>
+                <input name="postalCode" value={values.postalCode ?? ''} onChange={handleChange} maxLength={10} className={inputCls(false)} />
+              </Field>
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-3 pt-2">
           <Button

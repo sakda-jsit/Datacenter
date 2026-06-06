@@ -226,6 +226,37 @@ export interface PayrollYearSummary {
   total: PayrollSummaryRow
 }
 
+// ── สปส.1-10 ─────────────────────────────────────────────────────────────────────
+export interface SsoFilingRow {
+  seq: number
+  nationalId: string
+  prefix: string
+  firstName: string
+  lastName: string
+  wage: number
+  contribution: number
+}
+
+export interface SsoFiling {
+  runId: number
+  year: number
+  month: number
+  companyName: string
+  address?: string | null
+  postalCode?: string | null
+  phone?: string | null
+  ssoAccountNo: string
+  ssoBranchCode: string
+  ratePct: number
+  rows: SsoFilingRow[]
+  totalWage: number
+  totalEmployee: number
+  totalEmployer: number
+  grandTotal: number
+  insuredCount: number
+  grandTotalText: string
+}
+
 export interface PayrollItemInput {
   id: number
   salary: number

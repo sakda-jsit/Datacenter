@@ -11,6 +11,10 @@ export interface ClientDetailDto extends ClientListDto {
   branchCode: string
   address?: string
   fiscalYearStartMonth: number
+  ssoAccountNo?: string | null
+  ssoBranchCode?: string | null
+  phone?: string | null
+  postalCode?: string | null
 }
 
 export interface CreateClientRequest {
@@ -20,6 +24,11 @@ export interface CreateClientRequest {
   branchCode: string
   address?: string
   fiscalYearStartMonth: number
+  // ปกส. (ใช้ตอนแก้ไข — สำหรับ สปส.1-10)
+  ssoAccountNo?: string
+  ssoBranchCode?: string
+  phone?: string
+  postalCode?: string
 }
 
 export interface UpdateClientRequest {
@@ -28,4 +37,8 @@ export interface UpdateClientRequest {
   branchCode: string
   address?: string
   fiscalYearStartMonth: number
+  ssoAccountNo?: string
+  ssoBranchCode?: string
+  phone?: string
+  postalCode?: string
 }

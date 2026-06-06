@@ -6,7 +6,9 @@ public record ClientListDto(int Id, string Code, string Name, string TaxId, bool
 // Name = ชื่อจาก Express (อ้างอิง), LegalName = ชื่อทางการที่แก้ได้/ใช้ออกงบ
 public record ClientDetailDto(
     int Id, string Code, string Name, string LegalName, string TaxId,
-    string BranchCode, string? Address, int FiscalYearStartMonth, bool IsActive);
+    string BranchCode, string? Address, int FiscalYearStartMonth, bool IsActive,
+    string? SsoAccountNo, string? SsoBranchCode, string? Phone, string? PostalCode);
 
 public record UpdateClientRequest(
-    string LegalName, string TaxId, string BranchCode, string? Address, int FiscalYearStartMonth);
+    string LegalName, string TaxId, string BranchCode, string? Address, int FiscalYearStartMonth,
+    string? SsoAccountNo, string? SsoBranchCode, string? Phone, string? PostalCode);

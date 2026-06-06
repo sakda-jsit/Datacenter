@@ -43,6 +43,8 @@ public static class DependencyInjection
         services.AddSingleton<IWhtCertificatePdfService>(_ => new WhtCertificatePdfService(certFont));
         services.AddSingleton<ISignatureImageProcessor, SignatureImageProcessor>();
         services.AddSingleton<IPayrollExcelService, PayrollExcelService>();
+        services.AddSingleton<ISsoFilingExcelService, Services.Payroll.SsoFilingExcelService>();
+        services.AddSingleton<ISsoFilingPdfService>(_ => new Services.Payroll.SsoFilingPdfService(certFont));
 
         // หมายเหตุประกอบงบ (NOTE2) export Excel รูปแบบงบ — ClosedXML
         services.AddScoped<INote2ExcelExporter, Note2ExcelExporter>();

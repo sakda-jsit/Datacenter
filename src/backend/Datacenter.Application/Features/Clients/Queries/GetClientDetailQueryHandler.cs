@@ -16,6 +16,7 @@ public class GetClientDetailQueryHandler(IApplicationDbContext db)
             .FirstOrDefaultAsync(x => x.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(ClientDetailDto), request.Id);
 
-        return new ClientDetailDto(c.Id, c.Code, c.Name, c.LegalName, c.TaxId, c.BranchCode, c.Address, c.FiscalYearStartMonth, c.IsActive);
+        return new ClientDetailDto(c.Id, c.Code, c.Name, c.LegalName, c.TaxId, c.BranchCode, c.Address, c.FiscalYearStartMonth, c.IsActive,
+            c.SsoAccountNo, c.SsoBranchCode, c.Phone, c.PostalCode);
     }
 }

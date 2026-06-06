@@ -21,6 +21,10 @@ public class UpdateClientCommandHandler(IApplicationDbContext db, ICurrentUserSe
         client.BranchCode = request.BranchCode.Trim();
         client.Address = request.Address?.Trim();
         client.FiscalYearStartMonth = request.FiscalYearStartMonth;
+        client.SsoAccountNo = request.SsoAccountNo?.Trim();
+        client.SsoBranchCode = request.SsoBranchCode?.Trim();
+        client.Phone = request.Phone?.Trim();
+        client.PostalCode = request.PostalCode?.Trim();
         client.ModifiedAt = DateTime.UtcNow;
         client.ModifiedBy = currentUser.Username;
 

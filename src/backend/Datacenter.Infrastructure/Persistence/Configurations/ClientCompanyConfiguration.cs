@@ -17,6 +17,10 @@ public class ClientCompanyConfiguration : IEntityTypeConfiguration<ClientCompany
         builder.Property(x => x.TaxId).HasMaxLength(13);
         builder.Property(x => x.BranchCode).HasMaxLength(5).HasDefaultValue("00000");
         builder.Property(x => x.Address).HasMaxLength(500);
+        builder.Property(x => x.SsoAccountNo).HasMaxLength(15);
+        builder.Property(x => x.SsoBranchCode).HasMaxLength(6);
+        builder.Property(x => x.Phone).HasMaxLength(30);
+        builder.Property(x => x.PostalCode).HasMaxLength(10);
         builder.HasIndex(x => x.Code).IsUnique();
 
         // business key สำหรับ match ตอน import (filtered: เฉพาะ active ที่มี TaxId — เว้น onboard ที่ยังไม่กรอก/สำเนาที่ปิดใช้งาน)

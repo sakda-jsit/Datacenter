@@ -104,6 +104,14 @@ export function usePayrollYearSummary(companyId: number, year: number) {
   })
 }
 
+export function useSsoFiling(companyId: number, runId: number | null) {
+  return useQuery({
+    queryKey: ['sso-filing', companyId, runId ?? 0],
+    queryFn: () => payrollApi.ssoFiling(runId!, companyId),
+    enabled: companyId > 0 && !!runId,
+  })
+}
+
 export function usePayrollRun(companyId: number, runId: number | null) {
   return useQuery({
     queryKey: ['payroll-run', companyId, runId ?? 0],

@@ -31,7 +31,8 @@ public class ClientsController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] UpdateClientRequest body, CancellationToken ct)
     {
         await mediator.Send(new UpdateClientCommand(
-            id, body.LegalName, body.TaxId, body.BranchCode, body.Address, body.FiscalYearStartMonth), ct);
+            id, body.LegalName, body.TaxId, body.BranchCode, body.Address, body.FiscalYearStartMonth,
+            body.SsoAccountNo, body.SsoBranchCode, body.Phone, body.PostalCode), ct);
         return NoContent();
     }
 
