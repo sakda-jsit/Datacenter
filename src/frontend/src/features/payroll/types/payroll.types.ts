@@ -116,6 +116,90 @@ export interface PayrollRateConfigInput {
   note?: string
 }
 
+// ── งวดเงินเดือน ────────────────────────────────────────────────────────────────
+export const PAYROLL_RUN_STATUS_LABEL: Record<number, string> = { 0: 'ร่าง', 1: 'บันทึกแล้ว', 2: 'ปิดงวด' }
+export const MONTH_TH = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม']
+
+export interface PayrollRunListItem {
+  id: number
+  year: number
+  month: number
+  status: number
+  employeeCount: number
+  totalGross: number
+  totalSsoEmployee: number
+  totalTax: number
+  totalNet: number
+}
+
+export interface PayrollItemRow {
+  id: number
+  employeeId: number
+  employeeCode: string
+  employeeName: string
+  salaryType: number
+  salary: number
+  dailyWageDays: number
+  dailyWageRate: number
+  housingAllowance: number
+  foodAllowance: number
+  overtime: number
+  diligence: number
+  bonus: number
+  otherIncome: number
+  grossIncome: number
+  ssoWageBase: number
+  ssoEmployee: number
+  withholdingTax: number
+  absence: number
+  otherDeduction: number
+  netPay: number
+  ssoEmployeeCalc: number
+  ssoEmployerCalc: number
+  ssoDiff: number
+  taxCalc: number
+  taxDiff: number
+  note?: string | null
+}
+
+export interface PayrollRunDetail {
+  id: number
+  clientCompanyId: number
+  year: number
+  month: number
+  status: number
+  note?: string | null
+  rateSsoEmployeePct?: number | null
+  rateSsoEmployerPct?: number | null
+  rateWageFloor?: number | null
+  rateWageCap?: number | null
+  items: PayrollItemRow[]
+  totalGross: number
+  totalSsoEmployee: number
+  totalSsoEmployer: number
+  totalTax: number
+  totalNet: number
+}
+
+export interface PayrollItemInput {
+  id: number
+  salary: number
+  dailyWageDays: number
+  dailyWageRate: number
+  housingAllowance: number
+  foodAllowance: number
+  overtime: number
+  diligence: number
+  bonus: number
+  otherIncome: number
+  ssoWageBase: number
+  ssoEmployee: number
+  withholdingTax: number
+  absence: number
+  otherDeduction: number
+  note?: string | null
+}
+
 export interface EmployeeInput {
   employeeCode: string
   nationalId: string

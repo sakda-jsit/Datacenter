@@ -1,22 +1,36 @@
+import { useState } from 'react'
 import PageHeader from '../../../shared/components/ui/PageHeader'
+import Tabs from '../../../shared/components/ui/Tabs'
 import Card from '../../../shared/components/ui/Card'
 import StateMessage from '../../../shared/components/ui/StateMessage'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import EmployeesTab from './tabs/EmployeesTab'
+import PayrollRunsTab from './tabs/PayrollRunsTab'
+
+type Tab = 'employees' | 'runs'
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'employees', label: 'ทะเบียนพนักงาน' },
+  { key: 'runs', label: 'งวดเงินเดือน' },
+]
 
 export default function PayrollPage() {
   const { companyId } = useCurrentCompany()
+  const [tab, setTab] = useState<Tab>('employees')
 
   return (
     <div>
       <PageHeader
         title="เงินเดือน / ประกันสังคม"
-        description="ทะเบียนพนักงาน + คลังหลักฐาน (รูปบัตร/หลักฐานแจ้ง ปกส.) + แจ้งเข้า-ออกประกันสังคม — ข้อมูลส่วนบุคคล (PDPA)"
+        description="ทะเบียนพนักงาน + คลังหลักฐาน (PDPA) + งวดเงินเดือนรายเดือน (คำนวณ ปกส./ภาษีเทียบ)"
       />
+      <Tabs items={TABS} activeKey={tab} onChange={setTab} />
       {!companyId ? (
         <Card><StateMessage centered>เลือกบริษัทที่ header ก่อน</StateMessage></Card>
       ) : (
-        <EmployeesTab companyId={companyId} />
+        <>
+          {tab === 'employees' && <EmployeesTab companyId={companyId} />}
+          {tab === 'runs' && <PayrollRunsTab companyId={companyId} />}
+        </>
       )}
     </div>
   )

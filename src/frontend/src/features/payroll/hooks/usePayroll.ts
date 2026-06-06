@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { payrollApi } from '../services/payrollApi'
-import type { EmployeeInput } from '../types/payroll.types'
+import type { EmployeeInput, PayrollItemInput } from '../types/payroll.types'
 
 const keys = {
   employees: (companyId: number, includeResigned: boolean) =>
@@ -84,5 +84,57 @@ export function useUpdateEnrollment(companyId: number, employeeId: number) {
       body: { submittedDate?: string | null; status: number; proofDocumentId?: number | null; note?: string }
     }) => payrollApi.updateEnrollment(vars.id, companyId, vars.body),
     onSuccess: () => invalidateEmployee(companyId, employeeId)(qc),
+  })
+}
+
+// ── งวดเงินเดือน ────────────────────────────────────────────────────────────────
+export function usePayrollRuns(companyId: number, year?: number) {
+  return useQuery({
+    queryKey: ['payroll-runs', companyId, year ?? 0],
+    queryFn: () => payrollApi.runs(companyId, year),
+    enabled: companyId > 0,
+  })
+}
+
+export function usePayrollRun(companyId: number, runId: number | null) {
+  return useQuery({
+    queryKey: ['payroll-run', companyId, runId ?? 0],
+    queryFn: () => payrollApi.run(runId!, companyId),
+    enabled: companyId > 0 && !!runId,
+  })
+}
+
+export function useCreatePayrollRun(companyId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { year: number; month: number }) => payrollApi.createRun(companyId, vars.year, vars.month),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-runs', companyId] }),
+  })
+}
+
+export function useSavePayrollItems(companyId: number, runId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (items: PayrollItemInput[]) => payrollApi.saveItems(runId, companyId, items),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['payroll-run', companyId, runId] })
+      qc.invalidateQueries({ queryKey: ['payroll-runs', companyId] })
+    },
+  })
+}
+
+export function useSetRunStatus(companyId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { runId: number; status: number }) => payrollApi.setRunStatus(vars.runId, companyId, vars.status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-run', companyId] }),
+  })
+}
+
+export function useDeletePayrollRun(companyId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (runId: number) => payrollApi.deleteRun(runId, companyId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-runs', companyId] }),
   })
 }

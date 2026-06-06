@@ -1,5 +1,12 @@
 import apiClient from '../../../shared/services/apiClient'
-import type { EmployeeDetail, EmployeeInput, EmployeeListItem } from '../types/payroll.types'
+import type {
+  EmployeeDetail,
+  EmployeeInput,
+  EmployeeListItem,
+  PayrollItemInput,
+  PayrollRunDetail,
+  PayrollRunListItem,
+} from '../types/payroll.types'
 
 export const payrollApi = {
   employees: (clientCompanyId: number, includeResigned = true) =>
@@ -67,4 +74,33 @@ export const payrollApi = {
     apiClient
       .put(`/payroll/sso-enrollments/${id}`, body, { params: { clientCompanyId } })
       .then((r) => r.data),
+
+  // งวดเงินเดือนรายเดือน
+  runs: (clientCompanyId: number, year?: number) =>
+    apiClient
+      .get<PayrollRunListItem[]>('/payroll/runs', { params: { clientCompanyId, year } })
+      .then((r) => r.data),
+
+  run: (id: number, clientCompanyId: number) =>
+    apiClient
+      .get<PayrollRunDetail>(`/payroll/runs/${id}`, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  createRun: (clientCompanyId: number, year: number, month: number) =>
+    apiClient
+      .post<{ id: number }>('/payroll/runs', { year, month }, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  saveItems: (runId: number, clientCompanyId: number, items: PayrollItemInput[]) =>
+    apiClient
+      .put(`/payroll/runs/${runId}/items`, items, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  setRunStatus: (runId: number, clientCompanyId: number, status: number) =>
+    apiClient
+      .put(`/payroll/runs/${runId}/status`, { status }, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  deleteRun: (runId: number, clientCompanyId: number) =>
+    apiClient.delete(`/payroll/runs/${runId}`, { params: { clientCompanyId } }).then((r) => r.data),
 }
