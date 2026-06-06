@@ -40,6 +40,9 @@ public interface IApplicationDbContext
     DbSet<BankTransaction> BankTransactions { get; }
     DbSet<ReportPackage> ReportPackages { get; }
     DbSet<NoteTemplateSection> NoteTemplateSections { get; }
+    DbSet<Employee> Employees { get; }
+    DbSet<EmployeeDocument> EmployeeDocuments { get; }
+    DbSet<SsoEnrollment> SsoEnrollments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

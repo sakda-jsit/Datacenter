@@ -41,6 +41,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<BankTransaction> BankTransactions => Set<BankTransaction>();
     public DbSet<ReportPackage> ReportPackages => Set<ReportPackage>();
     public DbSet<NoteTemplateSection> NoteTemplateSections => Set<NoteTemplateSection>();
+    public DbSet<Employee> Employees => Set<Employee>();
+    public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
+    public DbSet<SsoEnrollment> SsoEnrollments => Set<SsoEnrollment>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
