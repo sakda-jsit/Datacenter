@@ -116,7 +116,7 @@ public class GetPayrollYearSummaryQueryHandler(IApplicationDbContext db)
         foreach (var i in items)
         {
             count++;
-            salary += i.Salary;
+            salary += i.Salary + i.DailyWageDays * i.DailyWageRate; // เงินเดือน + ค่าจ้างรายวัน
             absence += i.Absence;
             housing += i.HousingAllowance;
             food += i.FoodAllowance;

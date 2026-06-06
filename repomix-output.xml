@@ -673,6 +673,7 @@ src/frontend/src/features/payroll/pages/PayrollPage.tsx
 src/frontend/src/features/payroll/pages/tabs/AccountMappingTab.tsx
 src/frontend/src/features/payroll/pages/tabs/EmployeesTab.tsx
 src/frontend/src/features/payroll/pages/tabs/PayrollRunsTab.tsx
+src/frontend/src/features/payroll/pages/tabs/YearSummaryTab.tsx
 src/frontend/src/features/payroll/services/payrollApi.ts
 src/frontend/src/features/payroll/types/payroll.types.ts
 src/frontend/src/features/report-packages/hooks/useReportPackages.ts
@@ -72377,6 +72378,162 @@ export default function PayrollRunsTab({ companyId }: Props) {
 }
 </file>
 
+<file path="src/frontend/src/features/payroll/pages/tabs/YearSummaryTab.tsx">
+import { useState } from 'react'
+import Card from '../../../../shared/components/ui/Card'
+import StateMessage from '../../../../shared/components/ui/StateMessage'
+import { usePayrollYearSummary } from '../../hooks/usePayroll'
+import { MONTH_TH, type PayrollSummaryRow } from '../../types/payroll.types'
+
+interface Props {
+  companyId: number
+}
+
+function fmt(n: number) {
+  if (!n) return '-'
+  return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+// ลำดับคอลัมน์ตรงกับ sheet "รายได้ทั้งปี" — [field, ไฮไลต์รวม?]
+const COLS: { key: keyof PayrollSummaryRow; label: string; strong?: boolean; calc?: boolean }[] = [
+  // รายได้
+  { key: 'salary', label: 'เงินเดือน' },
+  { key: 'absenceLate', label: 'หยุดงาน+มาสาย' },
+  { key: 'netSalary', label: 'เงินเดือนสุทธิ' },
+  { key: 'housing', label: 'ค่าที่พักอาศัย' },
+  { key: 'food', label: 'ค่าอาหาร' },
+  { key: 'overtime', label: 'ค่าล่วงเวลา' },
+  { key: 'diligence', label: 'เบี้ยขยัน' },
+  { key: 'bonus', label: 'โบนัส' },
+  { key: 'netIncomeAfterAbsence', label: 'รายได้สุทธิหลังหักลามาสาย (ภงด.1ก)' },
+  { key: 'totalIncome', label: 'รวมรายได้ทั้งหมด (ยังไม่หักลา)', strong: true },
+  // กท.20ก
+  { key: 'wage', label: 'ค่าจ้าง' },
+  { key: 'wageOver20000', label: 'ค่าจ้างส่วนที่เกิน 20,000' },
+  // รายการหัก
+  { key: 'ssoReportable', label: 'รายได้ยื่นปกส.' },
+  { key: 'ssoCalc', label: 'คำนวณหักปกส.ได้', calc: true },
+  { key: 'ssoShortfall', label: 'ผลต่าง (ขาดไป)', calc: true },
+  { key: 'ssoActual', label: 'หักปกส.จริง' },
+  { key: 'tax', label: 'TAX' },
+  { key: 'absence', label: 'ขาดงาน' },
+  { key: 'advance', label: 'เบิกล่วงหน้า' },
+  // รวม
+  { key: 'totalDeduction', label: 'รวมรายการหัก', strong: true },
+  { key: 'pnd1Income', label: 'รายได้ยื่น ภงด.1 ประจำเดือน' },
+  { key: 'employerSso', label: 'นายจ้างสมทบ', calc: true },
+  { key: 'netPay', label: 'เงินสุทธิ', strong: true },
+]
+
+const GROUPS: { label: string; span: number; cls: string }[] = [
+  { label: 'รายได้', span: 10, cls: 'bg-emerald-50 text-emerald-800' },
+  { label: 'กรอกในแบบ กท.20 ก', span: 2, cls: 'bg-violet-50 text-violet-800' },
+  { label: 'รายการหัก', span: 7, cls: 'bg-rose-50 text-rose-800' },
+  { label: 'รวม', span: 3, cls: 'bg-slate-100 text-slate-800' },
+]
+
+export default function YearSummaryTab({ companyId }: Props) {
+  const thisYear = new Date().getFullYear()
+  const [year, setYear] = useState(thisYear)
+  const { data, isLoading, isError } = usePayrollYearSummary(companyId, year)
+
+  const yearOptions = Array.from({ length: 6 }, (_, i) => thisYear - i)
+
+  function cell(row: PayrollSummaryRow, c: (typeof COLS)[number]) {
+    const v = row[c.key] as number
+    const tone = c.calc ? 'text-sky-700' : c.strong ? 'font-semibold text-slate-800' : 'text-gray-700'
+    return (
+      <td key={c.key} className={`whitespace-nowrap px-2 py-1 text-right font-mono ${tone} ${c.strong ? 'bg-slate-50' : ''}`}>
+        {fmt(v)}
+      </td>
+    )
+  }
+
+  return (
+    <div>
+      <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 px-6 py-4">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">สรุปรายได้ทั้งปี</p>
+          <p className="text-xs text-gray-500">
+            รวมทุกงวด/ทุกพนักงานเป็นรายเดือน · คอลัมน์ตาม sheet “รายได้ทั้งปี” · คอลัมน์ <span className="text-sky-700">สีฟ้า</span> = ระบบคำนวณเทียบ
+          </p>
+        </div>
+        <label className="flex items-center gap-2 text-xs text-gray-600">
+          ปี
+          <select
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="rounded-md border border-gray-300 px-2 py-1 text-sm"
+          >
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </label>
+      </Card>
+
+      {isError && <StateMessage tone="error">เกิดข้อผิดพลาด กรุณาลองใหม่</StateMessage>}
+      {isLoading && <StateMessage>กำลังโหลด...</StateMessage>}
+
+      {data && (
+        <Card className="overflow-x-auto">
+          <table className="w-full text-[11px]">
+            <thead>
+              <tr>
+                <th rowSpan={2} className="sticky left-0 z-10 border-b border-r bg-white px-2 py-2 text-left align-bottom font-medium text-gray-600">
+                  เดือน
+                </th>
+                {GROUPS.map((g) => (
+                  <th key={g.label} colSpan={g.span} className={`border-b border-l px-2 py-1 text-center font-semibold ${g.cls}`}>
+                    {g.label}
+                  </th>
+                ))}
+              </tr>
+              <tr className="bg-slate-50 text-gray-600">
+                {COLS.map((c, idx) => {
+                  // เส้นแบ่งกลุ่ม (คอลัมน์แรกของแต่ละกลุ่ม)
+                  const groupStart = [0, 10, 12, 19].includes(idx)
+                  return (
+                    <th key={c.key} className={`border-b px-2 py-2 text-right align-bottom font-medium ${groupStart ? 'border-l' : ''}`}>
+                      {c.label}
+                    </th>
+                  )
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {data.months.map((row) => (
+                <tr key={row.month} className={`border-b border-gray-100 ${row.hasRun ? 'hover:bg-slate-50' : 'text-gray-300'}`}>
+                  <td className="sticky left-0 z-10 whitespace-nowrap border-r bg-white px-2 py-1 font-medium text-slate-700">
+                    {MONTH_TH[row.month]}
+                    {!row.hasRun && <span className="ml-1 text-[10px] text-gray-300">(ยังไม่มีงวด)</span>}
+                  </td>
+                  {COLS.map((c) => cell(row, c))}
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-slate-300 bg-slate-100 font-semibold text-slate-800">
+                <td className="sticky left-0 z-10 whitespace-nowrap border-r bg-slate-100 px-2 py-2">รวมทั้งปี</td>
+                {COLS.map((c) => (
+                  <td key={c.key} className="whitespace-nowrap px-2 py-2 text-right font-mono">
+                    {fmt(data.total[c.key] as number)}
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
+          </table>
+        </Card>
+      )}
+
+      <p className="mt-2 text-xs text-gray-400">
+        หมายเหตุ: “ค่าจ้าง/รายได้ยื่นปกส.” อ้างฐานยื่น ปกส. ที่กรอกในแต่ละงวด · “ส่วนที่เกิน 20,000” = ส่วนที่เกินเพดานฐานกองทุนทดแทน (กท.20ก) ต่อคน/เดือน
+      </p>
+    </div>
+  )
+}
+</file>
+
 <file path="src/frontend/src/features/report-packages/hooks/useReportPackages.ts">
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { reportPackageApi } from '../services/reportPackageApi'
@@ -86148,200 +86305,6 @@ public class GetImportHistoryQueryHandler(IApplicationDbContext db, ICompanyAcce
 }
 </file>
 
-<file path="src/backend/Datacenter.Application/Features/Payroll/Commands/PayrollRunFeature.cs">
-using Datacenter.Application.Common.Exceptions;
-using Datacenter.Application.Common.Interfaces;
-using Datacenter.Application.Common.Security;
-using Datacenter.Application.Features.Payroll.DTOs;
-using Datacenter.Application.Features.Payroll.Services;
-using Datacenter.Domain.Entities;
-using Datacenter.Domain.Enums;
-using MediatR;
-using Microsoft.EntityFrameworkCore;
-
-namespace Datacenter.Application.Features.Payroll.Commands;
-
-// ── รายการงวด ────────────────────────────────────────────────────────────────────
-public record GetPayrollRunsQuery(int ClientCompanyId, int? Year = null)
-    : IRequest<IReadOnlyList<PayrollRunListItemDto>>, IRequireCompanyAccess;
-
-public class GetPayrollRunsQueryHandler(IApplicationDbContext db)
-    : IRequestHandler<GetPayrollRunsQuery, IReadOnlyList<PayrollRunListItemDto>>
-{
-    public async Task<IReadOnlyList<PayrollRunListItemDto>> Handle(GetPayrollRunsQuery request, CancellationToken ct)
-    {
-        var q = db.PayrollRuns.AsNoTracking().Include(r => r.Items)
-            .Where(r => r.ClientCompanyId == request.ClientCompanyId);
-        if (request.Year is { } y) q = q.Where(r => r.Year == y);
-        var runs = await q.OrderByDescending(r => r.Year).ThenByDescending(r => r.Month).ToListAsync(ct);
-        return runs.Select(r => new PayrollRunListItemDto(
-            r.Id, r.Year, r.Month, (int)r.Status, r.Items.Count,
-            r.Items.Sum(i => i.GrossIncome), r.Items.Sum(i => i.SsoEmployee),
-            r.Items.Sum(i => i.WithholdingTax), r.Items.Sum(i => i.NetPay))).ToList();
-    }
-}
-
-// ── รายละเอียดงวด + ค่าคำนวณเทียบ ────────────────────────────────────────────────
-public record GetPayrollRunQuery(int ClientCompanyId, int RunId)
-    : IRequest<PayrollRunDetailDto>, IRequireCompanyAccess;
-
-public class GetPayrollRunQueryHandler(IApplicationDbContext db)
-    : IRequestHandler<GetPayrollRunQuery, PayrollRunDetailDto>
-{
-    public async Task<PayrollRunDetailDto> Handle(GetPayrollRunQuery request, CancellationToken ct)
-    {
-        var run = await db.PayrollRuns.AsNoTracking()
-            .Include(r => r.Items).ThenInclude(i => i.Employee)
-            .FirstOrDefaultAsync(r => r.Id == request.RunId && r.ClientCompanyId == request.ClientCompanyId, ct)
-            ?? throw new NotFoundException("PayrollRun", request.RunId);
-
-        var asOf = new DateTime(run.Year, run.Month, 1);
-        var allRates = await db.PayrollRateConfigs.AsNoTracking().ToListAsync(ct);
-        var cfg = PayrollRates.ResolveEffective(allRates, asOf);
-
-        var items = run.Items.OrderBy(i => i.Employee!.EmployeeCode).Select(i =>
-        {
-            var ssoEmpCalc = PayrollCalculator.SsoEmployee(i, cfg);
-            var ssoErCalc = PayrollCalculator.SsoEmployer(i, cfg);
-            var taxCalc = PayrollCalculator.MonthlyTaxEstimate(i.GrossIncome, i.SsoEmployee);
-            return new PayrollItemDto(
-                i.Id, i.EmployeeId, i.Employee!.EmployeeCode,
-                ((i.Employee.Prefix ?? "") + " " + i.Employee.FirstName + " " + i.Employee.LastName).Trim(),
-                i.Employee.Department,
-                (int)i.Employee.SalaryType,
-                i.Salary, i.DailyWageDays, i.DailyWageRate, i.HousingAllowance, i.FoodAllowance, i.Overtime,
-                i.Diligence, i.Bonus, i.OtherIncome, i.GrossIncome, i.SsoWageBase, i.SsoEmployee, i.WithholdingTax,
-                i.Absence, i.Advance, i.OtherDeduction, i.NetPay,
-                ssoEmpCalc, ssoErCalc, PayrollCalculator.Round2(i.SsoEmployee - ssoEmpCalc),
-                taxCalc, PayrollCalculator.Round2(i.WithholdingTax - taxCalc), i.Note);
-        }).ToList();
-
-        return new PayrollRunDetailDto(
-            run.Id, run.ClientCompanyId, run.Year, run.Month, (int)run.Status, run.Note,
-            cfg?.SsoEmployeePct, cfg?.SsoEmployerPct, cfg?.SsoWageFloor, cfg?.SsoWageCap,
-            items,
-            items.Sum(x => x.GrossIncome), items.Sum(x => x.SsoEmployee), items.Sum(x => x.SsoEmployerCalc),
-            items.Sum(x => x.WithholdingTax), items.Sum(x => x.NetPay));
-    }
-}
-
-// ── สร้างงวด + auto สร้างรายการจากพนักงาน Active ─────────────────────────────────
-public record CreatePayrollRunCommand(int ClientCompanyId, int Year, int Month)
-    : IRequest<int>, IRequireCompanyAccess;
-
-public class CreatePayrollRunCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
-    : IRequestHandler<CreatePayrollRunCommand, int>
-{
-    public async Task<int> Handle(CreatePayrollRunCommand request, CancellationToken ct)
-    {
-        if (request.Month is < 1 or > 12)
-            throw new Datacenter.Application.Common.Exceptions.ValidationException(new[] {
-                new FluentValidation.Results.ValidationFailure("Month", "เดือนต้องอยู่ระหว่าง 1-12") });
-
-        var exists = await db.PayrollRuns.AnyAsync(
-            r => r.ClientCompanyId == request.ClientCompanyId && r.Year == request.Year && r.Month == request.Month, ct);
-        if (exists)
-            throw new Datacenter.Application.Common.Exceptions.ValidationException(new[] {
-                new FluentValidation.Results.ValidationFailure("Month", $"มีงวด {request.Month}/{request.Year} อยู่แล้ว") });
-
-        var run = new PayrollRun
-        {
-            ClientCompanyId = request.ClientCompanyId, Year = request.Year, Month = request.Month,
-            Status = PayrollRunStatus.Draft, CreatedBy = currentUser.Username,
-        };
-
-        // prefill จากพนักงานที่ยัง Active (เงินเดือน/ค่าจ้างวันจากทะเบียน; ฐาน ปกส. = เพดานเงินเดือน)
-        var emps = await db.Employees.AsNoTracking()
-            .Where(e => e.ClientCompanyId == request.ClientCompanyId && e.EmploymentStatus == EmploymentStatus.Active)
-            .ToListAsync(ct);
-        foreach (var e in emps)
-        {
-            var item = new PayrollItem
-            {
-                EmployeeId = e.Id,
-                Salary = e.SalaryType == SalaryType.Monthly ? e.BaseSalary : 0,
-                DailyWageRate = e.DailyWage ?? 0,
-                CreatedBy = currentUser.Username,
-            };
-            item.SsoWageBase = item.Salary; // ตั้งต้น = เงินเดือน (แก้ได้ตอนกรอก)
-            PayrollCalculator.Recompute(item);
-            run.Items.Add(item);
-        }
-
-        db.PayrollRuns.Add(run);
-        await db.SaveChangesAsync(ct);
-        return run.Id;
-    }
-}
-
-// ── บันทึกค่ารายการ (grid save) — recompute Gross/Net ────────────────────────────
-public record SavePayrollItemsCommand(int ClientCompanyId, int RunId, IReadOnlyList<PayrollItemInput> Items)
-    : IRequest<Unit>, IRequireCompanyAccess;
-
-public class SavePayrollItemsCommandHandler(IApplicationDbContext db)
-    : IRequestHandler<SavePayrollItemsCommand, Unit>
-{
-    public async Task<Unit> Handle(SavePayrollItemsCommand request, CancellationToken ct)
-    {
-        var run = await db.PayrollRuns.Include(r => r.Items)
-            .FirstOrDefaultAsync(r => r.Id == request.RunId && r.ClientCompanyId == request.ClientCompanyId, ct)
-            ?? throw new NotFoundException("PayrollRun", request.RunId);
-
-        var byId = run.Items.ToDictionary(i => i.Id);
-        foreach (var inp in request.Items)
-        {
-            if (!byId.TryGetValue(inp.Id, out var it)) continue;
-            it.Salary = inp.Salary; it.DailyWageDays = inp.DailyWageDays; it.DailyWageRate = inp.DailyWageRate;
-            it.HousingAllowance = inp.HousingAllowance; it.FoodAllowance = inp.FoodAllowance; it.Overtime = inp.Overtime;
-            it.Diligence = inp.Diligence; it.Bonus = inp.Bonus; it.OtherIncome = inp.OtherIncome;
-            it.SsoWageBase = inp.SsoWageBase; it.SsoEmployee = inp.SsoEmployee; it.WithholdingTax = inp.WithholdingTax;
-            it.Absence = inp.Absence; it.Advance = inp.Advance; it.OtherDeduction = inp.OtherDeduction; it.Note = inp.Note;
-            PayrollCalculator.Recompute(it);
-        }
-        await db.SaveChangesAsync(ct);
-        return Unit.Value;
-    }
-}
-
-// ── ลบงวด ────────────────────────────────────────────────────────────────────────
-public record DeletePayrollRunCommand(int ClientCompanyId, int RunId)
-    : IRequest<Unit>, IRequireCompanyAccess;
-
-public class DeletePayrollRunCommandHandler(IApplicationDbContext db)
-    : IRequestHandler<DeletePayrollRunCommand, Unit>
-{
-    public async Task<Unit> Handle(DeletePayrollRunCommand request, CancellationToken ct)
-    {
-        var run = await db.PayrollRuns.FirstOrDefaultAsync(
-            r => r.Id == request.RunId && r.ClientCompanyId == request.ClientCompanyId, ct)
-            ?? throw new NotFoundException("PayrollRun", request.RunId);
-        db.PayrollRuns.Remove(run);
-        await db.SaveChangesAsync(ct);
-        return Unit.Value;
-    }
-}
-
-// ── เปลี่ยนสถานะงวด ──────────────────────────────────────────────────────────────
-public record SetPayrollRunStatusCommand(int ClientCompanyId, int RunId, int Status)
-    : IRequest<Unit>, IRequireCompanyAccess;
-
-public class SetPayrollRunStatusCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
-    : IRequestHandler<SetPayrollRunStatusCommand, Unit>
-{
-    public async Task<Unit> Handle(SetPayrollRunStatusCommand request, CancellationToken ct)
-    {
-        var run = await db.PayrollRuns.FirstOrDefaultAsync(
-            r => r.Id == request.RunId && r.ClientCompanyId == request.ClientCompanyId, ct)
-            ?? throw new NotFoundException("PayrollRun", request.RunId);
-        run.Status = (PayrollRunStatus)request.Status;
-        run.ModifiedBy = currentUser.Username;
-        run.ModifiedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
-        return Unit.Value;
-    }
-}
-</file>
-
 <file path="src/backend/Datacenter.Application/Features/Wht/Services/WhtCertificateBuilder.cs">
 using Datacenter.Application.Common;
 using Datacenter.Application.Common.Interfaces;
@@ -87956,6 +87919,301 @@ public class FinancialStatementController(IMediator mediator) : ControllerBase
 }
 </file>
 
+<file path="src/backend/Datacenter.Application/Features/Payroll/Commands/PayrollRunFeature.cs">
+using Datacenter.Application.Common.Exceptions;
+using Datacenter.Application.Common.Interfaces;
+using Datacenter.Application.Common.Security;
+using Datacenter.Application.Features.Payroll.DTOs;
+using Datacenter.Application.Features.Payroll.Services;
+using Datacenter.Domain.Entities;
+using Datacenter.Domain.Enums;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+
+namespace Datacenter.Application.Features.Payroll.Commands;
+
+// ── รายการงวด ────────────────────────────────────────────────────────────────────
+public record GetPayrollRunsQuery(int ClientCompanyId, int? Year = null)
+    : IRequest<IReadOnlyList<PayrollRunListItemDto>>, IRequireCompanyAccess;
+
+public class GetPayrollRunsQueryHandler(IApplicationDbContext db)
+    : IRequestHandler<GetPayrollRunsQuery, IReadOnlyList<PayrollRunListItemDto>>
+{
+    public async Task<IReadOnlyList<PayrollRunListItemDto>> Handle(GetPayrollRunsQuery request, CancellationToken ct)
+    {
+        var q = db.PayrollRuns.AsNoTracking().Include(r => r.Items)
+            .Where(r => r.ClientCompanyId == request.ClientCompanyId);
+        if (request.Year is { } y) q = q.Where(r => r.Year == y);
+        var runs = await q.OrderByDescending(r => r.Year).ThenByDescending(r => r.Month).ToListAsync(ct);
+        return runs.Select(r => new PayrollRunListItemDto(
+            r.Id, r.Year, r.Month, (int)r.Status, r.Items.Count,
+            r.Items.Sum(i => i.GrossIncome), r.Items.Sum(i => i.SsoEmployee),
+            r.Items.Sum(i => i.WithholdingTax), r.Items.Sum(i => i.NetPay))).ToList();
+    }
+}
+
+// ── รายละเอียดงวด + ค่าคำนวณเทียบ ────────────────────────────────────────────────
+public record GetPayrollRunQuery(int ClientCompanyId, int RunId)
+    : IRequest<PayrollRunDetailDto>, IRequireCompanyAccess;
+
+public class GetPayrollRunQueryHandler(IApplicationDbContext db)
+    : IRequestHandler<GetPayrollRunQuery, PayrollRunDetailDto>
+{
+    public async Task<PayrollRunDetailDto> Handle(GetPayrollRunQuery request, CancellationToken ct)
+    {
+        var run = await db.PayrollRuns.AsNoTracking()
+            .Include(r => r.Items).ThenInclude(i => i.Employee)
+            .FirstOrDefaultAsync(r => r.Id == request.RunId && r.ClientCompanyId == request.ClientCompanyId, ct)
+            ?? throw new NotFoundException("PayrollRun", request.RunId);
+
+        var asOf = new DateTime(run.Year, run.Month, 1);
+        var allRates = await db.PayrollRateConfigs.AsNoTracking().ToListAsync(ct);
+        var cfg = PayrollRates.ResolveEffective(allRates, asOf);
+
+        var items = run.Items.OrderBy(i => i.Employee!.EmployeeCode).Select(i =>
+        {
+            var ssoEmpCalc = PayrollCalculator.SsoEmployee(i, cfg);
+            var ssoErCalc = PayrollCalculator.SsoEmployer(i, cfg);
+            var taxCalc = PayrollCalculator.MonthlyTaxEstimate(i.GrossIncome, i.SsoEmployee);
+            return new PayrollItemDto(
+                i.Id, i.EmployeeId, i.Employee!.EmployeeCode,
+                ((i.Employee.Prefix ?? "") + " " + i.Employee.FirstName + " " + i.Employee.LastName).Trim(),
+                i.Employee.Department,
+                (int)i.Employee.SalaryType,
+                i.Salary, i.DailyWageDays, i.DailyWageRate, i.HousingAllowance, i.FoodAllowance, i.Overtime,
+                i.Diligence, i.Bonus, i.OtherIncome, i.GrossIncome, i.SsoWageBase, i.SsoEmployee, i.WithholdingTax,
+                i.Absence, i.Advance, i.OtherDeduction, i.NetPay,
+                ssoEmpCalc, ssoErCalc, PayrollCalculator.Round2(i.SsoEmployee - ssoEmpCalc),
+                taxCalc, PayrollCalculator.Round2(i.WithholdingTax - taxCalc), i.Note);
+        }).ToList();
+
+        return new PayrollRunDetailDto(
+            run.Id, run.ClientCompanyId, run.Year, run.Month, (int)run.Status, run.Note,
+            cfg?.SsoEmployeePct, cfg?.SsoEmployerPct, cfg?.SsoWageFloor, cfg?.SsoWageCap,
+            items,
+            items.Sum(x => x.GrossIncome), items.Sum(x => x.SsoEmployee), items.Sum(x => x.SsoEmployerCalc),
+            items.Sum(x => x.WithholdingTax), items.Sum(x => x.NetPay));
+    }
+}
+
+// ── สรุปรายได้ทั้งปี (แถว=เดือน) อิง sheet "รายได้ทั้งปี" ─────────────────────────
+public record GetPayrollYearSummaryQuery(int ClientCompanyId, int Year)
+    : IRequest<PayrollYearSummaryDto>, IRequireCompanyAccess;
+
+public class GetPayrollYearSummaryQueryHandler(IApplicationDbContext db)
+    : IRequestHandler<GetPayrollYearSummaryQuery, PayrollYearSummaryDto>
+{
+    private const decimal WcfMonthlyCap = 20000m; // ฐานกองทุนทดแทน (กท.20ก) เพดาน 20,000/คน/เดือน
+
+    public async Task<PayrollYearSummaryDto> Handle(GetPayrollYearSummaryQuery request, CancellationToken ct)
+    {
+        var runs = await db.PayrollRuns.AsNoTracking()
+            .Include(r => r.Items)
+            .Where(r => r.ClientCompanyId == request.ClientCompanyId && r.Year == request.Year)
+            .ToListAsync(ct);
+        var allRates = await db.PayrollRateConfigs.AsNoTracking().ToListAsync(ct);
+
+        var byMonth = runs.GroupBy(r => r.Month).ToDictionary(g => g.Key, g => g.First());
+        var months = new List<PayrollSummaryRow>(12);
+        for (int m = 1; m <= 12; m++)
+        {
+            if (byMonth.TryGetValue(m, out var run))
+            {
+                var cfg = PayrollRates.ResolveEffective(allRates, new DateTime(request.Year, m, 1));
+                months.Add(Aggregate(m, run.Items, cfg));
+            }
+            else months.Add(EmptyRow(m));
+        }
+
+        var total = SumRows(months);
+        return new PayrollYearSummaryDto(request.Year, months, total);
+    }
+
+    private static PayrollSummaryRow Aggregate(int month, IEnumerable<PayrollItem> items, PayrollRateConfig? cfg)
+    {
+        decimal salary = 0, absence = 0, housing = 0, food = 0, ot = 0, diligence = 0, bonus = 0,
+            totalIncome = 0, wage = 0, wageOver = 0, ssoReportable = 0, ssoCalc = 0, ssoActual = 0,
+            tax = 0, advance = 0, employerSso = 0;
+        int count = 0;
+        foreach (var i in items)
+        {
+            count++;
+            salary += i.Salary;
+            absence += i.Absence;
+            housing += i.HousingAllowance;
+            food += i.FoodAllowance;
+            ot += i.Overtime;
+            diligence += i.Diligence;
+            bonus += i.Bonus;
+            totalIncome += i.GrossIncome;
+            wage += i.SsoWageBase;
+            wageOver += Math.Max(i.SsoWageBase - WcfMonthlyCap, 0m);
+            ssoReportable += i.SsoWageBase;
+            ssoCalc += PayrollCalculator.SsoEmployee(i, cfg);
+            ssoActual += i.SsoEmployee;
+            tax += i.WithholdingTax;
+            advance += i.Advance;
+            employerSso += PayrollCalculator.SsoEmployer(i, cfg);
+        }
+        var netSalary = salary - absence;
+        var netAfterAbsence = totalIncome - absence;                 // รายได้สุทธิหลังหักลา (ภงด.1ก)
+        var totalDeduction = absence + ssoActual + tax + advance;    // รวมรายการหัก
+        var shortfall = Math.Max(ssoCalc - ssoActual, 0m);           // ปกส.ขาดไป
+        return new PayrollSummaryRow(
+            month, count, true,
+            PayrollCalculator.Round2(salary), PayrollCalculator.Round2(absence), PayrollCalculator.Round2(netSalary),
+            PayrollCalculator.Round2(housing), PayrollCalculator.Round2(food), PayrollCalculator.Round2(ot),
+            PayrollCalculator.Round2(diligence), PayrollCalculator.Round2(bonus),
+            PayrollCalculator.Round2(netAfterAbsence), PayrollCalculator.Round2(totalIncome),
+            PayrollCalculator.Round2(wage), PayrollCalculator.Round2(wageOver),
+            PayrollCalculator.Round2(ssoReportable), PayrollCalculator.Round2(ssoCalc),
+            PayrollCalculator.Round2(shortfall), PayrollCalculator.Round2(ssoActual),
+            PayrollCalculator.Round2(tax), PayrollCalculator.Round2(absence), PayrollCalculator.Round2(advance),
+            PayrollCalculator.Round2(totalDeduction), PayrollCalculator.Round2(netAfterAbsence),
+            PayrollCalculator.Round2(employerSso), PayrollCalculator.Round2(totalIncome - totalDeduction));
+    }
+
+    private static PayrollSummaryRow EmptyRow(int month) =>
+        new(month, 0, false, 0,0,0, 0,0,0,0,0, 0,0, 0,0, 0,0,0,0, 0,0,0, 0,0,0,0);
+
+    private static PayrollSummaryRow SumRows(IReadOnlyList<PayrollSummaryRow> rows)
+    {
+        PayrollSummaryRow t = new(0, 0, true, 0,0,0, 0,0,0,0,0, 0,0, 0,0, 0,0,0,0, 0,0,0, 0,0,0,0);
+        foreach (var r in rows)
+            t = t with {
+                EmployeeCount = Math.Max(t.EmployeeCount, r.EmployeeCount),
+                Salary = t.Salary + r.Salary, AbsenceLate = t.AbsenceLate + r.AbsenceLate, NetSalary = t.NetSalary + r.NetSalary,
+                Housing = t.Housing + r.Housing, Food = t.Food + r.Food, Overtime = t.Overtime + r.Overtime,
+                Diligence = t.Diligence + r.Diligence, Bonus = t.Bonus + r.Bonus,
+                NetIncomeAfterAbsence = t.NetIncomeAfterAbsence + r.NetIncomeAfterAbsence, TotalIncome = t.TotalIncome + r.TotalIncome,
+                Wage = t.Wage + r.Wage, WageOver20000 = t.WageOver20000 + r.WageOver20000,
+                SsoReportable = t.SsoReportable + r.SsoReportable, SsoCalc = t.SsoCalc + r.SsoCalc,
+                SsoShortfall = t.SsoShortfall + r.SsoShortfall, SsoActual = t.SsoActual + r.SsoActual,
+                Tax = t.Tax + r.Tax, Absence = t.Absence + r.Absence, Advance = t.Advance + r.Advance,
+                TotalDeduction = t.TotalDeduction + r.TotalDeduction, Pnd1Income = t.Pnd1Income + r.Pnd1Income,
+                EmployerSso = t.EmployerSso + r.EmployerSso, NetPay = t.NetPay + r.NetPay,
+            };
+        return t;
+    }
+}
+
+// ── สร้างงวด + auto สร้างรายการจากพนักงาน Active ─────────────────────────────────
+public record CreatePayrollRunCommand(int ClientCompanyId, int Year, int Month)
+    : IRequest<int>, IRequireCompanyAccess;
+
+public class CreatePayrollRunCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
+    : IRequestHandler<CreatePayrollRunCommand, int>
+{
+    public async Task<int> Handle(CreatePayrollRunCommand request, CancellationToken ct)
+    {
+        if (request.Month is < 1 or > 12)
+            throw new Datacenter.Application.Common.Exceptions.ValidationException(new[] {
+                new FluentValidation.Results.ValidationFailure("Month", "เดือนต้องอยู่ระหว่าง 1-12") });
+
+        var exists = await db.PayrollRuns.AnyAsync(
+            r => r.ClientCompanyId == request.ClientCompanyId && r.Year == request.Year && r.Month == request.Month, ct);
+        if (exists)
+            throw new Datacenter.Application.Common.Exceptions.ValidationException(new[] {
+                new FluentValidation.Results.ValidationFailure("Month", $"มีงวด {request.Month}/{request.Year} อยู่แล้ว") });
+
+        var run = new PayrollRun
+        {
+            ClientCompanyId = request.ClientCompanyId, Year = request.Year, Month = request.Month,
+            Status = PayrollRunStatus.Draft, CreatedBy = currentUser.Username,
+        };
+
+        // prefill จากพนักงานที่ยัง Active (เงินเดือน/ค่าจ้างวันจากทะเบียน; ฐาน ปกส. = เพดานเงินเดือน)
+        var emps = await db.Employees.AsNoTracking()
+            .Where(e => e.ClientCompanyId == request.ClientCompanyId && e.EmploymentStatus == EmploymentStatus.Active)
+            .ToListAsync(ct);
+        foreach (var e in emps)
+        {
+            var item = new PayrollItem
+            {
+                EmployeeId = e.Id,
+                Salary = e.SalaryType == SalaryType.Monthly ? e.BaseSalary : 0,
+                DailyWageRate = e.DailyWage ?? 0,
+                CreatedBy = currentUser.Username,
+            };
+            item.SsoWageBase = item.Salary; // ตั้งต้น = เงินเดือน (แก้ได้ตอนกรอก)
+            PayrollCalculator.Recompute(item);
+            run.Items.Add(item);
+        }
+
+        db.PayrollRuns.Add(run);
+        await db.SaveChangesAsync(ct);
+        return run.Id;
+    }
+}
+
+// ── บันทึกค่ารายการ (grid save) — recompute Gross/Net ────────────────────────────
+public record SavePayrollItemsCommand(int ClientCompanyId, int RunId, IReadOnlyList<PayrollItemInput> Items)
+    : IRequest<Unit>, IRequireCompanyAccess;
+
+public class SavePayrollItemsCommandHandler(IApplicationDbContext db)
+    : IRequestHandler<SavePayrollItemsCommand, Unit>
+{
+    public async Task<Unit> Handle(SavePayrollItemsCommand request, CancellationToken ct)
+    {
+        var run = await db.PayrollRuns.Include(r => r.Items)
+            .FirstOrDefaultAsync(r => r.Id == request.RunId && r.ClientCompanyId == request.ClientCompanyId, ct)
+            ?? throw new NotFoundException("PayrollRun", request.RunId);
+
+        var byId = run.Items.ToDictionary(i => i.Id);
+        foreach (var inp in request.Items)
+        {
+            if (!byId.TryGetValue(inp.Id, out var it)) continue;
+            it.Salary = inp.Salary; it.DailyWageDays = inp.DailyWageDays; it.DailyWageRate = inp.DailyWageRate;
+            it.HousingAllowance = inp.HousingAllowance; it.FoodAllowance = inp.FoodAllowance; it.Overtime = inp.Overtime;
+            it.Diligence = inp.Diligence; it.Bonus = inp.Bonus; it.OtherIncome = inp.OtherIncome;
+            it.SsoWageBase = inp.SsoWageBase; it.SsoEmployee = inp.SsoEmployee; it.WithholdingTax = inp.WithholdingTax;
+            it.Absence = inp.Absence; it.Advance = inp.Advance; it.OtherDeduction = inp.OtherDeduction; it.Note = inp.Note;
+            PayrollCalculator.Recompute(it);
+        }
+        await db.SaveChangesAsync(ct);
+        return Unit.Value;
+    }
+}
+
+// ── ลบงวด ────────────────────────────────────────────────────────────────────────
+public record DeletePayrollRunCommand(int ClientCompanyId, int RunId)
+    : IRequest<Unit>, IRequireCompanyAccess;
+
+public class DeletePayrollRunCommandHandler(IApplicationDbContext db)
+    : IRequestHandler<DeletePayrollRunCommand, Unit>
+{
+    public async Task<Unit> Handle(DeletePayrollRunCommand request, CancellationToken ct)
+    {
+        var run = await db.PayrollRuns.FirstOrDefaultAsync(
+            r => r.Id == request.RunId && r.ClientCompanyId == request.ClientCompanyId, ct)
+            ?? throw new NotFoundException("PayrollRun", request.RunId);
+        db.PayrollRuns.Remove(run);
+        await db.SaveChangesAsync(ct);
+        return Unit.Value;
+    }
+}
+
+// ── เปลี่ยนสถานะงวด ──────────────────────────────────────────────────────────────
+public record SetPayrollRunStatusCommand(int ClientCompanyId, int RunId, int Status)
+    : IRequest<Unit>, IRequireCompanyAccess;
+
+public class SetPayrollRunStatusCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
+    : IRequestHandler<SetPayrollRunStatusCommand, Unit>
+{
+    public async Task<Unit> Handle(SetPayrollRunStatusCommand request, CancellationToken ct)
+    {
+        var run = await db.PayrollRuns.FirstOrDefaultAsync(
+            r => r.Id == request.RunId && r.ClientCompanyId == request.ClientCompanyId, ct)
+            ?? throw new NotFoundException("PayrollRun", request.RunId);
+        run.Status = (PayrollRunStatus)request.Status;
+        run.ModifiedBy = currentUser.Username;
+        run.ModifiedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return Unit.Value;
+    }
+}
+</file>
+
 <file path="src/backend/Datacenter.Infrastructure/Datacenter.Infrastructure.csproj">
 <Project Sdk="Microsoft.NET.Sdk">
 
@@ -88625,222 +88883,6 @@ export interface NoteTemplateSectionDto {
 }
 </file>
 
-<file path="src/frontend/src/features/payroll/components/PayrollRunGrid.tsx">
-import { useMemo, useRef, useState } from 'react'
-import Button from '../../../shared/components/ui/Button'
-import Card from '../../../shared/components/ui/Card'
-import StateMessage from '../../../shared/components/ui/StateMessage'
-import { payrollApi } from '../services/payrollApi'
-import { useImportPayrollRun, usePayrollRun, useSetRunStatus } from '../hooks/usePayroll'
-import { MONTH_TH, PAYROLL_RUN_STATUS_LABEL, type PayrollItemRow } from '../types/payroll.types'
-
-interface Props {
-  companyId: number
-  runId: number
-  onBack: () => void
-}
-
-function fmt(n: number) {
-  return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
-  const { data: d, isLoading } = usePayrollRun(companyId, runId)
-  const importRun = useImportPayrollRun(companyId, runId)
-  const setStatus = useSetRunStatus(companyId)
-  const fileRef = useRef<HTMLInputElement>(null)
-  const [msg, setMsg] = useState('')
-  const [error, setError] = useState('')
-
-  async function download() {
-    setMsg(''); setError('')
-    const blob = await payrollApi.downloadTemplate(runId, companyId)
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `payroll-run-${runId}.xlsx`
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(url), 30000)
-  }
-
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    setMsg(''); setError('')
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    try {
-      const res = await importRun.mutateAsync(file)
-      setMsg(`อัปโหลดสำเร็จ — อัปเดต ${res.updated} รายการ`)
-    } catch (err) {
-      const m = (err as { response?: { data?: { detail?: string; title?: string } } })?.response?.data
-      setError(m?.detail ?? m?.title ?? 'อัปโหลดไม่สำเร็จ')
-    }
-  }
-
-  // แยกตามฝ่าย: ฝ่ายบริการก่อน ฝ่ายผลิตหลัง (ฝ่ายอื่น/ไม่ระบุต่อท้าย)
-  const groups = useMemo(() => {
-    if (!d) return []
-    const map = new Map<string, PayrollItemRow[]>()
-    for (const it of d.items) {
-      const key = (it.department && it.department.trim()) || 'ไม่ระบุฝ่าย'
-      const arr = map.get(key) ?? []
-      arr.push(it)
-      map.set(key, arr)
-    }
-    const rank = (name: string) =>
-      /บริการ|บริหาร|สำนักงาน|ออฟฟิศ/.test(name) ? 0 : /ผลิต/.test(name) ? 1 : 2
-    return [...map.entries()]
-      .map(([dept, items]) => ({ dept, items }))
-      .sort((a, b) => rank(a.dept) - rank(b.dept) || a.dept.localeCompare(b.dept, 'th'))
-  }, [d])
-
-  if (isLoading || !d) return <StateMessage>กำลังโหลด...</StateMessage>
-
-  const empty = d.items.every((i) => i.grossIncome === 0)
-
-  return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <Button type="button" variant="secondary" onClick={onBack} className="px-3 py-1">← กลับ</Button>
-          <div>
-            <p className="text-sm font-semibold text-slate-800">งวด {MONTH_TH[d.month]} {d.year}</p>
-            <p className="text-xs text-gray-500">
-              {d.items.length} คน · อัตรา ปกส. {d.rateSsoEmployeePct ?? '—'}% (เพดาน {(d.rateWageCap ?? 0).toLocaleString()}) · สถานะ {PAYROLL_RUN_STATUS_LABEL[d.status]}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <input ref={fileRef} type="file" accept=".xlsx" onChange={onFile} className="hidden" />
-          <Button type="button" variant="secondary" onClick={download}>⬇ ดาวน์โหลด Template</Button>
-          <Button type="button" onClick={() => fileRef.current?.click()} disabled={importRun.isPending}>
-            {importRun.isPending ? 'กำลังอัปโหลด...' : '⬆ อัปโหลดไฟล์'}
-          </Button>
-          {d.status === 0 && <Button type="button" variant="secondary" onClick={() => setStatus.mutate({ runId, status: 1 })}>บันทึกแล้ว</Button>}
-          {d.status === 1 && <Button type="button" variant="secondary" onClick={() => setStatus.mutate({ runId, status: 0 })}>กลับเป็นร่าง</Button>}
-        </div>
-      </div>
-
-      <div className="mb-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-xs text-sky-800">
-        📋 กรอกข้อมูลรายได้/รายการหักใน <b>Template Excel</b> (ดาวน์โหลด → กรอก → อัปโหลด) — แก้ไขข้อมูลทำได้โดย<b>อัปโหลดไฟล์ใหม่ทับ</b> (คอลัมน์รหัสพนักงานใช้จับคู่ ห้ามแก้)
-      </div>
-      {msg && <StateMessage tone="success">{msg}</StateMessage>}
-      {error && <StateMessage tone="error">{error}</StateMessage>}
-      {empty && !msg && (
-        <Card className="mb-3"><StateMessage centered>ยังไม่มีข้อมูล — ดาวน์โหลด Template กรอกแล้วอัปโหลด</StateMessage></Card>
-      )}
-
-      {groups.map((g) => (
-        <DeptTable key={g.dept} dept={g.dept} items={g.items} />
-      ))}
-
-      {groups.length > 1 && (
-        <Card className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <tbody>
-              <tr className="bg-slate-100 font-semibold text-slate-800">
-                <td className="px-2 py-2 w-[18%]">รวมทุกฝ่าย ({d.items.length} คน)</td>
-                <td className="px-2 py-2 text-right font-mono">{fmt(d.totalGross)}</td>
-                <td className="px-2 py-2 text-right font-mono">{fmt(d.totalSsoEmployee)}</td>
-                <td className="px-2 py-2 text-right font-mono">{fmt(d.totalTax)}</td>
-                <td className="px-2 py-2 text-right font-mono">{fmt(d.totalNet)}</td>
-              </tr>
-              <tr className="text-[10px] text-gray-400">
-                <td />
-                <td className="px-2 text-right">รวมรายได้</td>
-                <td className="px-2 text-right">หัก ปกส.</td>
-                <td className="px-2 text-right">ภาษี</td>
-                <td className="px-2 text-right">สุทธิ</td>
-              </tr>
-            </tbody>
-          </table>
-        </Card>
-      )}
-      <p className="mt-2 text-xs text-gray-400">คอลัมน์ "ปกส./ภาษีคำนวณ" = ระบบคำนวณเทียบกับที่กรอก (แดง/เหลือง = ต่างกัน ควรตรวจ)</p>
-    </div>
-  )
-}
-
-function DeptTable({ dept, items }: { dept: string; items: PayrollItemRow[] }) {
-  const sum = (sel: (i: PayrollItemRow) => number) => items.reduce((a, i) => a + sel(i), 0)
-  const totalGross = sum((i) => i.grossIncome)
-  const totalSso = sum((i) => i.ssoEmployee)
-  const totalTax = sum((i) => i.withholdingTax)
-  const totalNet = sum((i) => i.netPay)
-  return (
-    <div className="mb-4">
-      <div className="mb-1.5 flex items-baseline gap-2">
-        <h3 className="text-sm font-semibold text-slate-800">{dept}</h3>
-        <span className="text-xs text-gray-500">{items.length} คน</span>
-      </div>
-      <Card className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead className="border-b bg-slate-50 text-gray-600">
-            <tr>
-              <th className="px-2 py-2 text-left font-medium">พนักงาน</th>
-              <th className="px-2 py-2 text-right font-medium">เงินเดือน</th>
-              <th className="px-2 py-2 text-right font-medium">ค่าจ้างวัน</th>
-              <th className="px-2 py-2 text-right font-medium">OT</th>
-              <th className="px-2 py-2 text-right font-medium">เบี้ยขยัน</th>
-              <th className="px-2 py-2 text-right font-medium">โบนัส</th>
-              <th className="px-2 py-2 text-right font-medium bg-slate-100">รวมรายได้</th>
-              <th className="px-2 py-2 text-right font-medium">ฐาน ปกส.</th>
-              <th className="px-2 py-2 text-right font-medium">หัก ปกส.</th>
-              <th className="px-2 py-2 text-right font-medium text-sky-700">ปกส.คำนวณ</th>
-              <th className="px-2 py-2 text-right font-medium">ภาษี</th>
-              <th className="px-2 py-2 text-right font-medium text-sky-700">ภาษีคำนวณ</th>
-              <th className="px-2 py-2 text-right font-medium">ขาดงาน</th>
-              <th className="px-2 py-2 text-right font-medium">เบิกล่วงหน้า</th>
-              <th className="px-2 py-2 text-right font-medium bg-slate-100">สุทธิ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((it) => {
-              const ssoMismatch = Math.abs(it.ssoDiff) > 0.01
-              const taxMismatch = Math.abs(it.taxDiff) > 0.01
-              return (
-                <tr key={it.id} className="border-b border-gray-100">
-                  <td className="px-2 py-1 whitespace-nowrap">
-                    <span className="text-gray-800">{it.employeeName}</span>
-                    <span className="block font-mono text-[10px] text-gray-400">{it.employeeCode}</span>
-                  </td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.salary)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.dailyWageDays * it.dailyWageRate)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.overtime)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.diligence)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.bonus)}</td>
-                  <td className="px-2 py-1 text-right font-mono font-semibold bg-slate-50">{fmt(it.grossIncome)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.ssoWageBase)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.ssoEmployee)}</td>
-                  <td className={`px-2 py-1 text-right font-mono ${ssoMismatch ? 'bg-red-50 text-red-600' : 'text-gray-400'}`} title={ssoMismatch ? 'ต่างจากที่กรอก' : 'ตรง'}>{fmt(it.ssoEmployeeCalc)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.withholdingTax)}</td>
-                  <td className={`px-2 py-1 text-right font-mono ${taxMismatch ? 'bg-amber-50 text-amber-700' : 'text-gray-400'}`} title="ประมาณการ">{fmt(it.taxCalc)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.absence)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.advance)}</td>
-                  <td className="px-2 py-1 text-right font-mono font-semibold bg-slate-50">{fmt(it.netPay)}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-          <tfoot>
-            <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
-              <td className="px-2 py-2">รวม {dept}</td>
-              <td colSpan={5} />
-              <td className="px-2 py-2 text-right font-mono">{fmt(totalGross)}</td>
-              <td colSpan={2} className="px-2 py-2 text-right font-mono">{fmt(totalSso)}</td>
-              <td />
-              <td className="px-2 py-2 text-right font-mono">{fmt(totalTax)}</td>
-              <td colSpan={3} />
-              <td className="px-2 py-2 text-right font-mono">{fmt(totalNet)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </Card>
-    </div>
-  )
-}
-</file>
-
 <file path="src/frontend/src/features/payroll/pages/tabs/EmployeesTab.tsx">
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../../../../shared/components/ui/Button'
@@ -89216,561 +89258,264 @@ public static class DbInitializer
 }
 </file>
 
-<file path="src/frontend/src/features/payroll/hooks/usePayroll.ts">
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { payrollApi } from '../services/payrollApi'
-import type { EmployeeInput, PayrollItemInput } from '../types/payroll.types'
-
-const keys = {
-  employees: (companyId: number, includeResigned: boolean) =>
-    ['payroll-employees', companyId, includeResigned] as const,
-  employee: (companyId: number, id: number) => ['payroll-employee', companyId, id] as const,
-}
-
-export function useEmployees(companyId: number, includeResigned = true) {
-  return useQuery({
-    queryKey: keys.employees(companyId, includeResigned),
-    queryFn: () => payrollApi.employees(companyId, includeResigned),
-    enabled: companyId > 0,
-  })
-}
-
-export function useEmployee(companyId: number, id: number | null) {
-  return useQuery({
-    queryKey: keys.employee(companyId, id ?? 0),
-    queryFn: () => payrollApi.employee(id!, companyId),
-    enabled: companyId > 0 && !!id,
-  })
-}
-
-export function useSaveEmployee(companyId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (vars: { id: number | null; data: EmployeeInput }) =>
-      vars.id
-        ? payrollApi.updateEmployee(vars.id, companyId, vars.data)
-        : payrollApi.createEmployee(companyId, vars.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-employees', companyId] }),
-  })
-}
-
-export function useDeleteEmployee(companyId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (id: number) => payrollApi.deleteEmployee(id, companyId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-employees', companyId] }),
-  })
-}
-
-function invalidateEmployee(companyId: number, employeeId: number) {
-  return (qc: ReturnType<typeof useQueryClient>) => {
-    qc.invalidateQueries({ queryKey: ['payroll-employee', companyId, employeeId] })
-    qc.invalidateQueries({ queryKey: ['payroll-employees', companyId] })
-  }
-}
-
-export function useUploadDocument(companyId: number, employeeId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (vars: { docType: number; file: File; effectiveDate?: string | null; note?: string }) =>
-      payrollApi.uploadDocument(employeeId, companyId, vars.docType, vars.file, vars.effectiveDate, vars.note),
-    onSuccess: () => invalidateEmployee(companyId, employeeId)(qc),
-  })
-}
-
-export function useDeleteDocument(companyId: number, employeeId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (docId: number) => payrollApi.deleteDocument(docId, companyId),
-    onSuccess: () => invalidateEmployee(companyId, employeeId)(qc),
-  })
-}
-
-export function useCreateEnrollment(companyId: number, employeeId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (body: { employeeId: number; type: number; eventDate: string; note?: string }) =>
-      payrollApi.createEnrollment(companyId, body),
-    onSuccess: () => invalidateEmployee(companyId, employeeId)(qc),
-  })
-}
-
-export function useUpdateEnrollment(companyId: number, employeeId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (vars: {
-      id: number
-      body: { submittedDate?: string | null; status: number; proofDocumentId?: number | null; note?: string }
-    }) => payrollApi.updateEnrollment(vars.id, companyId, vars.body),
-    onSuccess: () => invalidateEmployee(companyId, employeeId)(qc),
-  })
-}
-
-// ── งวดเงินเดือน ────────────────────────────────────────────────────────────────
-export function usePayrollRuns(companyId: number, year?: number) {
-  return useQuery({
-    queryKey: ['payroll-runs', companyId, year ?? 0],
-    queryFn: () => payrollApi.runs(companyId, year),
-    enabled: companyId > 0,
-  })
-}
-
-export function usePayrollRun(companyId: number, runId: number | null) {
-  return useQuery({
-    queryKey: ['payroll-run', companyId, runId ?? 0],
-    queryFn: () => payrollApi.run(runId!, companyId),
-    enabled: companyId > 0 && !!runId,
-  })
-}
-
-export function useCreatePayrollRun(companyId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (vars: { year: number; month: number }) => payrollApi.createRun(companyId, vars.year, vars.month),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-runs', companyId] }),
-  })
-}
-
-export function useSavePayrollItems(companyId: number, runId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (items: PayrollItemInput[]) => payrollApi.saveItems(runId, companyId, items),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['payroll-run', companyId, runId] })
-      qc.invalidateQueries({ queryKey: ['payroll-runs', companyId] })
-    },
-  })
-}
-
-export function useSetRunStatus(companyId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (vars: { runId: number; status: number }) => payrollApi.setRunStatus(vars.runId, companyId, vars.status),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-run', companyId] }),
-  })
-}
-
-export function useDeletePayrollRun(companyId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (runId: number) => payrollApi.deleteRun(runId, companyId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-runs', companyId] }),
-  })
-}
-
-export function usePayrollAccountMappings(companyId: number) {
-  return useQuery({
-    queryKey: ['payroll-acct-map', companyId],
-    queryFn: () => payrollApi.accountMappings(companyId),
-    enabled: companyId > 0,
-  })
-}
-
-export function useSaveAccountMapping(companyId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (vars: { id: number | null; data: { accountCode: string; department: string; note?: string } }) =>
-      vars.id ? payrollApi.updateAccountMapping(vars.id, companyId, vars.data) : payrollApi.createAccountMapping(companyId, vars.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-acct-map', companyId] }),
-  })
-}
-
-export function useDeleteAccountMapping(companyId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (id: number) => payrollApi.deleteAccountMapping(id, companyId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-acct-map', companyId] }),
-  })
-}
-
-export function useImportPayrollRun(companyId: number, runId: number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (file: File) => payrollApi.importRun(runId, companyId, file),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['payroll-run', companyId, runId] })
-      qc.invalidateQueries({ queryKey: ['payroll-runs', companyId] })
-    },
-  })
-}
-</file>
-
-<file path="src/frontend/src/features/payroll/pages/PayrollPage.tsx">
-import { useState } from 'react'
-import PageHeader from '../../../shared/components/ui/PageHeader'
-import Tabs from '../../../shared/components/ui/Tabs'
+<file path="src/frontend/src/features/payroll/components/PayrollRunGrid.tsx">
+import { useMemo, useRef, useState } from 'react'
+import Button from '../../../shared/components/ui/Button'
 import Card from '../../../shared/components/ui/Card'
 import StateMessage from '../../../shared/components/ui/StateMessage'
-import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
-import EmployeesTab from './tabs/EmployeesTab'
-import PayrollRunsTab from './tabs/PayrollRunsTab'
-import AccountMappingTab from './tabs/AccountMappingTab'
+import { payrollApi } from '../services/payrollApi'
+import { useImportPayrollRun, usePayrollRun, useSetRunStatus } from '../hooks/usePayroll'
+import { MONTH_TH, PAYROLL_RUN_STATUS_LABEL, type PayrollItemRow } from '../types/payroll.types'
 
-type Tab = 'employees' | 'runs' | 'mapping'
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'employees', label: 'ทะเบียนพนักงาน' },
-  { key: 'runs', label: 'งวดเงินเดือน' },
-  { key: 'mapping', label: 'แมพบัญชีเงินเดือน' },
-]
+interface Props {
+  companyId: number
+  runId: number
+  onBack: () => void
+}
 
-export default function PayrollPage() {
-  const { companyId } = useCurrentCompany()
-  const [tab, setTab] = useState<Tab>('employees')
+function fmt(n: number) {
+  return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
+  const { data: d, isLoading } = usePayrollRun(companyId, runId)
+  const importRun = useImportPayrollRun(companyId, runId)
+  const setStatus = useSetRunStatus(companyId)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [msg, setMsg] = useState('')
+  const [error, setError] = useState('')
+
+  async function download() {
+    setMsg(''); setError('')
+    const blob = await payrollApi.downloadTemplate(runId, companyId)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `payroll-run-${runId}.xlsx`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    setMsg(''); setError('')
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      const res = await importRun.mutateAsync(file)
+      setMsg(`อัปโหลดสำเร็จ — อัปเดต ${res.updated} รายการ`)
+    } catch (err) {
+      const m = (err as { response?: { data?: { detail?: string; title?: string } } })?.response?.data
+      setError(m?.detail ?? m?.title ?? 'อัปโหลดไม่สำเร็จ')
+    }
+  }
+
+  // แยกตามฝ่าย: ฝ่ายบริการก่อน ฝ่ายผลิตหลัง (ฝ่ายอื่น/ไม่ระบุต่อท้าย)
+  const groups = useMemo(() => {
+    if (!d) return []
+    const map = new Map<string, PayrollItemRow[]>()
+    for (const it of d.items) {
+      const key = (it.department && it.department.trim()) || 'ไม่ระบุฝ่าย'
+      const arr = map.get(key) ?? []
+      arr.push(it)
+      map.set(key, arr)
+    }
+    const rank = (name: string) =>
+      /บริการ|บริหาร|สำนักงาน|ออฟฟิศ/.test(name) ? 0 : /ผลิต/.test(name) ? 1 : 2
+    return [...map.entries()]
+      .map(([dept, items]) => ({ dept, items }))
+      .sort((a, b) => rank(a.dept) - rank(b.dept) || a.dept.localeCompare(b.dept, 'th'))
+  }, [d])
+
+  if (isLoading || !d) return <StateMessage>กำลังโหลด...</StateMessage>
+
+  const empty = d.items.every((i) => i.grossIncome === 0)
 
   return (
     <div>
-      <PageHeader
-        title="เงินเดือน / ประกันสังคม"
-        description="ทะเบียนพนักงาน + คลังหลักฐาน (PDPA) + งวดเงินเดือนรายเดือน (คำนวณ ปกส./ภาษีเทียบ)"
-      />
-      <Tabs items={TABS} activeKey={tab} onChange={setTab} />
-      {!companyId ? (
-        <Card><StateMessage centered>เลือกบริษัทที่ header ก่อน</StateMessage></Card>
-      ) : (
-        <>
-          {tab === 'employees' && <EmployeesTab companyId={companyId} />}
-          {tab === 'runs' && <PayrollRunsTab companyId={companyId} />}
-          {tab === 'mapping' && <AccountMappingTab companyId={companyId} />}
-        </>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <Button type="button" variant="secondary" onClick={onBack} className="px-3 py-1">← กลับ</Button>
+          <div>
+            <p className="text-sm font-semibold text-slate-800">งวด {MONTH_TH[d.month]} {d.year}</p>
+            <p className="text-xs text-gray-500">
+              {d.items.length} คน · อัตรา ปกส. {d.rateSsoEmployeePct ?? '—'}% (เพดาน {(d.rateWageCap ?? 0).toLocaleString()}) · สถานะ {PAYROLL_RUN_STATUS_LABEL[d.status]}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <input ref={fileRef} type="file" accept=".xlsx" onChange={onFile} className="hidden" />
+          <Button type="button" variant="secondary" onClick={download}>⬇ ดาวน์โหลด Template</Button>
+          <Button type="button" onClick={() => fileRef.current?.click()} disabled={importRun.isPending}>
+            {importRun.isPending ? 'กำลังอัปโหลด...' : '⬆ อัปโหลดไฟล์'}
+          </Button>
+          {d.status === 0 && <Button type="button" variant="secondary" onClick={() => setStatus.mutate({ runId, status: 1 })}>บันทึกแล้ว</Button>}
+          {d.status === 1 && <Button type="button" variant="secondary" onClick={() => setStatus.mutate({ runId, status: 0 })}>กลับเป็นร่าง</Button>}
+        </div>
+      </div>
+
+      <div className="mb-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-xs text-sky-800">
+        📋 กรอกข้อมูลรายได้/รายการหักใน <b>Template Excel</b> (ดาวน์โหลด → กรอก → อัปโหลด) — แก้ไขข้อมูลทำได้โดย<b>อัปโหลดไฟล์ใหม่ทับ</b> (คอลัมน์รหัสพนักงานใช้จับคู่ ห้ามแก้)
+      </div>
+      {msg && <StateMessage tone="success">{msg}</StateMessage>}
+      {error && <StateMessage tone="error">{error}</StateMessage>}
+      {empty && !msg && (
+        <Card className="mb-3"><StateMessage centered>ยังไม่มีข้อมูล — ดาวน์โหลด Template กรอกแล้วอัปโหลด</StateMessage></Card>
       )}
+
+      {groups.map((g) => (
+        <DeptTable key={g.dept} dept={g.dept} items={g.items} />
+      ))}
+
+      {groups.length > 1 && (
+        <Card className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <tbody>
+              <tr className="bg-slate-100 font-semibold text-slate-800">
+                <td className="px-2 py-2 w-[18%]">รวมทุกฝ่าย ({d.items.length} คน)</td>
+                <td className="px-2 py-2 text-right font-mono">{fmt(d.totalGross)}</td>
+                <td className="px-2 py-2 text-right font-mono">{fmt(d.totalSsoEmployee)}</td>
+                <td className="px-2 py-2 text-right font-mono">{fmt(d.totalTax)}</td>
+                <td className="px-2 py-2 text-right font-mono">{fmt(d.totalNet)}</td>
+              </tr>
+              <tr className="text-[10px] text-gray-400">
+                <td />
+                <td className="px-2 text-right">รวมรายได้</td>
+                <td className="px-2 text-right">หัก ปกส.</td>
+                <td className="px-2 text-right">ภาษี</td>
+                <td className="px-2 text-right">สุทธิ</td>
+              </tr>
+            </tbody>
+          </table>
+        </Card>
+      )}
+      <p className="mt-2 text-xs text-gray-400">
+        คอลัมน์จัดกลุ่มตาม sheet “รายได้ทั้งปี” · คอลัมน์ <span className="text-sky-700">สีฟ้า</span> = ระบบคำนวณเทียบ (ปกส.คำนวณ/นายจ้างสมทบ) · ช่องแดง = ปกส.จริงต่างจากที่คำนวณ ควรตรวจ
+      </p>
     </div>
   )
 }
-</file>
 
-<file path="src/frontend/src/features/payroll/services/payrollApi.ts">
-import apiClient from '../../../shared/services/apiClient'
-import type {
-  EmployeeDetail,
-  EmployeeInput,
-  EmployeeListItem,
-  PayrollAccountMapping,
-  PayrollItemInput,
-  PayrollRunDetail,
-  PayrollRunListItem,
-} from '../types/payroll.types'
+// ── คอลัมน์ต่อพนักงาน (จัดกลุ่มตาม sheet รายได้ทั้งปี) ───────────────────────────
+const DEPT_GROUPS: { label: string; span: number; cls: string }[] = [
+  { label: 'รายได้', span: 11, cls: 'bg-emerald-50 text-emerald-800' },
+  { label: 'กรอกในแบบ กท.20 ก', span: 2, cls: 'bg-violet-50 text-violet-800' },
+  { label: 'รายการหัก', span: 7, cls: 'bg-rose-50 text-rose-800' },
+  { label: 'รวม', span: 4, cls: 'bg-slate-100 text-slate-800' },
+]
 
-export const payrollApi = {
-  employees: (clientCompanyId: number, includeResigned = true) =>
-    apiClient
-      .get<EmployeeListItem[]>('/payroll/employees', { params: { clientCompanyId, includeResigned } })
-      .then((r) => r.data),
-
-  employee: (id: number, clientCompanyId: number) =>
-    apiClient
-      .get<EmployeeDetail>(`/payroll/employees/${id}`, { params: { clientCompanyId } })
-      .then((r) => r.data),
-
-  createEmployee: (clientCompanyId: number, data: EmployeeInput) =>
-    apiClient
-      .post<{ id: number }>('/payroll/employees', data, { params: { clientCompanyId } })
-      .then((r) => r.data),
-
-  updateEmployee: (id: number, clientCompanyId: number, data: EmployeeInput) =>
-    apiClient.put(`/payroll/employees/${id}`, data, { params: { clientCompanyId } }).then((r) => r.data),
-
-  deleteEmployee: (id: number, clientCompanyId: number) =>
-    apiClient.delete(`/payroll/employees/${id}`, { params: { clientCompanyId } }).then((r) => r.data),
-
-  // เอกสาร (PDPA)
-  uploadDocument: (
-    employeeId: number,
-    clientCompanyId: number,
-    docType: number,
-    file: File,
-    effectiveDate?: string | null,
-    note?: string,
-  ) => {
-    const form = new FormData()
-    form.append('file', file)
-    return apiClient
-      .post<{ id: number }>(`/payroll/employees/${employeeId}/documents`, form, {
-        params: { clientCompanyId, docType, effectiveDate: effectiveDate || undefined, note: note || undefined },
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      .then((r) => r.data)
-  },
-
-  downloadDocument: (docId: number, clientCompanyId: number) =>
-    apiClient
-      .get(`/payroll/documents/${docId}`, { params: { clientCompanyId }, responseType: 'blob' })
-      .then((r) => r.data as Blob),
-
-  deleteDocument: (docId: number, clientCompanyId: number) =>
-    apiClient.delete(`/payroll/documents/${docId}`, { params: { clientCompanyId } }).then((r) => r.data),
-
-  // แจ้งเข้า-ออก ปกส.
-  createEnrollment: (
-    clientCompanyId: number,
-    body: { employeeId: number; type: number; eventDate: string; note?: string },
-  ) =>
-    apiClient
-      .post<{ id: number }>('/payroll/sso-enrollments', body, { params: { clientCompanyId } })
-      .then((r) => r.data),
-
-  updateEnrollment: (
-    id: number,
-    clientCompanyId: number,
-    body: { submittedDate?: string | null; status: number; proofDocumentId?: number | null; note?: string },
-  ) =>
-    apiClient
-      .put(`/payroll/sso-enrollments/${id}`, body, { params: { clientCompanyId } })
-      .then((r) => r.data),
-
-  // งวดเงินเดือนรายเดือน
-  runs: (clientCompanyId: number, year?: number) =>
-    apiClient
-      .get<PayrollRunListItem[]>('/payroll/runs', { params: { clientCompanyId, year } })
-      .then((r) => r.data),
-
-  run: (id: number, clientCompanyId: number) =>
-    apiClient
-      .get<PayrollRunDetail>(`/payroll/runs/${id}`, { params: { clientCompanyId } })
-      .then((r) => r.data),
-
-  createRun: (clientCompanyId: number, year: number, month: number) =>
-    apiClient
-      .post<{ id: number }>('/payroll/runs', { year, month }, { params: { clientCompanyId } })
-      .then((r) => r.data),
-
-  saveItems: (runId: number, clientCompanyId: number, items: PayrollItemInput[]) =>
-    apiClient
-      .put(`/payroll/runs/${runId}/items`, items, { params: { clientCompanyId } })
-      .then((r) => r.data),
-
-  setRunStatus: (runId: number, clientCompanyId: number, status: number) =>
-    apiClient
-      .put(`/payroll/runs/${runId}/status`, { status }, { params: { clientCompanyId } })
-      .then((r) => r.data),
-
-  deleteRun: (runId: number, clientCompanyId: number) =>
-    apiClient.delete(`/payroll/runs/${runId}`, { params: { clientCompanyId } }).then((r) => r.data),
-
-  downloadTemplate: (runId: number, clientCompanyId: number) =>
-    apiClient
-      .get(`/payroll/runs/${runId}/template`, { params: { clientCompanyId }, responseType: 'blob' })
-      .then((r) => r.data as Blob),
-
-  importRun: (runId: number, clientCompanyId: number, file: File) => {
-    const form = new FormData()
-    form.append('file', file)
-    return apiClient
-      .post<{ updated: number }>(`/payroll/runs/${runId}/import`, form, {
-        params: { clientCompanyId },
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      .then((r) => r.data)
-  },
-
-  // แมพบัญชีเงินเดือน (Express → ฝ่าย)
-  accountMappings: (clientCompanyId: number) =>
-    apiClient
-      .get<PayrollAccountMapping[]>('/payroll/account-mappings', { params: { clientCompanyId } })
-      .then((r) => r.data),
-  createAccountMapping: (clientCompanyId: number, data: { accountCode: string; department: string; note?: string }) =>
-    apiClient
-      .post<{ id: number }>('/payroll/account-mappings', data, { params: { clientCompanyId } })
-      .then((r) => r.data),
-  updateAccountMapping: (id: number, clientCompanyId: number, data: { accountCode: string; department: string; note?: string }) =>
-    apiClient.put(`/payroll/account-mappings/${id}`, data, { params: { clientCompanyId } }).then((r) => r.data),
-  deleteAccountMapping: (id: number, clientCompanyId: number) =>
-    apiClient.delete(`/payroll/account-mappings/${id}`, { params: { clientCompanyId } }).then((r) => r.data),
+type DeptCol = {
+  label: string
+  val: (i: PayrollItemRow) => number
+  strong?: boolean
+  calc?: boolean
+  groupStart?: boolean
+  ssoCheck?: boolean // ไฮไลต์แดงเมื่อ ปกส.จริงต่างจากคำนวณ
 }
-</file>
 
-<file path="src/backend/Datacenter.Api/Controllers/PayrollController.cs">
-using Datacenter.Application.Features.Payroll.Commands;
-using Datacenter.Application.Features.Payroll.DTOs;
-using Datacenter.Application.Features.Payroll.Queries;
-using Datacenter.Domain.Enums;
-using MediatR;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+const DEPT_COLS: DeptCol[] = [
+  // รายได้
+  { label: 'เงินเดือน', val: (i) => i.salary, groupStart: true },
+  { label: 'ค่าจ้างวัน', val: (i) => i.dailyWageDays * i.dailyWageRate },
+  { label: 'หยุดงาน+มาสาย', val: (i) => i.absence },
+  { label: 'เงินเดือนสุทธิ', val: (i) => i.salary - i.absence },
+  { label: 'ค่าที่พักอาศัย', val: (i) => i.housingAllowance },
+  { label: 'ค่าอาหาร', val: (i) => i.foodAllowance },
+  { label: 'ค่าล่วงเวลา', val: (i) => i.overtime },
+  { label: 'เบี้ยขยัน', val: (i) => i.diligence },
+  { label: 'โบนัส', val: (i) => i.bonus },
+  { label: 'รายได้สุทธิหลังหักลา (ภงด.1ก)', val: (i) => i.grossIncome - i.absence },
+  { label: 'รวมรายได้ทั้งหมด', val: (i) => i.grossIncome, strong: true },
+  // กท.20ก
+  { label: 'ค่าจ้าง', val: (i) => i.ssoWageBase, groupStart: true },
+  { label: 'ส่วนที่เกิน 20,000', val: (i) => Math.max(i.ssoWageBase - 20000, 0) },
+  // รายการหัก
+  { label: 'รายได้ยื่นปกส.', val: (i) => i.ssoWageBase, groupStart: true },
+  { label: 'คำนวณหักปกส.ได้', val: (i) => i.ssoEmployeeCalc, calc: true },
+  { label: 'ผลต่าง (ขาดไป)', val: (i) => Math.max(i.ssoEmployeeCalc - i.ssoEmployee, 0), calc: true },
+  { label: 'หักปกส.จริง', val: (i) => i.ssoEmployee, ssoCheck: true },
+  { label: 'TAX', val: (i) => i.withholdingTax },
+  { label: 'ขาดงาน', val: (i) => i.absence },
+  { label: 'เบิกล่วงหน้า', val: (i) => i.advance },
+  // รวม
+  { label: 'รวมรายการหัก', val: (i) => i.absence + i.ssoEmployee + i.withholdingTax + i.advance + i.otherDeduction, strong: true, groupStart: true },
+  { label: 'รายได้ยื่น ภงด.1', val: (i) => i.grossIncome - i.absence },
+  { label: 'นายจ้างสมทบ', val: (i) => i.ssoEmployerCalc, calc: true },
+  { label: 'เงินสุทธิ', val: (i) => i.netPay, strong: true },
+]
 
-namespace Datacenter.Api.Controllers;
-
-[Authorize]
-[ApiController]
-[Route("api/v1/payroll")]
-public class PayrollController(IMediator mediator) : ControllerBase
-{
-    // ── พนักงาน ──────────────────────────────────────────────────────────────
-    /// <summary>GET /api/v1/payroll/employees?clientCompanyId=1&amp;includeResigned=true</summary>
-    [HttpGet("employees")]
-    public async Task<IActionResult> GetEmployees([FromQuery] int clientCompanyId, [FromQuery] bool includeResigned = true, CancellationToken ct = default)
-        => Ok(await mediator.Send(new GetEmployeesQuery(clientCompanyId, includeResigned), ct));
-
-    /// <summary>GET /api/v1/payroll/employees/{id}?clientCompanyId=1 — รายละเอียด + เอกสาร + การแจ้ง ปกส.</summary>
-    [HttpGet("employees/{id:int}")]
-    public async Task<IActionResult> GetEmployee(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
-        => Ok(await mediator.Send(new GetEmployeeQuery(id, clientCompanyId), ct));
-
-    /// <summary>POST /api/v1/payroll/employees?clientCompanyId=1 (body: EmployeeInput)</summary>
-    [HttpPost("employees")]
-    public async Task<IActionResult> CreateEmployee([FromQuery] int clientCompanyId, [FromBody] EmployeeInput data, CancellationToken ct)
-        => Ok(new { id = await mediator.Send(new CreateEmployeeCommand(clientCompanyId, data), ct) });
-
-    /// <summary>PUT /api/v1/payroll/employees/{id}?clientCompanyId=1 (body: EmployeeInput)</summary>
-    [HttpPut("employees/{id:int}")]
-    public async Task<IActionResult> UpdateEmployee(int id, [FromQuery] int clientCompanyId, [FromBody] EmployeeInput data, CancellationToken ct)
-    {
-        await mediator.Send(new UpdateEmployeeCommand(id, clientCompanyId, data), ct);
-        return NoContent();
-    }
-
-    /// <summary>DELETE /api/v1/payroll/employees/{id}?clientCompanyId=1</summary>
-    [HttpDelete("employees/{id:int}")]
-    public async Task<IActionResult> DeleteEmployee(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
-    {
-        await mediator.Send(new DeleteEmployeeCommand(id, clientCompanyId), ct);
-        return NoContent();
-    }
-
-    // ── เอกสาร/หลักฐาน (PDPA) ─────────────────────────────────────────────────
-    /// <summary>POST /api/v1/payroll/employees/{id}/documents?clientCompanyId=1&amp;docType=1 (multipart: file)</summary>
-    [HttpPost("employees/{id:int}/documents")]
-    [RequestSizeLimit(10 * 1024 * 1024)]
-    public async Task<IActionResult> UploadDocument(
-        int id, [FromQuery] int clientCompanyId, [FromQuery] EmployeeDocType docType,
-        IFormFile file, [FromQuery] DateTime? effectiveDate, [FromQuery] string? note, CancellationToken ct)
-    {
-        if (file is null || file.Length == 0)
-            return BadRequest(new { detail = "กรุณาเลือกไฟล์" });
-        if (file.Length > 8 * 1024 * 1024)
-            return BadRequest(new { detail = "ไฟล์ใหญ่เกิน 8 MB" });
-
-        using var ms = new MemoryStream();
-        await file.CopyToAsync(ms, ct);
-        var docId = await mediator.Send(new UploadEmployeeDocumentCommand(
-            clientCompanyId, id, docType, file.FileName, file.ContentType ?? "application/octet-stream",
-            ms.ToArray(), effectiveDate, note), ct);
-        return Ok(new { id = docId });
-    }
-
-    /// <summary>GET /api/v1/payroll/documents/{docId}?clientCompanyId=1 — ดาวน์โหลด (audit PDPA)</summary>
-    [HttpGet("documents/{docId:int}")]
-    public async Task<IActionResult> GetDocument(int docId, [FromQuery] int clientCompanyId, CancellationToken ct)
-    {
-        var d = await mediator.Send(new GetEmployeeDocumentContentQuery(clientCompanyId, docId), ct);
-        return File(d.Content, d.ContentType, d.FileName);
-    }
-
-    /// <summary>DELETE /api/v1/payroll/documents/{docId}?clientCompanyId=1</summary>
-    [HttpDelete("documents/{docId:int}")]
-    public async Task<IActionResult> DeleteDocument(int docId, [FromQuery] int clientCompanyId, CancellationToken ct)
-    {
-        await mediator.Send(new DeleteEmployeeDocumentCommand(clientCompanyId, docId), ct);
-        return NoContent();
-    }
-
-    // ── การแจ้งเข้า-ออก ปกส. ──────────────────────────────────────────────────
-    /// <summary>POST /api/v1/payroll/sso-enrollments?clientCompanyId=1 (body: {employeeId,type,eventDate,note})</summary>
-    [HttpPost("sso-enrollments")]
-    public async Task<IActionResult> CreateEnrollment([FromQuery] int clientCompanyId, [FromBody] CreateEnrollmentBody body, CancellationToken ct)
-        => Ok(new { id = await mediator.Send(new CreateSsoEnrollmentCommand(
-            clientCompanyId, body.EmployeeId, body.Type, body.EventDate, body.Note), ct) });
-
-    /// <summary>PUT /api/v1/payroll/sso-enrollments/{id}?clientCompanyId=1 (แจ้งแล้ว + แนบหลักฐาน)</summary>
-    [HttpPut("sso-enrollments/{id:int}")]
-    public async Task<IActionResult> UpdateEnrollment(int id, [FromQuery] int clientCompanyId, [FromBody] UpdateEnrollmentBody body, CancellationToken ct)
-    {
-        await mediator.Send(new UpdateSsoEnrollmentCommand(
-            clientCompanyId, id, body.SubmittedDate, body.Status, body.ProofDocumentId, body.Note), ct);
-        return NoContent();
-    }
-
-    public record CreateEnrollmentBody(int EmployeeId, SsoEnrollmentType Type, DateTime EventDate, string? Note);
-    public record UpdateEnrollmentBody(DateTime? SubmittedDate, SsoEnrollmentStatus Status, int? ProofDocumentId, string? Note);
-
-    // ── งวดเงินเดือนรายเดือน ───────────────────────────────────────────────────
-    /// <summary>GET /api/v1/payroll/runs?clientCompanyId=1&amp;year=2025</summary>
-    [HttpGet("runs")]
-    public async Task<IActionResult> GetRuns([FromQuery] int clientCompanyId, [FromQuery] int? year, CancellationToken ct)
-        => Ok(await mediator.Send(new GetPayrollRunsQuery(clientCompanyId, year), ct));
-
-    /// <summary>GET /api/v1/payroll/runs/{id}?clientCompanyId=1 — รายละเอียด + ค่าคำนวณเทียบ</summary>
-    [HttpGet("runs/{id:int}")]
-    public async Task<IActionResult> GetRun(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
-        => Ok(await mediator.Send(new GetPayrollRunQuery(clientCompanyId, id), ct));
-
-    /// <summary>POST /api/v1/payroll/runs?clientCompanyId=1 (body: {year,month}) — สร้างงวด + prefill พนักงาน</summary>
-    [HttpPost("runs")]
-    public async Task<IActionResult> CreateRun([FromQuery] int clientCompanyId, [FromBody] CreateRunBody body, CancellationToken ct)
-        => Ok(new { id = await mediator.Send(new CreatePayrollRunCommand(clientCompanyId, body.Year, body.Month), ct) });
-
-    /// <summary>PUT /api/v1/payroll/runs/{id}/items?clientCompanyId=1 (body: PayrollItemInput[]) — บันทึก grid</summary>
-    [HttpPut("runs/{id:int}/items")]
-    public async Task<IActionResult> SaveItems(int id, [FromQuery] int clientCompanyId, [FromBody] List<PayrollItemInput> items, CancellationToken ct)
-    {
-        await mediator.Send(new SavePayrollItemsCommand(clientCompanyId, id, items ?? []), ct);
-        return NoContent();
-    }
-
-    /// <summary>PUT /api/v1/payroll/runs/{id}/status?clientCompanyId=1 (body: {status})</summary>
-    [HttpPut("runs/{id:int}/status")]
-    public async Task<IActionResult> SetRunStatus(int id, [FromQuery] int clientCompanyId, [FromBody] SetStatusBody body, CancellationToken ct)
-    {
-        await mediator.Send(new SetPayrollRunStatusCommand(clientCompanyId, id, body.Status), ct);
-        return NoContent();
-    }
-
-    /// <summary>DELETE /api/v1/payroll/runs/{id}?clientCompanyId=1</summary>
-    [HttpDelete("runs/{id:int}")]
-    public async Task<IActionResult> DeleteRun(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
-    {
-        await mediator.Send(new DeletePayrollRunCommand(clientCompanyId, id), ct);
-        return NoContent();
-    }
-
-    /// <summary>GET /api/v1/payroll/runs/{id}/template?clientCompanyId=1 — ดาวน์โหลด Excel template ไปกรอก</summary>
-    [HttpGet("runs/{id:int}/template")]
-    public async Task<IActionResult> GetRunTemplate(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
-    {
-        var bytes = await mediator.Send(new GetPayrollRunTemplateQuery(clientCompanyId, id), ct);
-        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"payroll-run-{id}.xlsx");
-    }
-
-    /// <summary>POST /api/v1/payroll/runs/{id}/import?clientCompanyId=1 (multipart: file) — อัปโหลดทับค่ารายการ</summary>
-    [HttpPost("runs/{id:int}/import")]
-    [RequestSizeLimit(10 * 1024 * 1024)]
-    public async Task<IActionResult> ImportRun(int id, [FromQuery] int clientCompanyId, IFormFile file, CancellationToken ct)
-    {
-        if (file is null || file.Length == 0) return BadRequest(new { detail = "กรุณาเลือกไฟล์ Excel" });
-        using var ms = new MemoryStream();
-        await file.CopyToAsync(ms, ct);
-        var updated = await mediator.Send(new ImportPayrollRunCommand(clientCompanyId, id, ms.ToArray()), ct);
-        return Ok(new { updated });
-    }
-
-    public record CreateRunBody(int Year, int Month);
-    public record SetStatusBody(int Status);
-
-    // ── แมพบัญชีเงินเดือน (Express GL → ฝ่าย) ──────────────────────────────────
-    /// <summary>GET /api/v1/payroll/account-mappings?clientCompanyId=1</summary>
-    [HttpGet("account-mappings")]
-    public async Task<IActionResult> GetAccountMappings([FromQuery] int clientCompanyId, CancellationToken ct)
-        => Ok(await mediator.Send(new GetPayrollAccountMappingsQuery(clientCompanyId), ct));
-
-    /// <summary>POST /api/v1/payroll/account-mappings?clientCompanyId=1 (body: {accountCode,department,note})</summary>
-    [HttpPost("account-mappings")]
-    public async Task<IActionResult> CreateAccountMapping([FromQuery] int clientCompanyId, [FromBody] PayrollAccountMappingInput data, CancellationToken ct)
-        => Ok(new { id = await mediator.Send(new UpsertPayrollAccountMappingCommand(clientCompanyId, null, data), ct) });
-
-    /// <summary>PUT /api/v1/payroll/account-mappings/{id}?clientCompanyId=1</summary>
-    [HttpPut("account-mappings/{id:int}")]
-    public async Task<IActionResult> UpdateAccountMapping(int id, [FromQuery] int clientCompanyId, [FromBody] PayrollAccountMappingInput data, CancellationToken ct)
-    {
-        await mediator.Send(new UpsertPayrollAccountMappingCommand(clientCompanyId, id, data), ct);
-        return NoContent();
-    }
-
-    /// <summary>DELETE /api/v1/payroll/account-mappings/{id}?clientCompanyId=1</summary>
-    [HttpDelete("account-mappings/{id:int}")]
-    public async Task<IActionResult> DeleteAccountMapping(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
-    {
-        await mediator.Send(new DeletePayrollAccountMappingCommand(clientCompanyId, id), ct);
-        return NoContent();
-    }
+function DeptTable({ dept, items }: { dept: string; items: PayrollItemRow[] }) {
+  return (
+    <div className="mb-4">
+      <div className="mb-1.5 flex items-baseline gap-2">
+        <h3 className="text-sm font-semibold text-slate-800">{dept}</h3>
+        <span className="text-xs text-gray-500">{items.length} คน</span>
+      </div>
+      <Card className="overflow-x-auto">
+        <table className="w-full text-[11px]">
+          <thead>
+            <tr>
+              <th rowSpan={2} className="sticky left-0 z-10 border-b border-r bg-white px-2 py-2 text-left align-bottom font-medium text-gray-600">
+                พนักงาน
+              </th>
+              {DEPT_GROUPS.map((g) => (
+                <th key={g.label} colSpan={g.span} className={`border-b border-l px-2 py-1 text-center font-semibold ${g.cls}`}>
+                  {g.label}
+                </th>
+              ))}
+            </tr>
+            <tr className="bg-slate-50 text-gray-600">
+              {DEPT_COLS.map((c) => (
+                <th key={c.label} className={`border-b px-2 py-2 text-right align-bottom font-medium ${c.groupStart ? 'border-l' : ''}`}>
+                  {c.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((it) => {
+              const ssoMismatch = Math.abs(it.ssoDiff) > 0.01
+              return (
+                <tr key={it.id} className="border-b border-gray-100 hover:bg-slate-50">
+                  <td className="sticky left-0 z-10 whitespace-nowrap border-r bg-white px-2 py-1">
+                    <span className="text-gray-800">{it.employeeName}</span>
+                    <span className="block font-mono text-[10px] text-gray-400">{it.employeeCode}</span>
+                  </td>
+                  {DEPT_COLS.map((c) => {
+                    const v = c.val(it)
+                    const tone = c.ssoCheck && ssoMismatch
+                      ? 'bg-red-50 text-red-600'
+                      : c.calc ? 'text-sky-700'
+                      : c.strong ? 'font-semibold text-slate-800 bg-slate-50'
+                      : 'text-gray-700'
+                    return (
+                      <td key={c.label} className={`whitespace-nowrap px-2 py-1 text-right font-mono ${tone} ${c.groupStart ? 'border-l border-gray-100' : ''}`}
+                        title={c.ssoCheck && ssoMismatch ? 'ต่างจากที่คำนวณ' : undefined}>
+                        {v ? fmt(v) : '-'}
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold text-slate-800">
+              <td className="sticky left-0 z-10 whitespace-nowrap border-r bg-slate-50 px-2 py-2">รวม {dept}</td>
+              {DEPT_COLS.map((c) => {
+                const total = items.reduce((a, i) => a + c.val(i), 0)
+                return (
+                  <td key={c.label} className={`whitespace-nowrap px-2 py-2 text-right font-mono ${c.groupStart ? 'border-l border-gray-200' : ''}`}>
+                    {total ? fmt(total) : '-'}
+                  </td>
+                )
+              })}
+            </tr>
+          </tfoot>
+        </table>
+      </Card>
+    </div>
+  )
 }
 </file>
 
@@ -90643,164 +90388,6 @@ public record ExpressEmployeeDto(
     string Department);
 </file>
 
-<file path="src/backend/Datacenter.Application/Features/Payroll/DTOs/PayrollDtos.cs">
-using Datacenter.Domain.Enums;
-
-namespace Datacenter.Application.Features.Payroll.DTOs;
-
-// ── พนักงาน ───────────────────────────────────────────────────────────────────
-
-public record EmployeeListItemDto(
-    int Id,
-    string EmployeeCode,
-    string FullName,
-    string NationalId,
-    string? Position,
-    string? Department,
-    DateTime StartDate,
-    DateTime? ResignDate,
-    EmploymentStatus EmploymentStatus,
-    SsoMemberStatus SsoStatus,
-    decimal BaseSalary);
-
-public record EmployeeDocumentDto(
-    int Id,
-    EmployeeDocType DocType,
-    string FileName,
-    string ContentType,
-    DateTime? EffectiveDate,
-    string? Note,
-    DateTime UploadedAt,
-    string UploadedBy);
-
-public record SsoEnrollmentDto(
-    int Id,
-    SsoEnrollmentType Type,
-    DateTime EventDate,
-    DateTime? SubmittedDate,
-    SsoEnrollmentStatus Status,
-    int? ProofDocumentId,
-    string? Note);
-
-public record EmployeeDetailDto(
-    int Id,
-    int ClientCompanyId,
-    string EmployeeCode,
-    string NationalId,
-    string? Prefix,
-    string FirstName,
-    string LastName,
-    DateTime? BirthDate,
-    string? MaritalStatus,
-    string? Nationality,
-    string? Address,
-    string? Position,
-    string? Department,
-    string? SourceSupplierCode,
-    DateTime StartDate,
-    DateTime? ResignDate,
-    EmploymentStatus EmploymentStatus,
-    SalaryType SalaryType,
-    decimal BaseSalary,
-    decimal? DailyWage,
-    string? SsoNumber,
-    string? SsoHospital,
-    SsoMemberStatus SsoStatus,
-    string? TaxId,
-    string? Note,
-    IReadOnlyList<EmployeeDocumentDto> Documents,
-    IReadOnlyList<SsoEnrollmentDto> SsoEnrollments);
-
-/// <summary>ฟิลด์สำหรับสร้าง/แก้ไขพนักงาน (กรอกมือ)</summary>
-public record EmployeeInput(
-    string EmployeeCode,
-    string NationalId,
-    string? Prefix,
-    string FirstName,
-    string LastName,
-    DateTime? BirthDate,
-    string? MaritalStatus,
-    string? Nationality,
-    string? Address,
-    string? Position,
-    string? Department,
-    DateTime StartDate,
-    DateTime? ResignDate,
-    EmploymentStatus EmploymentStatus,
-    SalaryType SalaryType,
-    decimal BaseSalary,
-    decimal? DailyWage,
-    string? SsoNumber,
-    string? SsoHospital,
-    SsoMemberStatus SsoStatus,
-    string? TaxId,
-    string? Note);
-
-/// <summary>เนื้อไฟล์เอกสาร (สำหรับดาวน์โหลด — มี audit PDPA)</summary>
-public record EmployeeDocumentContentDto(string FileName, string ContentType, byte[] Content);
-
-// ── อัตราเงินสมทบ ปกส./กองทุนทดแทน (effective-dated) ───────────────────────────
-
-public record PayrollRateConfigDto(
-    int Id,
-    DateTime EffectiveFrom,
-    decimal SsoEmployeePct,
-    decimal SsoEmployerPct,
-    decimal SsoWageFloor,
-    decimal SsoWageCap,
-    decimal WcfRatePct,
-    decimal WcfWageCapPerYear,
-    string? Note);
-
-public record PayrollRateConfigInput(
-    DateTime EffectiveFrom,
-    decimal SsoEmployeePct,
-    decimal SsoEmployerPct,
-    decimal SsoWageFloor,
-    decimal SsoWageCap,
-    decimal WcfRatePct,
-    decimal WcfWageCapPerYear,
-    string? Note);
-
-// ── แมพบัญชีเงินเดือน (Express GL → ฝ่าย) สำหรับ import พนักงาน ───────────────────
-public record PayrollAccountMappingDto(int Id, string AccountCode, string Department, string? Note);
-public record PayrollAccountMappingInput(string AccountCode, string Department, string? Note);
-
-// ── งวดเงินเดือนรายเดือน ─────────────────────────────────────────────────────────
-
-public record PayrollRunListItemDto(
-    int Id, int Year, int Month, int Status, int EmployeeCount,
-    decimal TotalGross, decimal TotalSsoEmployee, decimal TotalTax, decimal TotalNet);
-
-/// <summary>รายการต่อพนักงาน + ค่าคำนวณเทียบ (cross-check)</summary>
-public record PayrollItemDto(
-    int Id, int EmployeeId, string EmployeeCode, string EmployeeName, string? Department, int SalaryType,
-    decimal Salary, decimal DailyWageDays, decimal DailyWageRate,
-    decimal HousingAllowance, decimal FoodAllowance, decimal Overtime, decimal Diligence,
-    decimal Bonus, decimal OtherIncome, decimal GrossIncome,
-    decimal SsoWageBase, decimal SsoEmployee, decimal WithholdingTax,
-    decimal Absence, decimal Advance, decimal OtherDeduction, decimal NetPay,
-    // ── ระบบคำนวณเทียบ ──
-    decimal SsoEmployeeCalc, decimal SsoEmployerCalc, decimal SsoDiff,
-    decimal TaxCalc, decimal TaxDiff,
-    string? Note);
-
-public record PayrollRunDetailDto(
-    int Id, int ClientCompanyId, int Year, int Month, int Status, string? Note,
-    decimal? RateSsoEmployeePct, decimal? RateSsoEmployerPct, decimal? RateWageFloor, decimal? RateWageCap,
-    IReadOnlyList<PayrollItemDto> Items,
-    decimal TotalGross, decimal TotalSsoEmployee, decimal TotalSsoEmployer, decimal TotalTax, decimal TotalNet);
-
-/// <summary>ค่าที่กรอกต่อรายการ (key = ItemId)</summary>
-public record PayrollItemInput(
-    int Id,
-    decimal Salary, decimal DailyWageDays, decimal DailyWageRate,
-    decimal HousingAllowance, decimal FoodAllowance, decimal Overtime, decimal Diligence,
-    decimal Bonus, decimal OtherIncome,
-    decimal SsoWageBase, decimal SsoEmployee, decimal WithholdingTax,
-    decimal Absence, decimal Advance, decimal OtherDeduction, string? Note);
-</file>
-
 <file path="src/backend/Datacenter.Infrastructure/Services/ExpressDbfAdapter.cs">
 using System.Globalization;
 using System.Text;
@@ -91450,6 +91037,762 @@ public class ExpressDbfAdapter : IExpressDbfAdapter
 }
 </file>
 
+<file path="src/frontend/src/features/payroll/hooks/usePayroll.ts">
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { payrollApi } from '../services/payrollApi'
+import type { EmployeeInput, PayrollItemInput } from '../types/payroll.types'
+
+const keys = {
+  employees: (companyId: number, includeResigned: boolean) =>
+    ['payroll-employees', companyId, includeResigned] as const,
+  employee: (companyId: number, id: number) => ['payroll-employee', companyId, id] as const,
+}
+
+export function useEmployees(companyId: number, includeResigned = true) {
+  return useQuery({
+    queryKey: keys.employees(companyId, includeResigned),
+    queryFn: () => payrollApi.employees(companyId, includeResigned),
+    enabled: companyId > 0,
+  })
+}
+
+export function useEmployee(companyId: number, id: number | null) {
+  return useQuery({
+    queryKey: keys.employee(companyId, id ?? 0),
+    queryFn: () => payrollApi.employee(id!, companyId),
+    enabled: companyId > 0 && !!id,
+  })
+}
+
+export function useSaveEmployee(companyId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { id: number | null; data: EmployeeInput }) =>
+      vars.id
+        ? payrollApi.updateEmployee(vars.id, companyId, vars.data)
+        : payrollApi.createEmployee(companyId, vars.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-employees', companyId] }),
+  })
+}
+
+export function useDeleteEmployee(companyId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => payrollApi.deleteEmployee(id, companyId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-employees', companyId] }),
+  })
+}
+
+function invalidateEmployee(companyId: number, employeeId: number) {
+  return (qc: ReturnType<typeof useQueryClient>) => {
+    qc.invalidateQueries({ queryKey: ['payroll-employee', companyId, employeeId] })
+    qc.invalidateQueries({ queryKey: ['payroll-employees', companyId] })
+  }
+}
+
+export function useUploadDocument(companyId: number, employeeId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { docType: number; file: File; effectiveDate?: string | null; note?: string }) =>
+      payrollApi.uploadDocument(employeeId, companyId, vars.docType, vars.file, vars.effectiveDate, vars.note),
+    onSuccess: () => invalidateEmployee(companyId, employeeId)(qc),
+  })
+}
+
+export function useDeleteDocument(companyId: number, employeeId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (docId: number) => payrollApi.deleteDocument(docId, companyId),
+    onSuccess: () => invalidateEmployee(companyId, employeeId)(qc),
+  })
+}
+
+export function useCreateEnrollment(companyId: number, employeeId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { employeeId: number; type: number; eventDate: string; note?: string }) =>
+      payrollApi.createEnrollment(companyId, body),
+    onSuccess: () => invalidateEmployee(companyId, employeeId)(qc),
+  })
+}
+
+export function useUpdateEnrollment(companyId: number, employeeId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: {
+      id: number
+      body: { submittedDate?: string | null; status: number; proofDocumentId?: number | null; note?: string }
+    }) => payrollApi.updateEnrollment(vars.id, companyId, vars.body),
+    onSuccess: () => invalidateEmployee(companyId, employeeId)(qc),
+  })
+}
+
+// ── งวดเงินเดือน ────────────────────────────────────────────────────────────────
+export function usePayrollRuns(companyId: number, year?: number) {
+  return useQuery({
+    queryKey: ['payroll-runs', companyId, year ?? 0],
+    queryFn: () => payrollApi.runs(companyId, year),
+    enabled: companyId > 0,
+  })
+}
+
+export function usePayrollYearSummary(companyId: number, year: number) {
+  return useQuery({
+    queryKey: ['payroll-year-summary', companyId, year],
+    queryFn: () => payrollApi.yearSummary(companyId, year),
+    enabled: companyId > 0 && year > 0,
+  })
+}
+
+export function usePayrollRun(companyId: number, runId: number | null) {
+  return useQuery({
+    queryKey: ['payroll-run', companyId, runId ?? 0],
+    queryFn: () => payrollApi.run(runId!, companyId),
+    enabled: companyId > 0 && !!runId,
+  })
+}
+
+export function useCreatePayrollRun(companyId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { year: number; month: number }) => payrollApi.createRun(companyId, vars.year, vars.month),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-runs', companyId] }),
+  })
+}
+
+export function useSavePayrollItems(companyId: number, runId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (items: PayrollItemInput[]) => payrollApi.saveItems(runId, companyId, items),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['payroll-run', companyId, runId] })
+      qc.invalidateQueries({ queryKey: ['payroll-runs', companyId] })
+    },
+  })
+}
+
+export function useSetRunStatus(companyId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { runId: number; status: number }) => payrollApi.setRunStatus(vars.runId, companyId, vars.status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-run', companyId] }),
+  })
+}
+
+export function useDeletePayrollRun(companyId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (runId: number) => payrollApi.deleteRun(runId, companyId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-runs', companyId] }),
+  })
+}
+
+export function usePayrollAccountMappings(companyId: number) {
+  return useQuery({
+    queryKey: ['payroll-acct-map', companyId],
+    queryFn: () => payrollApi.accountMappings(companyId),
+    enabled: companyId > 0,
+  })
+}
+
+export function useSaveAccountMapping(companyId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { id: number | null; data: { accountCode: string; department: string; note?: string } }) =>
+      vars.id ? payrollApi.updateAccountMapping(vars.id, companyId, vars.data) : payrollApi.createAccountMapping(companyId, vars.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-acct-map', companyId] }),
+  })
+}
+
+export function useDeleteAccountMapping(companyId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => payrollApi.deleteAccountMapping(id, companyId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-acct-map', companyId] }),
+  })
+}
+
+export function useImportPayrollRun(companyId: number, runId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => payrollApi.importRun(runId, companyId, file),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['payroll-run', companyId, runId] })
+      qc.invalidateQueries({ queryKey: ['payroll-runs', companyId] })
+    },
+  })
+}
+</file>
+
+<file path="src/frontend/src/features/payroll/pages/PayrollPage.tsx">
+import { useState } from 'react'
+import PageHeader from '../../../shared/components/ui/PageHeader'
+import Tabs from '../../../shared/components/ui/Tabs'
+import Card from '../../../shared/components/ui/Card'
+import StateMessage from '../../../shared/components/ui/StateMessage'
+import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
+import EmployeesTab from './tabs/EmployeesTab'
+import PayrollRunsTab from './tabs/PayrollRunsTab'
+import YearSummaryTab from './tabs/YearSummaryTab'
+import AccountMappingTab from './tabs/AccountMappingTab'
+
+type Tab = 'employees' | 'runs' | 'year' | 'mapping'
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'employees', label: 'ทะเบียนพนักงาน' },
+  { key: 'runs', label: 'งวดเงินเดือน' },
+  { key: 'year', label: 'รายได้ทั้งปี' },
+  { key: 'mapping', label: 'แมพบัญชีเงินเดือน' },
+]
+
+export default function PayrollPage() {
+  const { companyId } = useCurrentCompany()
+  const [tab, setTab] = useState<Tab>('employees')
+
+  return (
+    <div>
+      <PageHeader
+        title="เงินเดือน / ประกันสังคม"
+        description="ทะเบียนพนักงาน + คลังหลักฐาน (PDPA) + งวดเงินเดือนรายเดือน (คำนวณ ปกส./ภาษีเทียบ)"
+      />
+      <Tabs items={TABS} activeKey={tab} onChange={setTab} />
+      {!companyId ? (
+        <Card><StateMessage centered>เลือกบริษัทที่ header ก่อน</StateMessage></Card>
+      ) : (
+        <>
+          {tab === 'employees' && <EmployeesTab companyId={companyId} />}
+          {tab === 'runs' && <PayrollRunsTab companyId={companyId} />}
+          {tab === 'year' && <YearSummaryTab companyId={companyId} />}
+          {tab === 'mapping' && <AccountMappingTab companyId={companyId} />}
+        </>
+      )}
+    </div>
+  )
+}
+</file>
+
+<file path="src/frontend/src/features/payroll/services/payrollApi.ts">
+import apiClient from '../../../shared/services/apiClient'
+import type {
+  EmployeeDetail,
+  EmployeeInput,
+  EmployeeListItem,
+  PayrollAccountMapping,
+  PayrollItemInput,
+  PayrollRunDetail,
+  PayrollRunListItem,
+  PayrollYearSummary,
+} from '../types/payroll.types'
+
+export const payrollApi = {
+  employees: (clientCompanyId: number, includeResigned = true) =>
+    apiClient
+      .get<EmployeeListItem[]>('/payroll/employees', { params: { clientCompanyId, includeResigned } })
+      .then((r) => r.data),
+
+  employee: (id: number, clientCompanyId: number) =>
+    apiClient
+      .get<EmployeeDetail>(`/payroll/employees/${id}`, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  createEmployee: (clientCompanyId: number, data: EmployeeInput) =>
+    apiClient
+      .post<{ id: number }>('/payroll/employees', data, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  updateEmployee: (id: number, clientCompanyId: number, data: EmployeeInput) =>
+    apiClient.put(`/payroll/employees/${id}`, data, { params: { clientCompanyId } }).then((r) => r.data),
+
+  deleteEmployee: (id: number, clientCompanyId: number) =>
+    apiClient.delete(`/payroll/employees/${id}`, { params: { clientCompanyId } }).then((r) => r.data),
+
+  // เอกสาร (PDPA)
+  uploadDocument: (
+    employeeId: number,
+    clientCompanyId: number,
+    docType: number,
+    file: File,
+    effectiveDate?: string | null,
+    note?: string,
+  ) => {
+    const form = new FormData()
+    form.append('file', file)
+    return apiClient
+      .post<{ id: number }>(`/payroll/employees/${employeeId}/documents`, form, {
+        params: { clientCompanyId, docType, effectiveDate: effectiveDate || undefined, note: note || undefined },
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data)
+  },
+
+  downloadDocument: (docId: number, clientCompanyId: number) =>
+    apiClient
+      .get(`/payroll/documents/${docId}`, { params: { clientCompanyId }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
+
+  deleteDocument: (docId: number, clientCompanyId: number) =>
+    apiClient.delete(`/payroll/documents/${docId}`, { params: { clientCompanyId } }).then((r) => r.data),
+
+  // แจ้งเข้า-ออก ปกส.
+  createEnrollment: (
+    clientCompanyId: number,
+    body: { employeeId: number; type: number; eventDate: string; note?: string },
+  ) =>
+    apiClient
+      .post<{ id: number }>('/payroll/sso-enrollments', body, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  updateEnrollment: (
+    id: number,
+    clientCompanyId: number,
+    body: { submittedDate?: string | null; status: number; proofDocumentId?: number | null; note?: string },
+  ) =>
+    apiClient
+      .put(`/payroll/sso-enrollments/${id}`, body, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  // งวดเงินเดือนรายเดือน
+  runs: (clientCompanyId: number, year?: number) =>
+    apiClient
+      .get<PayrollRunListItem[]>('/payroll/runs', { params: { clientCompanyId, year } })
+      .then((r) => r.data),
+
+  run: (id: number, clientCompanyId: number) =>
+    apiClient
+      .get<PayrollRunDetail>(`/payroll/runs/${id}`, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  yearSummary: (clientCompanyId: number, year: number) =>
+    apiClient
+      .get<PayrollYearSummary>('/payroll/year-summary', { params: { clientCompanyId, year } })
+      .then((r) => r.data),
+
+  createRun: (clientCompanyId: number, year: number, month: number) =>
+    apiClient
+      .post<{ id: number }>('/payroll/runs', { year, month }, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  saveItems: (runId: number, clientCompanyId: number, items: PayrollItemInput[]) =>
+    apiClient
+      .put(`/payroll/runs/${runId}/items`, items, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  setRunStatus: (runId: number, clientCompanyId: number, status: number) =>
+    apiClient
+      .put(`/payroll/runs/${runId}/status`, { status }, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  deleteRun: (runId: number, clientCompanyId: number) =>
+    apiClient.delete(`/payroll/runs/${runId}`, { params: { clientCompanyId } }).then((r) => r.data),
+
+  downloadTemplate: (runId: number, clientCompanyId: number) =>
+    apiClient
+      .get(`/payroll/runs/${runId}/template`, { params: { clientCompanyId }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
+
+  importRun: (runId: number, clientCompanyId: number, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return apiClient
+      .post<{ updated: number }>(`/payroll/runs/${runId}/import`, form, {
+        params: { clientCompanyId },
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data)
+  },
+
+  // แมพบัญชีเงินเดือน (Express → ฝ่าย)
+  accountMappings: (clientCompanyId: number) =>
+    apiClient
+      .get<PayrollAccountMapping[]>('/payroll/account-mappings', { params: { clientCompanyId } })
+      .then((r) => r.data),
+  createAccountMapping: (clientCompanyId: number, data: { accountCode: string; department: string; note?: string }) =>
+    apiClient
+      .post<{ id: number }>('/payroll/account-mappings', data, { params: { clientCompanyId } })
+      .then((r) => r.data),
+  updateAccountMapping: (id: number, clientCompanyId: number, data: { accountCode: string; department: string; note?: string }) =>
+    apiClient.put(`/payroll/account-mappings/${id}`, data, { params: { clientCompanyId } }).then((r) => r.data),
+  deleteAccountMapping: (id: number, clientCompanyId: number) =>
+    apiClient.delete(`/payroll/account-mappings/${id}`, { params: { clientCompanyId } }).then((r) => r.data),
+}
+</file>
+
+<file path="src/backend/Datacenter.Api/Controllers/PayrollController.cs">
+using Datacenter.Application.Features.Payroll.Commands;
+using Datacenter.Application.Features.Payroll.DTOs;
+using Datacenter.Application.Features.Payroll.Queries;
+using Datacenter.Domain.Enums;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Datacenter.Api.Controllers;
+
+[Authorize]
+[ApiController]
+[Route("api/v1/payroll")]
+public class PayrollController(IMediator mediator) : ControllerBase
+{
+    // ── พนักงาน ──────────────────────────────────────────────────────────────
+    /// <summary>GET /api/v1/payroll/employees?clientCompanyId=1&amp;includeResigned=true</summary>
+    [HttpGet("employees")]
+    public async Task<IActionResult> GetEmployees([FromQuery] int clientCompanyId, [FromQuery] bool includeResigned = true, CancellationToken ct = default)
+        => Ok(await mediator.Send(new GetEmployeesQuery(clientCompanyId, includeResigned), ct));
+
+    /// <summary>GET /api/v1/payroll/employees/{id}?clientCompanyId=1 — รายละเอียด + เอกสาร + การแจ้ง ปกส.</summary>
+    [HttpGet("employees/{id:int}")]
+    public async Task<IActionResult> GetEmployee(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+        => Ok(await mediator.Send(new GetEmployeeQuery(id, clientCompanyId), ct));
+
+    /// <summary>POST /api/v1/payroll/employees?clientCompanyId=1 (body: EmployeeInput)</summary>
+    [HttpPost("employees")]
+    public async Task<IActionResult> CreateEmployee([FromQuery] int clientCompanyId, [FromBody] EmployeeInput data, CancellationToken ct)
+        => Ok(new { id = await mediator.Send(new CreateEmployeeCommand(clientCompanyId, data), ct) });
+
+    /// <summary>PUT /api/v1/payroll/employees/{id}?clientCompanyId=1 (body: EmployeeInput)</summary>
+    [HttpPut("employees/{id:int}")]
+    public async Task<IActionResult> UpdateEmployee(int id, [FromQuery] int clientCompanyId, [FromBody] EmployeeInput data, CancellationToken ct)
+    {
+        await mediator.Send(new UpdateEmployeeCommand(id, clientCompanyId, data), ct);
+        return NoContent();
+    }
+
+    /// <summary>DELETE /api/v1/payroll/employees/{id}?clientCompanyId=1</summary>
+    [HttpDelete("employees/{id:int}")]
+    public async Task<IActionResult> DeleteEmployee(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+    {
+        await mediator.Send(new DeleteEmployeeCommand(id, clientCompanyId), ct);
+        return NoContent();
+    }
+
+    // ── เอกสาร/หลักฐาน (PDPA) ─────────────────────────────────────────────────
+    /// <summary>POST /api/v1/payroll/employees/{id}/documents?clientCompanyId=1&amp;docType=1 (multipart: file)</summary>
+    [HttpPost("employees/{id:int}/documents")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> UploadDocument(
+        int id, [FromQuery] int clientCompanyId, [FromQuery] EmployeeDocType docType,
+        IFormFile file, [FromQuery] DateTime? effectiveDate, [FromQuery] string? note, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { detail = "กรุณาเลือกไฟล์" });
+        if (file.Length > 8 * 1024 * 1024)
+            return BadRequest(new { detail = "ไฟล์ใหญ่เกิน 8 MB" });
+
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        var docId = await mediator.Send(new UploadEmployeeDocumentCommand(
+            clientCompanyId, id, docType, file.FileName, file.ContentType ?? "application/octet-stream",
+            ms.ToArray(), effectiveDate, note), ct);
+        return Ok(new { id = docId });
+    }
+
+    /// <summary>GET /api/v1/payroll/documents/{docId}?clientCompanyId=1 — ดาวน์โหลด (audit PDPA)</summary>
+    [HttpGet("documents/{docId:int}")]
+    public async Task<IActionResult> GetDocument(int docId, [FromQuery] int clientCompanyId, CancellationToken ct)
+    {
+        var d = await mediator.Send(new GetEmployeeDocumentContentQuery(clientCompanyId, docId), ct);
+        return File(d.Content, d.ContentType, d.FileName);
+    }
+
+    /// <summary>DELETE /api/v1/payroll/documents/{docId}?clientCompanyId=1</summary>
+    [HttpDelete("documents/{docId:int}")]
+    public async Task<IActionResult> DeleteDocument(int docId, [FromQuery] int clientCompanyId, CancellationToken ct)
+    {
+        await mediator.Send(new DeleteEmployeeDocumentCommand(clientCompanyId, docId), ct);
+        return NoContent();
+    }
+
+    // ── การแจ้งเข้า-ออก ปกส. ──────────────────────────────────────────────────
+    /// <summary>POST /api/v1/payroll/sso-enrollments?clientCompanyId=1 (body: {employeeId,type,eventDate,note})</summary>
+    [HttpPost("sso-enrollments")]
+    public async Task<IActionResult> CreateEnrollment([FromQuery] int clientCompanyId, [FromBody] CreateEnrollmentBody body, CancellationToken ct)
+        => Ok(new { id = await mediator.Send(new CreateSsoEnrollmentCommand(
+            clientCompanyId, body.EmployeeId, body.Type, body.EventDate, body.Note), ct) });
+
+    /// <summary>PUT /api/v1/payroll/sso-enrollments/{id}?clientCompanyId=1 (แจ้งแล้ว + แนบหลักฐาน)</summary>
+    [HttpPut("sso-enrollments/{id:int}")]
+    public async Task<IActionResult> UpdateEnrollment(int id, [FromQuery] int clientCompanyId, [FromBody] UpdateEnrollmentBody body, CancellationToken ct)
+    {
+        await mediator.Send(new UpdateSsoEnrollmentCommand(
+            clientCompanyId, id, body.SubmittedDate, body.Status, body.ProofDocumentId, body.Note), ct);
+        return NoContent();
+    }
+
+    public record CreateEnrollmentBody(int EmployeeId, SsoEnrollmentType Type, DateTime EventDate, string? Note);
+    public record UpdateEnrollmentBody(DateTime? SubmittedDate, SsoEnrollmentStatus Status, int? ProofDocumentId, string? Note);
+
+    // ── งวดเงินเดือนรายเดือน ───────────────────────────────────────────────────
+    /// <summary>GET /api/v1/payroll/runs?clientCompanyId=1&amp;year=2025</summary>
+    [HttpGet("runs")]
+    public async Task<IActionResult> GetRuns([FromQuery] int clientCompanyId, [FromQuery] int? year, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPayrollRunsQuery(clientCompanyId, year), ct));
+
+    /// <summary>GET /api/v1/payroll/runs/{id}?clientCompanyId=1 — รายละเอียด + ค่าคำนวณเทียบ</summary>
+    [HttpGet("runs/{id:int}")]
+    public async Task<IActionResult> GetRun(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPayrollRunQuery(clientCompanyId, id), ct));
+
+    /// <summary>GET /api/v1/payroll/year-summary?clientCompanyId=1&amp;year=2025 — สรุปรายได้ทั้งปี (แถว=เดือน)</summary>
+    [HttpGet("year-summary")]
+    public async Task<IActionResult> GetYearSummary([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPayrollYearSummaryQuery(clientCompanyId, year), ct));
+
+    /// <summary>POST /api/v1/payroll/runs?clientCompanyId=1 (body: {year,month}) — สร้างงวด + prefill พนักงาน</summary>
+    [HttpPost("runs")]
+    public async Task<IActionResult> CreateRun([FromQuery] int clientCompanyId, [FromBody] CreateRunBody body, CancellationToken ct)
+        => Ok(new { id = await mediator.Send(new CreatePayrollRunCommand(clientCompanyId, body.Year, body.Month), ct) });
+
+    /// <summary>PUT /api/v1/payroll/runs/{id}/items?clientCompanyId=1 (body: PayrollItemInput[]) — บันทึก grid</summary>
+    [HttpPut("runs/{id:int}/items")]
+    public async Task<IActionResult> SaveItems(int id, [FromQuery] int clientCompanyId, [FromBody] List<PayrollItemInput> items, CancellationToken ct)
+    {
+        await mediator.Send(new SavePayrollItemsCommand(clientCompanyId, id, items ?? []), ct);
+        return NoContent();
+    }
+
+    /// <summary>PUT /api/v1/payroll/runs/{id}/status?clientCompanyId=1 (body: {status})</summary>
+    [HttpPut("runs/{id:int}/status")]
+    public async Task<IActionResult> SetRunStatus(int id, [FromQuery] int clientCompanyId, [FromBody] SetStatusBody body, CancellationToken ct)
+    {
+        await mediator.Send(new SetPayrollRunStatusCommand(clientCompanyId, id, body.Status), ct);
+        return NoContent();
+    }
+
+    /// <summary>DELETE /api/v1/payroll/runs/{id}?clientCompanyId=1</summary>
+    [HttpDelete("runs/{id:int}")]
+    public async Task<IActionResult> DeleteRun(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+    {
+        await mediator.Send(new DeletePayrollRunCommand(clientCompanyId, id), ct);
+        return NoContent();
+    }
+
+    /// <summary>GET /api/v1/payroll/runs/{id}/template?clientCompanyId=1 — ดาวน์โหลด Excel template ไปกรอก</summary>
+    [HttpGet("runs/{id:int}/template")]
+    public async Task<IActionResult> GetRunTemplate(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+    {
+        var bytes = await mediator.Send(new GetPayrollRunTemplateQuery(clientCompanyId, id), ct);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"payroll-run-{id}.xlsx");
+    }
+
+    /// <summary>POST /api/v1/payroll/runs/{id}/import?clientCompanyId=1 (multipart: file) — อัปโหลดทับค่ารายการ</summary>
+    [HttpPost("runs/{id:int}/import")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> ImportRun(int id, [FromQuery] int clientCompanyId, IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0) return BadRequest(new { detail = "กรุณาเลือกไฟล์ Excel" });
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        var updated = await mediator.Send(new ImportPayrollRunCommand(clientCompanyId, id, ms.ToArray()), ct);
+        return Ok(new { updated });
+    }
+
+    public record CreateRunBody(int Year, int Month);
+    public record SetStatusBody(int Status);
+
+    // ── แมพบัญชีเงินเดือน (Express GL → ฝ่าย) ──────────────────────────────────
+    /// <summary>GET /api/v1/payroll/account-mappings?clientCompanyId=1</summary>
+    [HttpGet("account-mappings")]
+    public async Task<IActionResult> GetAccountMappings([FromQuery] int clientCompanyId, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPayrollAccountMappingsQuery(clientCompanyId), ct));
+
+    /// <summary>POST /api/v1/payroll/account-mappings?clientCompanyId=1 (body: {accountCode,department,note})</summary>
+    [HttpPost("account-mappings")]
+    public async Task<IActionResult> CreateAccountMapping([FromQuery] int clientCompanyId, [FromBody] PayrollAccountMappingInput data, CancellationToken ct)
+        => Ok(new { id = await mediator.Send(new UpsertPayrollAccountMappingCommand(clientCompanyId, null, data), ct) });
+
+    /// <summary>PUT /api/v1/payroll/account-mappings/{id}?clientCompanyId=1</summary>
+    [HttpPut("account-mappings/{id:int}")]
+    public async Task<IActionResult> UpdateAccountMapping(int id, [FromQuery] int clientCompanyId, [FromBody] PayrollAccountMappingInput data, CancellationToken ct)
+    {
+        await mediator.Send(new UpsertPayrollAccountMappingCommand(clientCompanyId, id, data), ct);
+        return NoContent();
+    }
+
+    /// <summary>DELETE /api/v1/payroll/account-mappings/{id}?clientCompanyId=1</summary>
+    [HttpDelete("account-mappings/{id:int}")]
+    public async Task<IActionResult> DeleteAccountMapping(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+    {
+        await mediator.Send(new DeletePayrollAccountMappingCommand(clientCompanyId, id), ct);
+        return NoContent();
+    }
+}
+</file>
+
+<file path="src/backend/Datacenter.Application/Features/Payroll/DTOs/PayrollDtos.cs">
+using Datacenter.Domain.Enums;
+
+namespace Datacenter.Application.Features.Payroll.DTOs;
+
+// ── พนักงาน ───────────────────────────────────────────────────────────────────
+
+public record EmployeeListItemDto(
+    int Id,
+    string EmployeeCode,
+    string FullName,
+    string NationalId,
+    string? Position,
+    string? Department,
+    DateTime StartDate,
+    DateTime? ResignDate,
+    EmploymentStatus EmploymentStatus,
+    SsoMemberStatus SsoStatus,
+    decimal BaseSalary);
+
+public record EmployeeDocumentDto(
+    int Id,
+    EmployeeDocType DocType,
+    string FileName,
+    string ContentType,
+    DateTime? EffectiveDate,
+    string? Note,
+    DateTime UploadedAt,
+    string UploadedBy);
+
+public record SsoEnrollmentDto(
+    int Id,
+    SsoEnrollmentType Type,
+    DateTime EventDate,
+    DateTime? SubmittedDate,
+    SsoEnrollmentStatus Status,
+    int? ProofDocumentId,
+    string? Note);
+
+public record EmployeeDetailDto(
+    int Id,
+    int ClientCompanyId,
+    string EmployeeCode,
+    string NationalId,
+    string? Prefix,
+    string FirstName,
+    string LastName,
+    DateTime? BirthDate,
+    string? MaritalStatus,
+    string? Nationality,
+    string? Address,
+    string? Position,
+    string? Department,
+    string? SourceSupplierCode,
+    DateTime StartDate,
+    DateTime? ResignDate,
+    EmploymentStatus EmploymentStatus,
+    SalaryType SalaryType,
+    decimal BaseSalary,
+    decimal? DailyWage,
+    string? SsoNumber,
+    string? SsoHospital,
+    SsoMemberStatus SsoStatus,
+    string? TaxId,
+    string? Note,
+    IReadOnlyList<EmployeeDocumentDto> Documents,
+    IReadOnlyList<SsoEnrollmentDto> SsoEnrollments);
+
+/// <summary>ฟิลด์สำหรับสร้าง/แก้ไขพนักงาน (กรอกมือ)</summary>
+public record EmployeeInput(
+    string EmployeeCode,
+    string NationalId,
+    string? Prefix,
+    string FirstName,
+    string LastName,
+    DateTime? BirthDate,
+    string? MaritalStatus,
+    string? Nationality,
+    string? Address,
+    string? Position,
+    string? Department,
+    DateTime StartDate,
+    DateTime? ResignDate,
+    EmploymentStatus EmploymentStatus,
+    SalaryType SalaryType,
+    decimal BaseSalary,
+    decimal? DailyWage,
+    string? SsoNumber,
+    string? SsoHospital,
+    SsoMemberStatus SsoStatus,
+    string? TaxId,
+    string? Note);
+
+/// <summary>เนื้อไฟล์เอกสาร (สำหรับดาวน์โหลด — มี audit PDPA)</summary>
+public record EmployeeDocumentContentDto(string FileName, string ContentType, byte[] Content);
+
+// ── อัตราเงินสมทบ ปกส./กองทุนทดแทน (effective-dated) ───────────────────────────
+
+public record PayrollRateConfigDto(
+    int Id,
+    DateTime EffectiveFrom,
+    decimal SsoEmployeePct,
+    decimal SsoEmployerPct,
+    decimal SsoWageFloor,
+    decimal SsoWageCap,
+    decimal WcfRatePct,
+    decimal WcfWageCapPerYear,
+    string? Note);
+
+public record PayrollRateConfigInput(
+    DateTime EffectiveFrom,
+    decimal SsoEmployeePct,
+    decimal SsoEmployerPct,
+    decimal SsoWageFloor,
+    decimal SsoWageCap,
+    decimal WcfRatePct,
+    decimal WcfWageCapPerYear,
+    string? Note);
+
+// ── แมพบัญชีเงินเดือน (Express GL → ฝ่าย) สำหรับ import พนักงาน ───────────────────
+public record PayrollAccountMappingDto(int Id, string AccountCode, string Department, string? Note);
+public record PayrollAccountMappingInput(string AccountCode, string Department, string? Note);
+
+// ── งวดเงินเดือนรายเดือน ─────────────────────────────────────────────────────────
+
+public record PayrollRunListItemDto(
+    int Id, int Year, int Month, int Status, int EmployeeCount,
+    decimal TotalGross, decimal TotalSsoEmployee, decimal TotalTax, decimal TotalNet);
+
+/// <summary>รายการต่อพนักงาน + ค่าคำนวณเทียบ (cross-check)</summary>
+public record PayrollItemDto(
+    int Id, int EmployeeId, string EmployeeCode, string EmployeeName, string? Department, int SalaryType,
+    decimal Salary, decimal DailyWageDays, decimal DailyWageRate,
+    decimal HousingAllowance, decimal FoodAllowance, decimal Overtime, decimal Diligence,
+    decimal Bonus, decimal OtherIncome, decimal GrossIncome,
+    decimal SsoWageBase, decimal SsoEmployee, decimal WithholdingTax,
+    decimal Absence, decimal Advance, decimal OtherDeduction, decimal NetPay,
+    // ── ระบบคำนวณเทียบ ──
+    decimal SsoEmployeeCalc, decimal SsoEmployerCalc, decimal SsoDiff,
+    decimal TaxCalc, decimal TaxDiff,
+    string? Note);
+
+public record PayrollRunDetailDto(
+    int Id, int ClientCompanyId, int Year, int Month, int Status, string? Note,
+    decimal? RateSsoEmployeePct, decimal? RateSsoEmployerPct, decimal? RateWageFloor, decimal? RateWageCap,
+    IReadOnlyList<PayrollItemDto> Items,
+    decimal TotalGross, decimal TotalSsoEmployee, decimal TotalSsoEmployer, decimal TotalTax, decimal TotalNet);
+
+// ── สรุปรายได้ทั้งปี (แถว=เดือน, รวมทุกพนักงาน) อิง sheet "รายได้ทั้งปี" ─────────────
+/// <summary>หนึ่งแถวสรุป (เดือน 1-12; Month=0 = แถวรวมทั้งปี) คอลัมน์ตรงกับ sheet รายได้ทั้งปี</summary>
+public record PayrollSummaryRow(
+    int Month, int EmployeeCount, bool HasRun,
+    // รายได้
+    decimal Salary, decimal AbsenceLate, decimal NetSalary,
+    decimal Housing, decimal Food, decimal Overtime, decimal Diligence, decimal Bonus,
+    decimal NetIncomeAfterAbsence, decimal TotalIncome,
+    // กรอกในแบบ กท.20 ก
+    decimal Wage, decimal WageOver20000,
+    // รายการหัก
+    decimal SsoReportable, decimal SsoCalc, decimal SsoShortfall, decimal SsoActual,
+    decimal Tax, decimal Absence, decimal Advance,
+    // รวม
+    decimal TotalDeduction, decimal Pnd1Income, decimal EmployerSso, decimal NetPay);
+
+public record PayrollYearSummaryDto(int Year, IReadOnlyList<PayrollSummaryRow> Months, PayrollSummaryRow Total);
+
+/// <summary>ค่าที่กรอกต่อรายการ (key = ItemId)</summary>
+public record PayrollItemInput(
+    int Id,
+    decimal Salary, decimal DailyWageDays, decimal DailyWageRate,
+    decimal HousingAllowance, decimal FoodAllowance, decimal Overtime, decimal Diligence,
+    decimal Bonus, decimal OtherIncome,
+    decimal SsoWageBase, decimal SsoEmployee, decimal WithholdingTax,
+    decimal Absence, decimal Advance, decimal OtherDeduction, string? Note);
+</file>
+
 <file path="src/frontend/src/features/payroll/types/payroll.types.ts">
 // ── enums (ตรงกับ backend, serialize เป็นเลข) ──────────────────────────────────
 export const SalaryType = { Monthly: 1, Daily: 2 } as const
@@ -91637,6 +91980,46 @@ export interface PayrollRunDetail {
   totalSsoEmployer: number
   totalTax: number
   totalNet: number
+}
+
+// ── สรุปรายได้ทั้งปี (แถว=เดือน) ─────────────────────────────────────────────────
+export interface PayrollSummaryRow {
+  month: number // 1-12 ; 0 = แถวรวมทั้งปี
+  employeeCount: number
+  hasRun: boolean
+  // รายได้
+  salary: number
+  absenceLate: number
+  netSalary: number
+  housing: number
+  food: number
+  overtime: number
+  diligence: number
+  bonus: number
+  netIncomeAfterAbsence: number
+  totalIncome: number
+  // กท.20ก
+  wage: number
+  wageOver20000: number
+  // รายการหัก
+  ssoReportable: number
+  ssoCalc: number
+  ssoShortfall: number
+  ssoActual: number
+  tax: number
+  absence: number
+  advance: number
+  // รวม
+  totalDeduction: number
+  pnd1Income: number
+  employerSso: number
+  netPay: number
+}
+
+export interface PayrollYearSummary {
+  year: number
+  months: PayrollSummaryRow[]
+  total: PayrollSummaryRow
 }
 
 export interface PayrollItemInput {

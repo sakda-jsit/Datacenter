@@ -137,7 +137,7 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
 
 // ── คอลัมน์ต่อพนักงาน (จัดกลุ่มตาม sheet รายได้ทั้งปี) ───────────────────────────
 const DEPT_GROUPS: { label: string; span: number; cls: string }[] = [
-  { label: 'รายได้', span: 11, cls: 'bg-emerald-50 text-emerald-800' },
+  { label: 'รายได้', span: 10, cls: 'bg-emerald-50 text-emerald-800' },
   { label: 'กรอกในแบบ กท.20 ก', span: 2, cls: 'bg-violet-50 text-violet-800' },
   { label: 'รายการหัก', span: 7, cls: 'bg-rose-50 text-rose-800' },
   { label: 'รวม', span: 4, cls: 'bg-slate-100 text-slate-800' },
@@ -153,11 +153,10 @@ type DeptCol = {
 }
 
 const DEPT_COLS: DeptCol[] = [
-  // รายได้
-  { label: 'เงินเดือน', val: (i) => i.salary, groupStart: true },
-  { label: 'ค่าจ้างวัน', val: (i) => i.dailyWageDays * i.dailyWageRate },
+  // รายได้ (เงินเดือน = เงินเดือน + ค่าจ้างรายวัน)
+  { label: 'เงินเดือน', val: (i) => i.salary + i.dailyWageDays * i.dailyWageRate, groupStart: true },
   { label: 'หยุดงาน+มาสาย', val: (i) => i.absence },
-  { label: 'เงินเดือนสุทธิ', val: (i) => i.salary - i.absence },
+  { label: 'เงินเดือนสุทธิ', val: (i) => i.salary + i.dailyWageDays * i.dailyWageRate - i.absence },
   { label: 'ค่าที่พักอาศัย', val: (i) => i.housingAllowance },
   { label: 'ค่าอาหาร', val: (i) => i.foodAllowance },
   { label: 'ค่าล่วงเวลา', val: (i) => i.overtime },
