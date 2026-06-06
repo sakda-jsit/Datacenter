@@ -6,6 +6,7 @@ import { payrollApi } from '../../services/payrollApi'
 import { usePayrollYearSummary } from '../../hooks/usePayroll'
 import { MONTH_TH, type PayrollSummaryRow } from '../../types/payroll.types'
 import Salary50TawiModal from '../../components/Salary50TawiModal'
+import Kt20Modal from '../../components/Kt20Modal'
 
 async function dl(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob)
@@ -63,6 +64,7 @@ export default function YearSummaryTab({ companyId }: Props) {
   const thisYear = new Date().getFullYear()
   const [year, setYear] = useState(thisYear)
   const [show50Tawi, setShow50Tawi] = useState(false)
+  const [showKt20, setShowKt20] = useState(false)
   const { data, isLoading, isError } = usePayrollYearSummary(companyId, year)
 
   const yearOptions = Array.from({ length: 6 }, (_, i) => thisYear - i)
@@ -95,6 +97,9 @@ export default function YearSummaryTab({ companyId }: Props) {
           </Button>
           <Button type="button" variant="secondary" onClick={() => setShow50Tawi(true)}>
             📄 50 ทวิ เงินเดือน
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => setShowKt20(true)}>
+            🏭 กท.20ก
           </Button>
           <label className="flex items-center gap-2 text-xs text-gray-600">
             ปี
@@ -171,6 +176,9 @@ export default function YearSummaryTab({ companyId }: Props) {
 
       {show50Tawi && (
         <Salary50TawiModal companyId={companyId} year={year} onClose={() => setShow50Tawi(false)} />
+      )}
+      {showKt20 && (
+        <Kt20Modal companyId={companyId} year={year} onClose={() => setShowKt20(false)} />
       )}
     </div>
   )

@@ -129,6 +129,19 @@ public record Pnd1kDto(
     int Year, string CompanyName, string TaxId, string? Address,
     IReadOnlyList<Pnd1kRow> Rows, decimal TotalIncome, decimal TotalTax, int PersonCount);
 
+// ── กท.20ก (แบบแสดงเงินค่าจ้างประจำปี กองทุนเงินทดแทน) ───────────────────────────
+public record Kt20Row(
+    int Seq, string NationalId, string Prefix, string FirstName, string LastName,
+    decimal AnnualWage,   // ค่าจ้างจริงทั้งปี (ฐาน ปกส. ไม่รวม OT/วันหยุด/โบนัส)
+    decimal CappedWage);  // ค่าจ้างที่ใช้คำนวณ = min(AnnualWage, เพดาน 240,000/ปี)
+
+public record Kt20Dto(
+    int Year, string CompanyName, string? Address, string? PostalCode,
+    string WcfAccountNo, string WcfBranchCode,
+    decimal RatePct, decimal WageCapPerYear,
+    IReadOnlyList<Kt20Row> Rows,
+    decimal TotalWage, int EmployeeCount, decimal Contribution, string ContributionText);
+
 // ── ใบสำคัญลงบัญชีเงินเดือน + กระทบยอด GL ────────────────────────────────────────
 /// <summary>หนึ่งบรรทัดในใบสำคัญ (Dr/Cr) + กระทบยอดกับ GL จริงเดือนนั้น</summary>
 public record PayrollPostingLine(

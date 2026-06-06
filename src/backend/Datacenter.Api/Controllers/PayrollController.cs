@@ -146,6 +146,32 @@ public class PayrollController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Get50TawiImages([FromQuery] int clientCompanyId, [FromQuery] int year, [FromQuery] int[]? employeeIds, CancellationToken ct)
         => Ok(await mediator.Send(new Get50TawiSalaryImagesQuery(clientCompanyId, year, employeeIds), ct));
 
+    /// <summary>GET /api/v1/payroll/kt20?clientCompanyId=1&amp;year=2025 — กท.20ก (แสดงเงินค่าจ้างประจำปี กองทุนเงินทดแทน)</summary>
+    [HttpGet("kt20")]
+    public async Task<IActionResult> GetKt20([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)
+        => Ok(await mediator.Send(new GetKt20Query(clientCompanyId, year), ct));
+
+    /// <summary>GET /api/v1/payroll/kt20/excel?clientCompanyId=1&amp;year=2025</summary>
+    [HttpGet("kt20/excel")]
+    public async Task<IActionResult> GetKt20Excel([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)
+    {
+        var bytes = await mediator.Send(new GetKt20ExcelQuery(clientCompanyId, year), ct);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"kt20-{year}.xlsx");
+    }
+
+    /// <summary>GET /api/v1/payroll/kt20/pdf?clientCompanyId=1&amp;year=2025</summary>
+    [HttpGet("kt20/pdf")]
+    public async Task<IActionResult> GetKt20Pdf([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)
+    {
+        var bytes = await mediator.Send(new GetKt20PdfQuery(clientCompanyId, year), ct);
+        return File(bytes, "application/pdf", $"kt20-{year}.pdf");
+    }
+
+    /// <summary>GET /api/v1/payroll/kt20/images?clientCompanyId=1&amp;year=2025 — รูป PNG (data URL) สำหรับ preview</summary>
+    [HttpGet("kt20/images")]
+    public async Task<IActionResult> GetKt20Images([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)
+        => Ok(await mediator.Send(new GetKt20ImagesQuery(clientCompanyId, year), ct));
+
     /// <summary>GET /api/v1/payroll/year-summary?clientCompanyId=1&amp;year=2025 — สรุปรายได้ทั้งปี (แถว=เดือน)</summary>
     [HttpGet("year-summary")]
     public async Task<IActionResult> GetYearSummary([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)

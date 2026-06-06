@@ -116,6 +116,20 @@ export const payrollApi = {
       .get<string[]>('/payroll/50tawi/images', { params: { clientCompanyId, year, employeeIds } })
       .then((r) => r.data),
 
+  // กท.20ก (แบบแสดงเงินค่าจ้างประจำปี กองทุนเงินทดแทน)
+  kt20Images: (clientCompanyId: number, year: number) =>
+    apiClient
+      .get<string[]>('/payroll/kt20/images', { params: { clientCompanyId, year } })
+      .then((r) => r.data),
+  downloadKt20Pdf: (clientCompanyId: number, year: number) =>
+    apiClient
+      .get('/payroll/kt20/pdf', { params: { clientCompanyId, year }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
+  downloadKt20Excel: (clientCompanyId: number, year: number) =>
+    apiClient
+      .get('/payroll/kt20/excel', { params: { clientCompanyId, year }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
+
   createRun: (clientCompanyId: number, year: number, month: number) =>
     apiClient
       .post<{ id: number }>('/payroll/runs', { year, month }, { params: { clientCompanyId } })
