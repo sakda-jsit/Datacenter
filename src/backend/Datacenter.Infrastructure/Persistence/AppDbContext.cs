@@ -51,6 +51,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SsoMonthlyFiling> SsoMonthlyFilings => Set<SsoMonthlyFiling>();
     public DbSet<StatutoryFiling> StatutoryFilings => Set<StatutoryFiling>();
     public DbSet<ExpressPostingLink> ExpressPostingLinks => Set<ExpressPostingLink>();
+    public DbSet<PrepaidExpense> PrepaidExpenses => Set<PrepaidExpense>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

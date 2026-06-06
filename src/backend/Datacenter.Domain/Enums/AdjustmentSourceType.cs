@@ -18,5 +18,7 @@ public enum AdjustmentSourceType
     /// <summary>อื่น ๆ</summary>
     Other = 4,
     /// <summary>มาจากกระดาษทำการสินทรัพย์ถาวร (ค่าเสื่อมราคา/จำหน่าย)</summary>
-    FixedAsset = 5
+    FixedAsset = 5,
+    /// <summary>มาจากกระดาษทำการค่าใช้จ่ายจ่ายล่วงหน้า (ตัดจ่ายตามงวด)</summary>
+    Prepaid = 6
 }

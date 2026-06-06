@@ -50,6 +50,7 @@ public interface IApplicationDbContext
     DbSet<SsoMonthlyFiling> SsoMonthlyFilings { get; }
     DbSet<StatutoryFiling> StatutoryFilings { get; }
     DbSet<ExpressPostingLink> ExpressPostingLinks { get; }
+    DbSet<PrepaidExpense> PrepaidExpenses { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

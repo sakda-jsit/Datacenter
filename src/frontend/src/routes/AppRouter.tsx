@@ -11,6 +11,7 @@ import FinancialStatementPage from '../features/financial-statement/pages/Financ
 import AdjustmentsPage from '../features/adjustments/pages/AdjustmentsPage'
 import LeasingPage from '../features/leasing/pages/LeasingPage'
 import FixedAssetsPage from '../features/fixed-assets/pages/FixedAssetsPage'
+import PrepaidPage from '../features/prepaid/pages/PrepaidPage'
 import VatPage from '../features/vat/pages/VatPage'
 import WhtPage from '../features/wht/pages/WhtPage'
 import ArPage from '../features/ar/pages/ArPage'
@@ -46,6 +47,7 @@ export default function AppRouter() {
           <Route path="adjustments" element={<AdjustmentsPage />} />
           <Route path="leasing" element={<LeasingPage />} />
           <Route path="fixed-assets" element={<FixedAssetsPage />} />
+          <Route path="prepaid" element={<PrepaidPage />} />
           <Route path="vat" element={<VatPage />} />
           <Route path="wht" element={<WhtPage />} />
           <Route path="ar" element={<ArPage />} />
