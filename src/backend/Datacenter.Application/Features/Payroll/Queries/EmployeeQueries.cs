@@ -27,7 +27,7 @@ public class GetEmployeesQueryHandler(IApplicationDbContext db)
             .Select(e => new EmployeeListItemDto(
                 e.Id, e.EmployeeCode,
                 ((e.Prefix ?? "") + " " + e.FirstName + " " + e.LastName).Trim(),
-                e.NationalId, e.Position, e.StartDate, e.ResignDate,
+                e.NationalId, e.Position, e.Department, e.StartDate, e.ResignDate,
                 e.EmploymentStatus, e.SsoStatus, e.BaseSalary))
             .ToListAsync(ct);
     }
@@ -62,7 +62,8 @@ public class GetEmployeeQueryHandler(IApplicationDbContext db)
 
         return new EmployeeDetailDto(
             e.Id, e.ClientCompanyId, e.EmployeeCode, e.NationalId, e.Prefix, e.FirstName, e.LastName,
-            e.BirthDate, e.MaritalStatus, e.Nationality, e.Position, e.Department, e.StartDate, e.ResignDate,
+            e.BirthDate, e.MaritalStatus, e.Nationality, e.Address, e.Position, e.Department, e.SourceSupplierCode,
+            e.StartDate, e.ResignDate,
             e.EmploymentStatus, e.SalaryType, e.BaseSalary, e.DailyWage, e.SsoNumber, e.SsoHospital,
             e.SsoStatus, e.TaxId, e.Note, docs, enr);
     }

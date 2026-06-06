@@ -46,6 +46,7 @@ public interface IApplicationDbContext
     DbSet<PayrollRateConfig> PayrollRateConfigs { get; }
     DbSet<PayrollRun> PayrollRuns { get; }
     DbSet<PayrollItem> PayrollItems { get; }
+    DbSet<PayrollAccountMapping> PayrollAccountMappings { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

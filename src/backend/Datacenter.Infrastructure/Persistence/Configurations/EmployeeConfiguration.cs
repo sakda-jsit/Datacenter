@@ -18,8 +18,10 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.Property(x => x.LastName).HasMaxLength(100);
         builder.Property(x => x.MaritalStatus).HasMaxLength(20);
         builder.Property(x => x.Nationality).HasMaxLength(50);
+        builder.Property(x => x.Address).HasMaxLength(500);
         builder.Property(x => x.Position).HasMaxLength(100);
         builder.Property(x => x.Department).HasMaxLength(100);
+        builder.Property(x => x.SourceSupplierCode).HasMaxLength(30);
         builder.Property(x => x.SsoNumber).HasMaxLength(20);
         builder.Property(x => x.SsoHospital).HasMaxLength(200);
         builder.Property(x => x.TaxId).HasMaxLength(13);

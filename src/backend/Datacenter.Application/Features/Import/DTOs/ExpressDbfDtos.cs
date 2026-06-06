@@ -221,3 +221,12 @@ public record ExpressWhtEntryDto(
     decimal TaxAmount,
     string? Condition,
     bool IsLate);
+
+/// <summary>พนักงานที่ดึงจาก Express (APMAS ที่ถูกลงบัญชีเงินเดือนผ่าน journal) + ฝ่ายจากบัญชี</summary>
+public record ExpressEmployeeDto(
+    string SupplierCode,
+    string? Prefix,
+    string Name,
+    string? TaxId,
+    string? Address,
+    string Department);

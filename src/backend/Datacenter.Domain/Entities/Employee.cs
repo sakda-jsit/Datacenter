@@ -21,9 +21,13 @@ public class Employee : BaseEntity
     public DateTime? BirthDate { get; set; }
     public string? MaritalStatus { get; set; }                 // โสด/สมรส
     public string? Nationality { get; set; }
+    public string? Address { get; set; }                       // ที่อยู่ (จาก APMAS เมื่อ import)
 
     public string? Position { get; set; }                      // ตำแหน่ง
-    public string? Department { get; set; }                    // ฝ่าย
+    public string? Department { get; set; }                    // ฝ่าย (เช่น ฝ่ายบริหาร/ฝ่ายผลิต — จากบัญชีเงินเดือน Express)
+
+    /// <summary>รหัสเจ้าหนี้ใน Express (APMAS.SUPCOD) — ใช้ match ตอน import จาก Express; ว่าง = กรอกมือ</summary>
+    public string? SourceSupplierCode { get; set; }
     public DateTime StartDate { get; set; }                    // วันเริ่มงาน
     public DateTime? ResignDate { get; set; }                  // วันลาออก
     public EmploymentStatus EmploymentStatus { get; set; } = EmploymentStatus.Active;

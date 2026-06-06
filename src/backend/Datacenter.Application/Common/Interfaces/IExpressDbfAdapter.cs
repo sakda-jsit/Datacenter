@@ -74,4 +74,11 @@ public interface IExpressDbfAdapter
 
     /// <summary>อ่านรายการเดินบัญชีธนาคารจาก BKTRN.DBF (คืนว่างถ้าไม่มีไฟล์).</summary>
     Task<IReadOnlyList<ExpressBankTransactionDto>> ReadBankTransactionsAsync(string companyFolderPath, CancellationToken ct = default);
+
+    /// <summary>
+    /// ดึงพนักงานจาก Express: GLJNLIT ที่ลงบัญชีเงินเดือน (ตาม salaryAccountToDept: รหัสบัญชี→ฝ่าย)
+    /// → voucher → APTRN.SUPCOD → APMAS = พนักงาน. คืนว่างถ้าไม่มี mapping/ไฟล์.
+    /// </summary>
+    Task<IReadOnlyList<ExpressEmployeeDto>> ReadPayrollEmployeesAsync(
+        string companyFolderPath, IReadOnlyDictionary<string, string> salaryAccountToDept, CancellationToken ct = default);
 }

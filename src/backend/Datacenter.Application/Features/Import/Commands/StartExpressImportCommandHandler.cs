@@ -339,6 +339,30 @@ public class StartExpressImportCommandHandler(
                     batch.Message += $" (นำเข้าธนาคารไม่สำเร็จ: {ex.Message})";
                     await db.SaveChangesAsync(CancellationToken.None);
                 }
+
+                // นำเข้าทะเบียนพนักงานจาก Express (APMAS ที่ผูกบัญชีเงินเดือนตาม PayrollAccountMapping)
+                try
+                {
+                    var empCount = await Payroll.Services.PayrollEmployeeImporter.ImportAsync(
+                        db, dbfAdapter, folderPath, request.ClientCompanyId, currentUser.Username, ct);
+                    if (empCount > 0)
+                    {
+                        batch.Message += $" · พนักงาน {empCount}";
+                        await audit.LogAsync(
+                            action: "ImportEmployees",
+                            entityName: "ImportBatch",
+                            entityId: batch.Id.ToString(),
+                            afterValue: $"นำเข้าพนักงานจาก Express {empCount} คน",
+                            companyId: request.ClientCompanyId,
+                            cancellationToken: ct);
+                        await db.SaveChangesAsync(ct);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    batch.Message += $" (นำเข้าพนักงานไม่สำเร็จ: {ex.Message})";
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
             }
 
             return batch.Id;

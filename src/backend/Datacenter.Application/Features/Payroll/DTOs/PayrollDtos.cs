@@ -10,6 +10,7 @@ public record EmployeeListItemDto(
     string FullName,
     string NationalId,
     string? Position,
+    string? Department,
     DateTime StartDate,
     DateTime? ResignDate,
     EmploymentStatus EmploymentStatus,
@@ -46,8 +47,10 @@ public record EmployeeDetailDto(
     DateTime? BirthDate,
     string? MaritalStatus,
     string? Nationality,
+    string? Address,
     string? Position,
     string? Department,
+    string? SourceSupplierCode,
     DateTime StartDate,
     DateTime? ResignDate,
     EmploymentStatus EmploymentStatus,
@@ -72,6 +75,7 @@ public record EmployeeInput(
     DateTime? BirthDate,
     string? MaritalStatus,
     string? Nationality,
+    string? Address,
     string? Position,
     string? Department,
     DateTime StartDate,
@@ -111,6 +115,10 @@ public record PayrollRateConfigInput(
     decimal WcfRatePct,
     decimal WcfWageCapPerYear,
     string? Note);
+
+// ── แมพบัญชีเงินเดือน (Express GL → ฝ่าย) สำหรับ import พนักงาน ───────────────────
+public record PayrollAccountMappingDto(int Id, string AccountCode, string Department, string? Note);
+public record PayrollAccountMappingInput(string AccountCode, string Department, string? Note);
 
 // ── งวดเงินเดือนรายเดือน ─────────────────────────────────────────────────────────
 

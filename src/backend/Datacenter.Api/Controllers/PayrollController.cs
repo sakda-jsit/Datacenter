@@ -163,4 +163,31 @@ public class PayrollController(IMediator mediator) : ControllerBase
 
     public record CreateRunBody(int Year, int Month);
     public record SetStatusBody(int Status);
+
+    // ── แมพบัญชีเงินเดือน (Express GL → ฝ่าย) ──────────────────────────────────
+    /// <summary>GET /api/v1/payroll/account-mappings?clientCompanyId=1</summary>
+    [HttpGet("account-mappings")]
+    public async Task<IActionResult> GetAccountMappings([FromQuery] int clientCompanyId, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPayrollAccountMappingsQuery(clientCompanyId), ct));
+
+    /// <summary>POST /api/v1/payroll/account-mappings?clientCompanyId=1 (body: {accountCode,department,note})</summary>
+    [HttpPost("account-mappings")]
+    public async Task<IActionResult> CreateAccountMapping([FromQuery] int clientCompanyId, [FromBody] PayrollAccountMappingInput data, CancellationToken ct)
+        => Ok(new { id = await mediator.Send(new UpsertPayrollAccountMappingCommand(clientCompanyId, null, data), ct) });
+
+    /// <summary>PUT /api/v1/payroll/account-mappings/{id}?clientCompanyId=1</summary>
+    [HttpPut("account-mappings/{id:int}")]
+    public async Task<IActionResult> UpdateAccountMapping(int id, [FromQuery] int clientCompanyId, [FromBody] PayrollAccountMappingInput data, CancellationToken ct)
+    {
+        await mediator.Send(new UpsertPayrollAccountMappingCommand(clientCompanyId, id, data), ct);
+        return NoContent();
+    }
+
+    /// <summary>DELETE /api/v1/payroll/account-mappings/{id}?clientCompanyId=1</summary>
+    [HttpDelete("account-mappings/{id:int}")]
+    public async Task<IActionResult> DeleteAccountMapping(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+    {
+        await mediator.Send(new DeletePayrollAccountMappingCommand(clientCompanyId, id), ct);
+        return NoContent();
+    }
 }

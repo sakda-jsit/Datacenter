@@ -53,6 +53,7 @@ public class CreateEmployeeCommandHandler(IApplicationDbContext db, ICurrentUser
         e.BirthDate = d.BirthDate;
         e.MaritalStatus = d.MaritalStatus?.Trim();
         e.Nationality = d.Nationality?.Trim();
+        e.Address = d.Address?.Trim();
         e.Position = d.Position?.Trim();
         e.Department = d.Department?.Trim();
         e.StartDate = d.StartDate;

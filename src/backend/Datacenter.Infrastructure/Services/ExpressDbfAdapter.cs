@@ -594,4 +594,53 @@ public class ExpressDbfAdapter : IExpressDbfAdapter
         var m = System.Text.RegularExpressions.Regex.Match(text, @"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}");
         return m.Success ? m.Value : null;
     }
+
+    public Task<IReadOnlyList<ExpressEmployeeDto>> ReadPayrollEmployeesAsync(
+        string companyFolderPath, IReadOnlyDictionary<string, string> salaryAccountToDept, CancellationToken ct = default)
+    {
+        if (salaryAccountToDept is null || salaryAccountToDept.Count == 0)
+            return Task.FromResult<IReadOnlyList<ExpressEmployeeDto>>([]);
+
+        List<DbfRow> gl, ap, am;
+        try { gl = ReadDbf(companyFolderPath, "GLJNLIT"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressEmployeeDto>>([]); }
+        try { ap = ReadDbf(companyFolderPath, "APTRN"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressEmployeeDto>>([]); }
+        try { am = ReadDbf(companyFolderPath, "APMAS"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressEmployeeDto>>([]); }
+
+        // voucher → ฝ่าย (จากบรรทัด journal ที่ลงบัญชีเงินเดือน)
+        var voucherDept = new Dictionary<string, string>();
+        foreach (var r in gl)
+        {
+            var acc = Str(r, "ACCNUM");
+            if (!salaryAccountToDept.TryGetValue(acc, out var dept)) continue;
+            var v = Str(r, "VOUCHER");
+            if (!string.IsNullOrWhiteSpace(v)) voucherDept.TryAdd(v, dept);
+        }
+        if (voucherDept.Count == 0) return Task.FromResult<IReadOnlyList<ExpressEmployeeDto>>([]);
+
+        // เอกสาร (voucher/DOCNUM) → SUPCOD
+        var docSup = new Dictionary<string, string>();
+        foreach (var r in ap)
+        {
+            var doc = Str(r, "DOCNUM");
+            if (!string.IsNullOrWhiteSpace(doc)) docSup.TryAdd(doc, Str(r, "SUPCOD"));
+        }
+
+        var apByCode = am.GroupBy(r => Str(r, "SUPCOD")).ToDictionary(g => g.Key, g => g.First());
+
+        var seen = new Dictionary<string, ExpressEmployeeDto>();
+        foreach (var (voucher, dept) in voucherDept)
+        {
+            if (!docSup.TryGetValue(voucher, out var sup) || string.IsNullOrWhiteSpace(sup)) continue;
+            if (seen.ContainsKey(sup)) continue;
+            if (!apByCode.TryGetValue(sup, out var r)) continue;
+            var addr = string.Join(" ", new[] { Str(r, "ADDR01"), Str(r, "ADDR02"), Str(r, "ADDR03"), Str(r, "ZIPCOD") }
+                .Where(s => !string.IsNullOrWhiteSpace(s)));
+            seen[sup] = new ExpressEmployeeDto(sup, Str(r, "PRENAM"), Str(r, "SUPNAM"), Str(r, "TAXID"), addr, dept);
+        }
+
+        return Task.FromResult<IReadOnlyList<ExpressEmployeeDto>>(seen.Values.ToList());
+    }
 }
