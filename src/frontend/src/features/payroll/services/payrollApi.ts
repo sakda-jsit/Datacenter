@@ -3,6 +3,7 @@ import type {
   EmployeeDetail,
   EmployeeInput,
   EmployeeListItem,
+  PayrollAccountMapping,
   PayrollItemInput,
   PayrollRunDetail,
   PayrollRunListItem,
@@ -119,4 +120,18 @@ export const payrollApi = {
       })
       .then((r) => r.data)
   },
+
+  // แมพบัญชีเงินเดือน (Express → ฝ่าย)
+  accountMappings: (clientCompanyId: number) =>
+    apiClient
+      .get<PayrollAccountMapping[]>('/payroll/account-mappings', { params: { clientCompanyId } })
+      .then((r) => r.data),
+  createAccountMapping: (clientCompanyId: number, data: { accountCode: string; department: string; note?: string }) =>
+    apiClient
+      .post<{ id: number }>('/payroll/account-mappings', data, { params: { clientCompanyId } })
+      .then((r) => r.data),
+  updateAccountMapping: (id: number, clientCompanyId: number, data: { accountCode: string; department: string; note?: string }) =>
+    apiClient.put(`/payroll/account-mappings/${id}`, data, { params: { clientCompanyId } }).then((r) => r.data),
+  deleteAccountMapping: (id: number, clientCompanyId: number) =>
+    apiClient.delete(`/payroll/account-mappings/${id}`, { params: { clientCompanyId } }).then((r) => r.data),
 }

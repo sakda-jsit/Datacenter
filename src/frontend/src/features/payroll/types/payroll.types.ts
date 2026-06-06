@@ -37,6 +37,7 @@ export interface EmployeeListItem {
   fullName: string
   nationalId: string
   position?: string
+  department?: string | null
   startDate: string
   resignDate?: string | null
   employmentStatus: number
@@ -76,8 +77,10 @@ export interface EmployeeDetail {
   birthDate?: string | null
   maritalStatus?: string | null
   nationality?: string | null
+  address?: string | null
   position?: string | null
   department?: string | null
+  sourceSupplierCode?: string | null
   startDate: string
   resignDate?: string | null
   employmentStatus: number
@@ -202,6 +205,13 @@ export interface PayrollItemInput {
   note?: string | null
 }
 
+export interface PayrollAccountMapping {
+  id: number
+  accountCode: string
+  department: string
+  note?: string | null
+}
+
 export interface EmployeeInput {
   employeeCode: string
   nationalId: string
@@ -211,6 +221,7 @@ export interface EmployeeInput {
   birthDate?: string | null
   maritalStatus?: string
   nationality?: string
+  address?: string
   position?: string
   department?: string
   startDate: string

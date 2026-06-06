@@ -26,7 +26,7 @@ interface Props {
 
 const EMPTY: EmployeeInput = {
   employeeCode: '', nationalId: '', prefix: '', firstName: '', lastName: '',
-  birthDate: null, maritalStatus: '', nationality: 'ไทย', position: '', department: '',
+  birthDate: null, maritalStatus: '', nationality: 'ไทย', address: '', position: '', department: '',
   startDate: new Date().toISOString().slice(0, 10), resignDate: null,
   employmentStatus: 1, salaryType: 1, baseSalary: 0, dailyWage: null,
   ssoNumber: '', ssoHospital: '', ssoStatus: 0, taxId: '', note: '',
@@ -49,7 +49,7 @@ export default function EmployeeFormModal({ companyId, employeeId, onClose }: Pr
         employeeCode: detail.employeeCode, nationalId: detail.nationalId, prefix: detail.prefix ?? '',
         firstName: detail.firstName, lastName: detail.lastName, birthDate: d(detail.birthDate) || null,
         maritalStatus: detail.maritalStatus ?? '', nationality: detail.nationality ?? '',
-        position: detail.position ?? '', department: detail.department ?? '',
+        address: detail.address ?? '', position: detail.position ?? '', department: detail.department ?? '',
         startDate: d(detail.startDate), resignDate: d(detail.resignDate) || null,
         employmentStatus: detail.employmentStatus, salaryType: detail.salaryType,
         baseSalary: detail.baseSalary, dailyWage: detail.dailyWage ?? null,
@@ -96,6 +96,7 @@ export default function EmployeeFormModal({ companyId, employeeId, onClose }: Pr
             <Field label="สถานภาพ"><input className={inp} value={form.maritalStatus} onChange={(e) => set('maritalStatus', e.target.value)} placeholder="โสด/สมรส" /></Field>
             <Field label="ตำแหน่ง"><input className={inp} value={form.position} onChange={(e) => set('position', e.target.value)} /></Field>
             <Field label="ฝ่าย"><input className={inp} value={form.department} onChange={(e) => set('department', e.target.value)} /></Field>
+            <div className="col-span-2 sm:col-span-3"><Field label="ที่อยู่"><input className={inp} value={form.address} onChange={(e) => set('address', e.target.value)} /></Field></div>
             <Field label="วันเริ่มงาน *"><input type="date" className={inp} value={d(form.startDate)} onChange={(e) => set('startDate', e.target.value)} /></Field>
             <Field label="วันลาออก"><input type="date" className={inp} value={d(form.resignDate)} onChange={(e) => set('resignDate', e.target.value || null)} /></Field>
             <Field label="สถานะ">

@@ -139,6 +139,31 @@ export function useDeletePayrollRun(companyId: number) {
   })
 }
 
+export function usePayrollAccountMappings(companyId: number) {
+  return useQuery({
+    queryKey: ['payroll-acct-map', companyId],
+    queryFn: () => payrollApi.accountMappings(companyId),
+    enabled: companyId > 0,
+  })
+}
+
+export function useSaveAccountMapping(companyId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { id: number | null; data: { accountCode: string; department: string; note?: string } }) =>
+      vars.id ? payrollApi.updateAccountMapping(vars.id, companyId, vars.data) : payrollApi.createAccountMapping(companyId, vars.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-acct-map', companyId] }),
+  })
+}
+
+export function useDeleteAccountMapping(companyId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => payrollApi.deleteAccountMapping(id, companyId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-acct-map', companyId] }),
+  })
+}
+
 export function useImportPayrollRun(companyId: number, runId: number) {
   const qc = useQueryClient()
   return useMutation({

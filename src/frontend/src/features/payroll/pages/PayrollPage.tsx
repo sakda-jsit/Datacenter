@@ -6,11 +6,13 @@ import StateMessage from '../../../shared/components/ui/StateMessage'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import EmployeesTab from './tabs/EmployeesTab'
 import PayrollRunsTab from './tabs/PayrollRunsTab'
+import AccountMappingTab from './tabs/AccountMappingTab'
 
-type Tab = 'employees' | 'runs'
+type Tab = 'employees' | 'runs' | 'mapping'
 const TABS: { key: Tab; label: string }[] = [
   { key: 'employees', label: 'ทะเบียนพนักงาน' },
   { key: 'runs', label: 'งวดเงินเดือน' },
+  { key: 'mapping', label: 'แมพบัญชีเงินเดือน' },
 ]
 
 export default function PayrollPage() {
@@ -30,6 +32,7 @@ export default function PayrollPage() {
         <>
           {tab === 'employees' && <EmployeesTab companyId={companyId} />}
           {tab === 'runs' && <PayrollRunsTab companyId={companyId} />}
+          {tab === 'mapping' && <AccountMappingTab companyId={companyId} />}
         </>
       )}
     </div>

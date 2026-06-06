@@ -79,7 +79,8 @@ export default function EmployeesTab({ companyId }: Props) {
               <tr>
                 <th className="px-4 py-2 text-left font-medium">รหัส</th>
                 <th className="px-4 py-2 text-left font-medium">ชื่อ-สกุล</th>
-                <th className="px-4 py-2 text-left font-medium w-40">ตำแหน่ง</th>
+                <th className="px-4 py-2 text-left font-medium w-32">ฝ่าย</th>
+                <th className="px-4 py-2 text-left font-medium w-36">ตำแหน่ง</th>
                 <th className="px-4 py-2 text-left font-medium w-28">วันเริ่มงาน</th>
                 <th className="px-4 py-2 text-right font-medium w-28">เงินเดือน</th>
                 <th className="px-4 py-2 text-center font-medium w-28">ปกส.</th>
@@ -92,6 +93,7 @@ export default function EmployeesTab({ companyId }: Props) {
                 <tr key={e.id} className="border-b border-gray-100 hover:bg-slate-50">
                   <td className="px-4 py-1.5 font-mono text-xs text-slate-700">{e.employeeCode}</td>
                   <td className="px-4 py-1.5 text-gray-800">{e.fullName}</td>
+                  <td className="px-4 py-1.5 text-gray-600">{e.department || '—'}</td>
                   <td className="px-4 py-1.5 text-gray-600">{e.position || '—'}</td>
                   <td className="px-4 py-1.5 text-gray-600">{e.startDate.slice(0, 10)}</td>
                   <td className="px-4 py-1.5 text-right font-mono text-slate-800">{fmt(e.baseSalary)}</td>
