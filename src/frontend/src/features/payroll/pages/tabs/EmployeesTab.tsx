@@ -27,10 +27,6 @@ export default function EmployeesTab({ companyId }: Props) {
   const [editId, setEditId] = useState<number | null>(null)
   const [formOpen, setFormOpen] = useState(false)
 
-  function openCreate() {
-    setEditId(null)
-    setFormOpen(true)
-  }
   function openEdit(id: number) {
     setEditId(id)
     setFormOpen(true)
@@ -54,14 +50,13 @@ export default function EmployeesTab({ companyId }: Props) {
       <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 px-6 py-4">
         <div>
           <p className="text-sm font-semibold text-slate-800">พนักงานทั้งหมด</p>
-          <p className="text-xs text-gray-500">{rows.length} คน · กรอกมือ (ข้อมูลส่วนบุคคล PDPA)</p>
+          <p className="text-xs text-gray-500">{rows.length} คน · นำเข้าจาก Express (เมนูนำเข้าข้อมูล) · ข้อมูลส่วนบุคคล PDPA</p>
         </div>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-1.5 text-xs text-gray-600">
             <input type="checkbox" checked={includeResigned} onChange={(e) => setIncludeResigned(e.target.checked)} className="rounded" />
             แสดงผู้ลาออก
           </label>
-          <Button type="button" onClick={openCreate}>+ เพิ่มพนักงาน</Button>
         </div>
       </Card>
 
