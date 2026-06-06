@@ -112,6 +112,27 @@ public class PayrollController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetRun(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
         => Ok(await mediator.Send(new GetPayrollRunQuery(clientCompanyId, id), ct));
 
+    /// <summary>GET /api/v1/payroll/pnd1k?clientCompanyId=1&amp;year=2025 — ภ.ง.ด.1ก (สรุปทั้งปี)</summary>
+    [HttpGet("pnd1k")]
+    public async Task<IActionResult> GetPnd1k([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPnd1kQuery(clientCompanyId, year), ct));
+
+    /// <summary>GET /api/v1/payroll/pnd1k/excel?clientCompanyId=1&amp;year=2025</summary>
+    [HttpGet("pnd1k/excel")]
+    public async Task<IActionResult> GetPnd1kExcel([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)
+    {
+        var bytes = await mediator.Send(new GetPnd1kExcelQuery(clientCompanyId, year), ct);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"pnd1k-{year}.xlsx");
+    }
+
+    /// <summary>GET /api/v1/payroll/pnd1k/pdf?clientCompanyId=1&amp;year=2025</summary>
+    [HttpGet("pnd1k/pdf")]
+    public async Task<IActionResult> GetPnd1kPdf([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)
+    {
+        var bytes = await mediator.Send(new GetPnd1kPdfQuery(clientCompanyId, year), ct);
+        return File(bytes, "application/pdf", $"pnd1k-{year}.pdf");
+    }
+
     /// <summary>GET /api/v1/payroll/year-summary?clientCompanyId=1&amp;year=2025 — สรุปรายได้ทั้งปี (แถว=เดือน)</summary>
     [HttpGet("year-summary")]
     public async Task<IActionResult> GetYearSummary([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)

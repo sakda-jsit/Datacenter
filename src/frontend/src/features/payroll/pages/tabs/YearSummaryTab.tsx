@@ -1,8 +1,17 @@
 import { useState } from 'react'
+import Button from '../../../../shared/components/ui/Button'
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
+import { payrollApi } from '../../services/payrollApi'
 import { usePayrollYearSummary } from '../../hooks/usePayroll'
 import { MONTH_TH, type PayrollSummaryRow } from '../../types/payroll.types'
+
+async function dl(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = name; a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 30000)
+}
 
 interface Props {
   companyId: number
@@ -75,18 +84,26 @@ export default function YearSummaryTab({ companyId }: Props) {
             รวมทุกงวด/ทุกพนักงานเป็นรายเดือน · คอลัมน์ตาม sheet “รายได้ทั้งปี”
           </p>
         </div>
-        <label className="flex items-center gap-2 text-xs text-gray-600">
-          ปี
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="rounded-md border border-gray-300 px-2 py-1 text-sm"
-          >
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="secondary" onClick={async () => dl(await payrollApi.downloadPnd1kExcel(companyId, year), `pnd1k-${year}.xlsx`)}>
+            ⬇ ภ.ง.ด.1ก (Excel)
+          </Button>
+          <Button type="button" variant="secondary" onClick={async () => dl(await payrollApi.downloadPnd1kPdf(companyId, year), `pnd1k-${year}.pdf`)}>
+            ⬇ ภ.ง.ด.1ก (PDF)
+          </Button>
+          <label className="flex items-center gap-2 text-xs text-gray-600">
+            ปี
+            <select
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+              className="rounded-md border border-gray-300 px-2 py-1 text-sm"
+            >
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </label>
+        </div>
       </Card>
 
       {isError && <StateMessage tone="error">เกิดข้อผิดพลาด กรุณาลองใหม่</StateMessage>}

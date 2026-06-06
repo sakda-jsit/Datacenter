@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddSingleton<IPayrollExcelService, PayrollExcelService>();
         services.AddSingleton<ISsoFilingExcelService, Services.Payroll.SsoFilingExcelService>();
         services.AddSingleton<ISsoFilingPdfService>(_ => new Services.Payroll.SsoFilingPdfService(certFont));
+        services.AddSingleton<IPnd1kExportService>(_ => new Services.Payroll.Pnd1kExportService(certFont));
 
         // หมายเหตุประกอบงบ (NOTE2) export Excel รูปแบบงบ — ClosedXML
         services.AddScoped<INote2ExcelExporter, Note2ExcelExporter>();

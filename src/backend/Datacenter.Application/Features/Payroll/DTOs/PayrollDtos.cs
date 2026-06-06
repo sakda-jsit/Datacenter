@@ -120,6 +120,15 @@ public record PayrollRateConfigInput(
 public record PayrollAccountMappingDto(int Id, string AccountCode, int Role, string? Department, string? Note);
 public record PayrollAccountMappingInput(string AccountCode, int Role, string? Department, string? Note);
 
+// ── ภ.ง.ด.1ก (สรุปภาษีเงินได้หัก ณ ที่จ่ายเงินเดือนทั้งปี) ─────────────────────────
+public record Pnd1kRow(
+    int Seq, string NationalId, string Prefix, string FirstName, string LastName,
+    string IncomeTypeCode, decimal AnnualIncome, decimal AnnualTax, int Condition);
+
+public record Pnd1kDto(
+    int Year, string CompanyName, string TaxId, string? Address,
+    IReadOnlyList<Pnd1kRow> Rows, decimal TotalIncome, decimal TotalTax, int PersonCount);
+
 // ── ใบสำคัญลงบัญชีเงินเดือน + กระทบยอด GL ────────────────────────────────────────
 /// <summary>หนึ่งบรรทัดในใบสำคัญ (Dr/Cr) + กระทบยอดกับ GL จริงเดือนนั้น</summary>
 public record PayrollPostingLine(

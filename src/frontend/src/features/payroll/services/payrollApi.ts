@@ -97,6 +97,15 @@ export const payrollApi = {
       .get<PayrollYearSummary>('/payroll/year-summary', { params: { clientCompanyId, year } })
       .then((r) => r.data),
 
+  downloadPnd1kExcel: (clientCompanyId: number, year: number) =>
+    apiClient
+      .get('/payroll/pnd1k/excel', { params: { clientCompanyId, year }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
+  downloadPnd1kPdf: (clientCompanyId: number, year: number) =>
+    apiClient
+      .get('/payroll/pnd1k/pdf', { params: { clientCompanyId, year }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
+
   createRun: (clientCompanyId: number, year: number, month: number) =>
     apiClient
       .post<{ id: number }>('/payroll/runs', { year, month }, { params: { clientCompanyId } })
