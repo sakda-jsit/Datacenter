@@ -122,8 +122,8 @@ ExpressMatchStatus(Pending/Matched/Diff), ExpressDocNoRef?, Note`
 
 ---
 
-## 7. แผนสร้าง (phasing) — เสนอ
-- **P1 ทะเบียน + คลังหลักฐาน:** Employee master + EmployeeDocument(รูปบัตร) + SsoEnrollment + checklist แจ้งเข้า-ออก + นำเข้าทะเบียนจาก xlsx เดิม (`2026_ทะเบียนประกันสังคม`)
+## 7. แผนสร้าง (phasing)
+- **P1 ทะเบียน + คลังหลักฐาน — ✅ DONE (2026-06-06, commit add56dd+e3fc87e):** Employee master + EmployeeDocument(รูปบัตร/หลักฐาน, blob+PDPA audit) + SsoEnrollment (แจ้งเข้า-ออก, แจ้งแล้ว→auto ปรับ SsoStatus). CQRS+controller (/payroll/employees,/documents,/sso-enrollments) + frontend (PayrollPage/EmployeesTab/EmployeeFormModal). กรอกมือ. enum int. verify e2e curl + UI. **ยังไม่ทำ:** import xlsx (กรอกมือตามมติ), checklist dashboard รวม (P6)
 - **P2 งวดเงินเดือนรายเดือน:** PayrollRun/Item (กรอก detail ตาม slip) + คำนวณ ปกส./ภาษี (ไฮบริด cross-check) + แนบ slip
 - **P3 ยื่น ปกส.:** SsoMonthlyFiling + generate สปส.1-10 + แนบแบบ/ใบเสร็จ + reconcile
 - **P4 Express integration:** generate/กระทบยอดรายการค่าใช้จ่าย+ใบเสร็จกับ GL
