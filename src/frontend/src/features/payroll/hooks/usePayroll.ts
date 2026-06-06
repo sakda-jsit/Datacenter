@@ -138,3 +138,14 @@ export function useDeletePayrollRun(companyId: number) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll-runs', companyId] }),
   })
 }
+
+export function useImportPayrollRun(companyId: number, runId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => payrollApi.importRun(runId, companyId, file),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['payroll-run', companyId, runId] })
+      qc.invalidateQueries({ queryKey: ['payroll-runs', companyId] })
+    },
+  })
+}

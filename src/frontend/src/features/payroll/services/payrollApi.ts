@@ -103,4 +103,20 @@ export const payrollApi = {
 
   deleteRun: (runId: number, clientCompanyId: number) =>
     apiClient.delete(`/payroll/runs/${runId}`, { params: { clientCompanyId } }).then((r) => r.data),
+
+  downloadTemplate: (runId: number, clientCompanyId: number) =>
+    apiClient
+      .get(`/payroll/runs/${runId}/template`, { params: { clientCompanyId }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
+
+  importRun: (runId: number, clientCompanyId: number, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return apiClient
+      .post<{ updated: number }>(`/payroll/runs/${runId}/import`, form, {
+        params: { clientCompanyId },
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data)
+  },
 }

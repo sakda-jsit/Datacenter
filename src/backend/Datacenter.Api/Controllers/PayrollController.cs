@@ -141,6 +141,26 @@ public class PayrollController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>GET /api/v1/payroll/runs/{id}/template?clientCompanyId=1 — ดาวน์โหลด Excel template ไปกรอก</summary>
+    [HttpGet("runs/{id:int}/template")]
+    public async Task<IActionResult> GetRunTemplate(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+    {
+        var bytes = await mediator.Send(new GetPayrollRunTemplateQuery(clientCompanyId, id), ct);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"payroll-run-{id}.xlsx");
+    }
+
+    /// <summary>POST /api/v1/payroll/runs/{id}/import?clientCompanyId=1 (multipart: file) — อัปโหลดทับค่ารายการ</summary>
+    [HttpPost("runs/{id:int}/import")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> ImportRun(int id, [FromQuery] int clientCompanyId, IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0) return BadRequest(new { detail = "กรุณาเลือกไฟล์ Excel" });
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        var updated = await mediator.Send(new ImportPayrollRunCommand(clientCompanyId, id, ms.ToArray()), ct);
+        return Ok(new { updated });
+    }
+
     public record CreateRunBody(int Year, int Month);
     public record SetStatusBody(int Status);
 }
