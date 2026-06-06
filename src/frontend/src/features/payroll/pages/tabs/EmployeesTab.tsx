@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Button from '../../../../shared/components/ui/Button'
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
+import Pagination from '../../../../shared/components/ui/Pagination'
 import { useDeleteEmployee, useEmployees } from '../../hooks/usePayroll'
 import {
   EMPLOYMENT_STATUS_LABEL,
@@ -39,7 +40,14 @@ export default function EmployeesTab({ companyId }: Props) {
     await del.mutateAsync(e.id)
   }
 
-  const rows = data ?? []
+  const rows = useMemo(() => data ?? [], [data])
+
+  const PAGE_SIZE = 10
+  const [page, setPage] = useState(1)
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  useEffect(() => { if (page > totalPages) setPage(1) }, [page, totalPages])
+  useEffect(() => { setPage(1) }, [includeResigned])
+  const paged = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div>
@@ -69,38 +77,45 @@ export default function EmployeesTab({ companyId }: Props) {
           <table className="w-full text-sm">
             <thead className="border-b bg-slate-50 text-xs text-gray-600">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">รหัส</th>
-                <th className="px-4 py-3 text-left font-medium">ชื่อ-สกุล</th>
-                <th className="px-4 py-3 text-left font-medium w-40">ตำแหน่ง</th>
-                <th className="px-4 py-3 text-left font-medium w-28">วันเริ่มงาน</th>
-                <th className="px-4 py-3 text-right font-medium w-28">เงินเดือน</th>
-                <th className="px-4 py-3 text-center font-medium w-28">ปกส.</th>
-                <th className="px-4 py-3 text-center font-medium w-20">สถานะ</th>
-                <th className="px-4 py-3 text-right font-medium w-32">จัดการ</th>
+                <th className="px-4 py-2 text-left font-medium">รหัส</th>
+                <th className="px-4 py-2 text-left font-medium">ชื่อ-สกุล</th>
+                <th className="px-4 py-2 text-left font-medium w-40">ตำแหน่ง</th>
+                <th className="px-4 py-2 text-left font-medium w-28">วันเริ่มงาน</th>
+                <th className="px-4 py-2 text-right font-medium w-28">เงินเดือน</th>
+                <th className="px-4 py-2 text-center font-medium w-28">ปกส.</th>
+                <th className="px-4 py-2 text-center font-medium w-20">สถานะ</th>
+                <th className="px-4 py-2 text-right font-medium w-28">จัดการ</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((e) => (
+              {paged.map((e) => (
                 <tr key={e.id} className="border-b border-gray-100 hover:bg-slate-50">
-                  <td className="px-4 py-2.5 font-mono text-xs text-slate-700">{e.employeeCode}</td>
-                  <td className="px-4 py-2.5 text-gray-800">{e.fullName}</td>
-                  <td className="px-4 py-2.5 text-gray-600">{e.position || '—'}</td>
-                  <td className="px-4 py-2.5 text-gray-600">{e.startDate.slice(0, 10)}</td>
-                  <td className="px-4 py-2.5 text-right font-mono text-slate-800">{fmt(e.baseSalary)}</td>
-                  <td className="px-4 py-2.5 text-center">
+                  <td className="px-4 py-1.5 font-mono text-xs text-slate-700">{e.employeeCode}</td>
+                  <td className="px-4 py-1.5 text-gray-800">{e.fullName}</td>
+                  <td className="px-4 py-1.5 text-gray-600">{e.position || '—'}</td>
+                  <td className="px-4 py-1.5 text-gray-600">{e.startDate.slice(0, 10)}</td>
+                  <td className="px-4 py-1.5 text-right font-mono text-slate-800">{fmt(e.baseSalary)}</td>
+                  <td className="px-4 py-1.5 text-center">
                     <span className={`rounded-full px-2 py-0.5 text-xs ${SSO_STATUS_CLASS[e.ssoStatus]}`}>{SSO_STATUS_LABEL[e.ssoStatus]}</span>
                   </td>
-                  <td className="px-4 py-2.5 text-center text-xs">
+                  <td className="px-4 py-1.5 text-center text-xs">
                     <span className={e.employmentStatus === 2 ? 'text-gray-400' : 'text-green-700'}>{EMPLOYMENT_STATUS_LABEL[e.employmentStatus]}</span>
                   </td>
-                  <td className="px-4 py-2.5 text-right">
-                    <Button type="button" variant="ghost" onClick={() => openEdit(e.id)} className="px-2 py-1 text-xs">แก้ไข</Button>
-                    <Button type="button" variant="ghost" onClick={() => handleDelete(e)} className="px-2 py-1 text-xs text-red-500 hover:text-red-600">ลบ</Button>
+                  <td className="px-4 py-1.5 text-right">
+                    <div className="flex justify-end gap-1 whitespace-nowrap">
+                      <Button type="button" variant="ghost" onClick={() => openEdit(e.id)} className="px-2 py-1 text-xs">แก้ไข</Button>
+                      <Button type="button" variant="ghost" onClick={() => handleDelete(e)} className="px-2 py-1 text-xs text-red-500 hover:text-red-600">ลบ</Button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {rows.length > PAGE_SIZE && (
+            <div className="px-4 pb-3">
+              <Pagination page={page} totalPages={totalPages} totalCount={rows.length} onPageChange={setPage} />
+            </div>
+          )}
         </Card>
       )}
 
