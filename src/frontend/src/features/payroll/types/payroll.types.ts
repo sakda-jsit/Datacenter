@@ -140,6 +140,7 @@ export interface PayrollItemRow {
   employeeId: number
   employeeCode: string
   employeeName: string
+  department?: string | null
   salaryType: number
   salary: number
   dailyWageDays: number

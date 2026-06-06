@@ -128,7 +128,7 @@ public record PayrollRunListItemDto(
 
 /// <summary>รายการต่อพนักงาน + ค่าคำนวณเทียบ (cross-check)</summary>
 public record PayrollItemDto(
-    int Id, int EmployeeId, string EmployeeCode, string EmployeeName, int SalaryType,
+    int Id, int EmployeeId, string EmployeeCode, string EmployeeName, string? Department, int SalaryType,
     decimal Salary, decimal DailyWageDays, decimal DailyWageRate,
     decimal HousingAllowance, decimal FoodAllowance, decimal Overtime, decimal Diligence,
     decimal Bonus, decimal OtherIncome, decimal GrossIncome,

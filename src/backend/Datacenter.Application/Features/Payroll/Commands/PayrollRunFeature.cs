@@ -56,6 +56,7 @@ public class GetPayrollRunQueryHandler(IApplicationDbContext db)
             return new PayrollItemDto(
                 i.Id, i.EmployeeId, i.Employee!.EmployeeCode,
                 ((i.Employee.Prefix ?? "") + " " + i.Employee.FirstName + " " + i.Employee.LastName).Trim(),
+                i.Employee.Department,
                 (int)i.Employee.SalaryType,
                 i.Salary, i.DailyWageDays, i.DailyWageRate, i.HousingAllowance, i.FoodAllowance, i.Overtime,
                 i.Diligence, i.Bonus, i.OtherIncome, i.GrossIncome, i.SsoWageBase, i.SsoEmployee, i.WithholdingTax,

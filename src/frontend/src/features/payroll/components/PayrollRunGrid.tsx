@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Button from '../../../shared/components/ui/Button'
 import Card from '../../../shared/components/ui/Card'
 import StateMessage from '../../../shared/components/ui/StateMessage'
 import { payrollApi } from '../services/payrollApi'
 import { useImportPayrollRun, usePayrollRun, useSetRunStatus } from '../hooks/usePayroll'
-import { MONTH_TH, PAYROLL_RUN_STATUS_LABEL } from '../types/payroll.types'
+import { MONTH_TH, PAYROLL_RUN_STATUS_LABEL, type PayrollItemRow } from '../types/payroll.types'
 
 interface Props {
   companyId: number
@@ -49,6 +49,23 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
     }
   }
 
+  // แยกตามฝ่าย: ฝ่ายบริการก่อน ฝ่ายผลิตหลัง (ฝ่ายอื่น/ไม่ระบุต่อท้าย)
+  const groups = useMemo(() => {
+    if (!d) return []
+    const map = new Map<string, PayrollItemRow[]>()
+    for (const it of d.items) {
+      const key = (it.department && it.department.trim()) || 'ไม่ระบุฝ่าย'
+      const arr = map.get(key) ?? []
+      arr.push(it)
+      map.set(key, arr)
+    }
+    const rank = (name: string) =>
+      /บริการ|บริหาร|สำนักงาน|ออฟฟิศ/.test(name) ? 0 : /ผลิต/.test(name) ? 1 : 2
+    return [...map.entries()]
+      .map(([dept, items]) => ({ dept, items }))
+      .sort((a, b) => rank(a.dept) - rank(b.dept) || a.dept.localeCompare(b.dept, 'th'))
+  }, [d])
+
   if (isLoading || !d) return <StateMessage>กำลังโหลด...</StateMessage>
 
   const empty = d.items.every((i) => i.grossIncome === 0)
@@ -85,6 +102,49 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
         <Card className="mb-3"><StateMessage centered>ยังไม่มีข้อมูล — ดาวน์โหลด Template กรอกแล้วอัปโหลด</StateMessage></Card>
       )}
 
+      {groups.map((g) => (
+        <DeptTable key={g.dept} dept={g.dept} items={g.items} />
+      ))}
+
+      {groups.length > 1 && (
+        <Card className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <tbody>
+              <tr className="bg-slate-100 font-semibold text-slate-800">
+                <td className="px-2 py-2 w-[18%]">รวมทุกฝ่าย ({d.items.length} คน)</td>
+                <td className="px-2 py-2 text-right font-mono">{fmt(d.totalGross)}</td>
+                <td className="px-2 py-2 text-right font-mono">{fmt(d.totalSsoEmployee)}</td>
+                <td className="px-2 py-2 text-right font-mono">{fmt(d.totalTax)}</td>
+                <td className="px-2 py-2 text-right font-mono">{fmt(d.totalNet)}</td>
+              </tr>
+              <tr className="text-[10px] text-gray-400">
+                <td />
+                <td className="px-2 text-right">รวมรายได้</td>
+                <td className="px-2 text-right">หัก ปกส.</td>
+                <td className="px-2 text-right">ภาษี</td>
+                <td className="px-2 text-right">สุทธิ</td>
+              </tr>
+            </tbody>
+          </table>
+        </Card>
+      )}
+      <p className="mt-2 text-xs text-gray-400">คอลัมน์ "ปกส./ภาษีคำนวณ" = ระบบคำนวณเทียบกับที่กรอก (แดง/เหลือง = ต่างกัน ควรตรวจ)</p>
+    </div>
+  )
+}
+
+function DeptTable({ dept, items }: { dept: string; items: PayrollItemRow[] }) {
+  const sum = (sel: (i: PayrollItemRow) => number) => items.reduce((a, i) => a + sel(i), 0)
+  const totalGross = sum((i) => i.grossIncome)
+  const totalSso = sum((i) => i.ssoEmployee)
+  const totalTax = sum((i) => i.withholdingTax)
+  const totalNet = sum((i) => i.netPay)
+  return (
+    <div className="mb-4">
+      <div className="mb-1.5 flex items-baseline gap-2">
+        <h3 className="text-sm font-semibold text-slate-800">{dept}</h3>
+        <span className="text-xs text-gray-500">{items.length} คน</span>
+      </div>
       <Card className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="border-b bg-slate-50 text-gray-600">
@@ -107,7 +167,7 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
             </tr>
           </thead>
           <tbody>
-            {d.items.map((it) => {
+            {items.map((it) => {
               const ssoMismatch = Math.abs(it.ssoDiff) > 0.01
               const taxMismatch = Math.abs(it.taxDiff) > 0.01
               return (
@@ -136,19 +196,18 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
-              <td className="px-2 py-2">รวม</td>
+              <td className="px-2 py-2">รวม {dept}</td>
               <td colSpan={5} />
-              <td className="px-2 py-2 text-right font-mono">{fmt(d.totalGross)}</td>
-              <td colSpan={2} className="px-2 py-2 text-right font-mono">{fmt(d.totalSsoEmployee)}</td>
+              <td className="px-2 py-2 text-right font-mono">{fmt(totalGross)}</td>
+              <td colSpan={2} className="px-2 py-2 text-right font-mono">{fmt(totalSso)}</td>
               <td />
-              <td className="px-2 py-2 text-right font-mono">{fmt(d.totalTax)}</td>
+              <td className="px-2 py-2 text-right font-mono">{fmt(totalTax)}</td>
               <td colSpan={3} />
-              <td className="px-2 py-2 text-right font-mono">{fmt(d.totalNet)}</td>
+              <td className="px-2 py-2 text-right font-mono">{fmt(totalNet)}</td>
             </tr>
           </tfoot>
         </table>
       </Card>
-      <p className="mt-2 text-xs text-gray-400">คอลัมน์ "ปกส./ภาษีคำนวณ" = ระบบคำนวณเทียบกับที่กรอก (แดง/เหลือง = ต่างกัน ควรตรวจ)</p>
     </div>
   )
 }
