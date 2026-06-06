@@ -217,12 +217,24 @@ public class GetSsoFilingQueryHandler(IApplicationDbContext db)
         var totalEmp = rows.Sum(r => r.Contribution);
         var grand = totalEmp * 2; // นายจ้างสมทบเท่าลูกจ้าง
 
+        // สถานะการยื่น + ใบเสร็จ (ถ้ามี) + กระทบยอด
+        var filing = await db.SsoMonthlyFilings.AsNoTracking()
+            .FirstOrDefaultAsync(f => f.PayrollRunId == run.Id, ct);
+        SsoFilingStatusDto? status = filing is null ? null : new SsoFilingStatusDto(
+            (int)filing.Status, filing.SubmittedDate,
+            filing.ReceiptDate, filing.ReceiptAmount, filing.ReceiptNo, filing.Note,
+            HasForm: filing.FormContent != null && filing.FormContent.Length > 0,
+            HasReceipt: filing.ReceiptContent != null && filing.ReceiptContent.Length > 0,
+            PayrollMatch: filing.SubmittedDate == null || Math.Abs(filing.SnapshotGrandTotal - grand) < 0.05m,
+            ReceiptMatch: filing.ReceiptAmount.HasValue && Math.Abs(filing.ReceiptAmount.Value - grand) < 0.05m,
+            SnapshotGrandTotal: filing.SnapshotGrandTotal);
+
         return new SsoFilingDto(
             run.Id, run.Year, run.Month,
             string.IsNullOrWhiteSpace(company.LegalName) ? company.Name : company.LegalName,
             company.Address, company.PostalCode, company.Phone,
             company.SsoAccountNo ?? "", company.SsoBranchCode ?? "000000", cfg?.SsoEmployeePct ?? 0,
-            rows, totalWage, totalEmp, totalEmp, grand, rows.Count, ThaiBahtText.Convert(grand));
+            rows, totalWage, totalEmp, totalEmp, grand, rows.Count, ThaiBahtText.Convert(grand), status);
     }
 
     private static string Digits(string s) => System.Text.RegularExpressions.Regex.Replace(s ?? "", @"\D", "");

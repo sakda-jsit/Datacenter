@@ -112,8 +112,13 @@ export default function DashboardTab({ companyId }: Props) {
             />
           </div>
 
-          {/* แบบรายปีที่พร้อม */}
+          {/* แบบรายปีที่พร้อม + ความคืบหน้าการยื่น ปกส. */}
           <Card className="mb-4 flex flex-wrap gap-x-8 gap-y-2 px-6 py-3 text-sm">
+            <div>
+              <span className="text-gray-500">ยื่น ปกส.:</span>{' '}
+              <span className="font-semibold">{data.months.filter((m) => m.ssoFiled).length}/{data.monthsWithRun} เดือน</span>
+              {' · '}<span className="text-gray-500">ได้ใบเสร็จ</span> <span className="font-semibold">{data.months.filter((m) => m.ssoReceiptReceived).length} เดือน</span>
+            </div>
             <div><span className="text-gray-500">ภ.ง.ด.1ก:</span> <span className="font-semibold">{data.pnd1kPersonCount} ราย</span> · ภาษี {fmt(data.pnd1kTotalTax)}</div>
             <div><span className="text-gray-500">50 ทวิ เงินเดือน:</span> <span className="font-semibold">{data.pnd1kPersonCount} ฉบับ</span></div>
             <div><span className="text-gray-500">กท.20ก:</span> <span className="font-semibold">{data.kt20EmployeeCount} ลูกจ้าง</span> · ค่าจ้าง {fmt(data.kt20Wage)} · สมทบ {fmt(data.kt20Contribution)}</div>
@@ -132,6 +137,8 @@ export default function DashboardTab({ companyId }: Props) {
                   <th className="px-3 py-2 text-right font-medium">ภาษี</th>
                   <th className="px-3 py-2 text-center font-medium">slip↔ระบบ</th>
                   <th className="px-3 py-2 text-center font-medium">ลงบัญชีดุล</th>
+                  <th className="px-3 py-2 text-center font-medium">ยื่น ปกส.</th>
+                  <th className="px-3 py-2 text-center font-medium">ใบเสร็จ</th>
                   <th className="px-3 py-2 text-right font-medium">ส่วนต่าง GL</th>
                 </tr>
               </thead>
@@ -156,6 +163,12 @@ export default function DashboardTab({ companyId }: Props) {
                       {m.hasRun ? (Math.abs(m.ssoCrossCheckDiff) < 2 ? <Check ok /> : <span className="text-amber-600">{fmt(m.ssoCrossCheckDiff)}</span>) : '-'}
                     </td>
                     <td className="px-3 py-1.5 text-center"><Check ok={m.postingBalanced} /></td>
+                    <td className="px-3 py-1.5 text-center"><Check ok={m.ssoFiled} /></td>
+                    <td className="px-3 py-1.5 text-center">
+                      {m.ssoReceiptReceived
+                        ? (m.ssoReceiptMatch ? <Check ok /> : <span className="text-amber-600" title="ยอดใบเสร็จไม่ตรง">⚠</span>)
+                        : <span className="text-gray-300">–</span>}
+                    </td>
                     <td className="px-3 py-1.5 text-right font-mono text-gray-500">{m.hasRun ? fmt(m.glDiff) : '-'}</td>
                   </tr>
                 ))}

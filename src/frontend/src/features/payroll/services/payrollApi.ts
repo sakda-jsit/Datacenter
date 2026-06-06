@@ -11,6 +11,7 @@ import type {
   PayrollDashboard,
   PayrollPosting,
   SsoFiling,
+  SsoFilingStatusInput,
 } from '../types/payroll.types'
 
 type MappingInput = { accountCode: string; role: number; department?: string | null; note?: string }
@@ -174,6 +175,28 @@ export const payrollApi = {
   downloadSsoPdf: (runId: number, clientCompanyId: number) =>
     apiClient
       .get(`/payroll/runs/${runId}/sso-filing/pdf`, { params: { clientCompanyId }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
+
+  // สถานะยื่น สปส.1-10 + ใบเสร็จ
+  setSsoFilingStatus: (runId: number, clientCompanyId: number, body: SsoFilingStatusInput) =>
+    apiClient
+      .put(`/payroll/runs/${runId}/sso-filing/status`, body, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  uploadSsoFilingDoc: (runId: number, clientCompanyId: number, kind: 'form' | 'receipt', file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return apiClient
+      .post(`/payroll/runs/${runId}/sso-filing/document`, form, {
+        params: { clientCompanyId, kind },
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data)
+  },
+
+  downloadSsoFilingDoc: (runId: number, clientCompanyId: number, kind: 'form' | 'receipt') =>
+    apiClient
+      .get(`/payroll/runs/${runId}/sso-filing/document`, { params: { clientCompanyId, kind }, responseType: 'blob' })
       .then((r) => r.data as Blob),
 
   downloadTemplate: (runId: number, clientCompanyId: number) =>

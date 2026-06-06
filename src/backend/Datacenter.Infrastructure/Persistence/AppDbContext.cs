@@ -48,6 +48,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PayrollRun> PayrollRuns => Set<PayrollRun>();
     public DbSet<PayrollItem> PayrollItems => Set<PayrollItem>();
     public DbSet<PayrollAccountMapping> PayrollAccountMappings => Set<PayrollAccountMapping>();
+    public DbSet<SsoMonthlyFiling> SsoMonthlyFilings => Set<SsoMonthlyFiling>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -4,6 +4,7 @@ using Datacenter.Application.Common.Security;
 using Datacenter.Application.Features.Payroll.Commands;
 using Datacenter.Application.Features.Payroll.DTOs;
 using Datacenter.Application.Features.Payroll.Services;
+using Datacenter.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,6 +31,10 @@ public class GetPayrollDashboardQueryHandler(IApplicationDbContext db, ISender s
 
         var rates = await db.PayrollRateConfigs.AsNoTracking().ToListAsync(ct);
 
+        var filings = await db.SsoMonthlyFilings.AsNoTracking()
+            .Where(f => f.ClientCompanyId == request.ClientCompanyId && f.Year == request.Year)
+            .ToListAsync(ct);
+
         var months = new List<PayrollChecklistMonth>();
         for (int m = 1; m <= 12; m++)
         {
@@ -37,7 +42,7 @@ public class GetPayrollDashboardQueryHandler(IApplicationDbContext db, ISender s
             if (run is null)
             {
                 months.Add(new PayrollChecklistMonth(m, false, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, 0,
-                    false, false, false, false));
+                    false, false, false, false, false, false, false));
                 continue;
             }
 
@@ -61,10 +66,17 @@ public class GetPayrollDashboardQueryHandler(IApplicationDbContext db, ISender s
             }
             catch { /* ไม่มีแมพบัญชี/ลงบัญชีไม่ได้ → ปล่อยเป็นยังไม่กระทบยอด */ }
 
+            var grand = PayrollCalculator.Round2(ssoEmp + ssoEr);
+            var filing = filings.FirstOrDefault(f => f.PayrollRunId == run.Id);
+            bool ssoFiled = filing?.SubmittedDate != null;
+            bool ssoReceipt = filing is { Status: SsoFilingStatus.ReceiptReceived };
+            bool receiptMatch = filing?.ReceiptAmount is { } ra && Math.Abs(ra - grand) < 0.05m;
+
             months.Add(new PayrollChecklistMonth(
                 m, true, (int)run.Status, items.Count, gross, net,
-                ssoEmp, ssoEr, PayrollCalculator.Round2(ssoEmp + ssoEr), tax,
+                ssoEmp, ssoEr, grand, tax,
                 ssoDiff, balanced, glDiff,
+                ssoFiled, ssoReceipt, receiptMatch,
                 StepRecorded: (int)run.Status >= 1,
                 StepBalanced: balanced,
                 StepSsoReady: ssoEmp > 0,

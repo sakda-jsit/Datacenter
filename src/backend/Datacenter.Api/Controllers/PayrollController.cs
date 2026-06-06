@@ -177,6 +177,44 @@ public class PayrollController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetDashboard([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)
         => Ok(await mediator.Send(new GetPayrollDashboardQuery(clientCompanyId, year), ct));
 
+    // ── สถานะยื่น สปส.1-10 + ใบเสร็จ ──────────────────────────────────────────
+    /// <summary>PUT /api/v1/payroll/runs/{runId}/sso-filing/status?clientCompanyId=1 — บันทึกสถานะยื่น/ใบเสร็จ</summary>
+    [HttpPut("runs/{runId:int}/sso-filing/status")]
+    public async Task<IActionResult> UpsertSsoFilingStatus(
+        int runId, [FromQuery] int clientCompanyId, [FromBody] SsoFilingStatusInput body, CancellationToken ct)
+    {
+        var id = await mediator.Send(new UpsertSsoFilingStatusCommand(
+            clientCompanyId, runId, body.SubmittedDate, body.ReceiptDate, body.ReceiptAmount,
+            body.ReceiptNo, body.Note), ct);
+        return Ok(new { id });
+    }
+
+    /// <summary>POST /api/v1/payroll/runs/{runId}/sso-filing/document?clientCompanyId=1&amp;kind=form|receipt (multipart: file)</summary>
+    [HttpPost("runs/{runId:int}/sso-filing/document")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> UploadSsoFilingDocument(
+        int runId, [FromQuery] int clientCompanyId, [FromQuery] string kind, IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { detail = "กรุณาเลือกไฟล์" });
+        if (file.Length > 8 * 1024 * 1024)
+            return BadRequest(new { detail = "ไฟล์ใหญ่เกิน 8 MB" });
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        var id = await mediator.Send(new UploadSsoFilingDocumentCommand(
+            clientCompanyId, runId, kind, file.FileName, file.ContentType ?? "application/octet-stream", ms.ToArray()), ct);
+        return Ok(new { id });
+    }
+
+    /// <summary>GET /api/v1/payroll/runs/{runId}/sso-filing/document?clientCompanyId=1&amp;kind=form|receipt — ดาวน์โหลดไฟล์แนบ</summary>
+    [HttpGet("runs/{runId:int}/sso-filing/document")]
+    public async Task<IActionResult> GetSsoFilingDocument(
+        int runId, [FromQuery] int clientCompanyId, [FromQuery] string kind, CancellationToken ct)
+    {
+        var d = await mediator.Send(new GetSsoFilingDocumentQuery(clientCompanyId, runId, kind), ct);
+        return File(d.Content, d.ContentType, d.FileName);
+    }
+
     /// <summary>GET /api/v1/payroll/year-summary?clientCompanyId=1&amp;year=2025 — สรุปรายได้ทั้งปี (แถว=เดือน)</summary>
     [HttpGet("year-summary")]
     public async Task<IActionResult> GetYearSummary([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)

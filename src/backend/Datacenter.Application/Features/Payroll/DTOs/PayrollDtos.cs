@@ -139,6 +139,8 @@ public record PayrollChecklistMonth(
     decimal SsoCrossCheckDiff,
     // กระทบยอด #2 เงินเดือน ↔ GL (จากใบสำคัญ P4)
     bool PostingBalanced, decimal GlDiff,
+    // สถานะยื่น ปกส. (จาก SsoMonthlyFiling)
+    bool SsoFiled, bool SsoReceiptReceived, bool SsoReceiptMatch,
     // checklist (derive จากข้อมูล)
     bool StepRecorded, bool StepBalanced, bool StepSsoReady, bool StepHasTax);
 
@@ -235,7 +237,20 @@ public record SsoFilingDto(
     string SsoAccountNo, string SsoBranchCode, decimal RatePct,
     IReadOnlyList<SsoFilingRow> Rows,
     decimal TotalWage, decimal TotalEmployee, decimal TotalEmployer, decimal GrandTotal,
-    int InsuredCount, string GrandTotalText);
+    int InsuredCount, string GrandTotalText,
+    SsoFilingStatusDto? FilingStatus = null);
+
+/// <summary>ค่าที่กรอกเพื่อบันทึกสถานะยื่น/ใบเสร็จ (body ของ PUT)</summary>
+public record SsoFilingStatusInput(
+    DateTime? SubmittedDate, DateTime? ReceiptDate, decimal? ReceiptAmount, string? ReceiptNo, string? Note);
+
+/// <summary>สถานะการยื่น สปส.1-10 + ใบเสร็จ + กระทบยอด (จาก SsoMonthlyFiling)</summary>
+public record SsoFilingStatusDto(
+    int Status, DateTime? SubmittedDate,
+    DateTime? ReceiptDate, decimal? ReceiptAmount, string? ReceiptNo, string? Note,
+    bool HasForm, bool HasReceipt,
+    // กระทบยอด: snapshot ยอด ณ วันยื่น == ยอดงวดปัจจุบัน (ไม่ drift) / ใบเสร็จ == ยอดรวม
+    bool PayrollMatch, bool ReceiptMatch, decimal SnapshotGrandTotal);
 
 /// <summary>ค่าที่กรอกต่อรายการ (key = ItemId)</summary>
 public record PayrollItemInput(

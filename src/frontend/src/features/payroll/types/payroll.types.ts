@@ -241,6 +241,9 @@ export interface PayrollChecklistMonth {
   ssoCrossCheckDiff: number
   postingBalanced: boolean
   glDiff: number
+  ssoFiled: boolean
+  ssoReceiptReceived: boolean
+  ssoReceiptMatch: boolean
   stepRecorded: boolean
   stepBalanced: boolean
   stepSsoReady: boolean
@@ -292,6 +295,29 @@ export interface SsoFiling {
   grandTotal: number
   insuredCount: number
   grandTotalText: string
+  filingStatus?: SsoFilingStatus | null
+}
+
+export interface SsoFilingStatus {
+  status: number // 0=ยังไม่ยื่น 1=ยื่นแล้ว 2=ได้ใบเสร็จ
+  submittedDate?: string | null
+  receiptDate?: string | null
+  receiptAmount?: number | null
+  receiptNo?: string | null
+  note?: string | null
+  hasForm: boolean
+  hasReceipt: boolean
+  payrollMatch: boolean
+  receiptMatch: boolean
+  snapshotGrandTotal: number
+}
+
+export interface SsoFilingStatusInput {
+  submittedDate?: string | null
+  receiptDate?: string | null
+  receiptAmount?: number | null
+  receiptNo?: string | null
+  note?: string | null
 }
 
 export interface PayrollItemInput {
