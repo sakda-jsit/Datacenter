@@ -136,53 +136,70 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
 }
 
 // ── คอลัมน์ต่อพนักงาน (จัดกลุ่มตาม sheet รายได้ทั้งปี) ───────────────────────────
-const DEPT_GROUPS: { label: string; span: number; cls: string }[] = [
-  { label: 'รายได้', span: 10, cls: 'bg-emerald-50 text-emerald-800' },
-  { label: 'กรอกในแบบ กท.20 ก', span: 2, cls: 'bg-violet-50 text-violet-800' },
-  { label: 'รายการหัก', span: 7, cls: 'bg-rose-50 text-rose-800' },
-  { label: 'รวม', span: 4, cls: 'bg-slate-100 text-slate-800' },
-]
+type DeptGroupKey = 'income' | 'wcf' | 'deduct' | 'total'
+
+const GROUP_META: Record<DeptGroupKey, { label: string; cls: string }> = {
+  income: { label: 'รายได้', cls: 'bg-emerald-50 text-emerald-800' },
+  wcf: { label: 'กรอกในแบบ กท.20 ก', cls: 'bg-violet-50 text-violet-800' },
+  deduct: { label: 'รายการหัก', cls: 'bg-rose-50 text-rose-800' },
+  total: { label: 'รวม', cls: 'bg-slate-100 text-slate-800' },
+}
 
 type DeptCol = {
   label: string
+  group: DeptGroupKey
   val: (i: PayrollItemRow) => number
   strong?: boolean
   calc?: boolean
-  groupStart?: boolean
   ssoCheck?: boolean // ไฮไลต์แดงเมื่อ ปกส.จริงต่างจากคำนวณ
+  dailyOnly?: boolean // แสดงเฉพาะเมื่อมีพนักงานรายวันในฝ่ายนั้น
 }
 
+const daily = (i: PayrollItemRow) => i.dailyWageDays * i.dailyWageRate
+
 const DEPT_COLS: DeptCol[] = [
-  // รายได้ (เงินเดือน = เงินเดือน + ค่าจ้างรายวัน)
-  { label: 'เงินเดือน', val: (i) => i.salary + i.dailyWageDays * i.dailyWageRate, groupStart: true },
-  { label: 'หยุดงาน+มาสาย', val: (i) => i.absence },
-  { label: 'เงินเดือนสุทธิ', val: (i) => i.salary + i.dailyWageDays * i.dailyWageRate - i.absence },
-  { label: 'ค่าที่พักอาศัย', val: (i) => i.housingAllowance },
-  { label: 'ค่าอาหาร', val: (i) => i.foodAllowance },
-  { label: 'ค่าล่วงเวลา', val: (i) => i.overtime },
-  { label: 'เบี้ยขยัน', val: (i) => i.diligence },
-  { label: 'โบนัส', val: (i) => i.bonus },
-  { label: 'รายได้สุทธิหลังหักลา (ภงด.1ก)', val: (i) => i.grossIncome - i.absence },
-  { label: 'รวมรายได้ทั้งหมด', val: (i) => i.grossIncome, strong: true },
+  // รายได้ (เงินเดือน = เงินเดือนล้วน, ค่าจ้างวันแยกคอลัมน์เมื่อมี)
+  { label: 'เงินเดือน', group: 'income', val: (i) => i.salary },
+  { label: 'ค่าจ้างวัน', group: 'income', val: daily, dailyOnly: true },
+  { label: 'หยุดงาน+มาสาย', group: 'income', val: (i) => i.absence },
+  { label: 'เงินเดือนสุทธิ', group: 'income', val: (i) => i.salary + daily(i) - i.absence },
+  { label: 'ค่าที่พักอาศัย', group: 'income', val: (i) => i.housingAllowance },
+  { label: 'ค่าอาหาร', group: 'income', val: (i) => i.foodAllowance },
+  { label: 'ค่าล่วงเวลา', group: 'income', val: (i) => i.overtime },
+  { label: 'เบี้ยขยัน', group: 'income', val: (i) => i.diligence },
+  { label: 'โบนัส', group: 'income', val: (i) => i.bonus },
+  { label: 'รายได้สุทธิหลังหักลา (ภงด.1ก)', group: 'income', val: (i) => i.grossIncome - i.absence },
+  { label: 'รวมรายได้ทั้งหมด', group: 'income', val: (i) => i.grossIncome, strong: true },
   // กท.20ก
-  { label: 'ค่าจ้าง', val: (i) => i.ssoWageBase, groupStart: true },
-  { label: 'ส่วนที่เกิน 20,000', val: (i) => Math.max(i.ssoWageBase - 20000, 0) },
+  { label: 'ค่าจ้าง', group: 'wcf', val: (i) => i.ssoWageBase },
+  { label: 'ส่วนที่เกิน 20,000', group: 'wcf', val: (i) => Math.max(i.ssoWageBase - 20000, 0) },
   // รายการหัก
-  { label: 'รายได้ยื่นปกส.', val: (i) => i.ssoWageBase, groupStart: true },
-  { label: 'คำนวณหักปกส.ได้', val: (i) => i.ssoEmployeeCalc, calc: true },
-  { label: 'ผลต่าง (ขาดไป)', val: (i) => Math.max(i.ssoEmployeeCalc - i.ssoEmployee, 0), calc: true },
-  { label: 'หักปกส.จริง', val: (i) => i.ssoEmployee, ssoCheck: true },
-  { label: 'TAX', val: (i) => i.withholdingTax },
-  { label: 'ขาดงาน', val: (i) => i.absence },
-  { label: 'เบิกล่วงหน้า', val: (i) => i.advance },
+  { label: 'รายได้ยื่นปกส.', group: 'deduct', val: (i) => i.ssoWageBase },
+  { label: 'คำนวณหักปกส.ได้', group: 'deduct', val: (i) => i.ssoEmployeeCalc, calc: true },
+  { label: 'ผลต่าง (ขาดไป)', group: 'deduct', val: (i) => Math.max(i.ssoEmployeeCalc - i.ssoEmployee, 0), calc: true },
+  { label: 'หักปกส.จริง', group: 'deduct', val: (i) => i.ssoEmployee, ssoCheck: true },
+  { label: 'TAX', group: 'deduct', val: (i) => i.withholdingTax },
+  { label: 'ขาดงาน', group: 'deduct', val: (i) => i.absence },
+  { label: 'เบิกล่วงหน้า', group: 'deduct', val: (i) => i.advance },
   // รวม
-  { label: 'รวมรายการหัก', val: (i) => i.absence + i.ssoEmployee + i.withholdingTax + i.advance + i.otherDeduction, strong: true, groupStart: true },
-  { label: 'รายได้ยื่น ภงด.1', val: (i) => i.grossIncome - i.absence },
-  { label: 'นายจ้างสมทบ', val: (i) => i.ssoEmployerCalc, calc: true },
-  { label: 'เงินสุทธิ', val: (i) => i.netPay, strong: true },
+  { label: 'รวมรายการหัก', group: 'total', val: (i) => i.absence + i.ssoEmployee + i.withholdingTax + i.advance + i.otherDeduction, strong: true },
+  { label: 'รายได้ยื่น ภงด.1', group: 'total', val: (i) => i.grossIncome - i.absence },
+  { label: 'นายจ้างสมทบ', group: 'total', val: (i) => i.ssoEmployerCalc, calc: true },
+  { label: 'เงินสุทธิ', group: 'total', val: (i) => i.netPay, strong: true },
 ]
 
 function DeptTable({ dept, items }: { dept: string; items: PayrollItemRow[] }) {
+  const hasDaily = items.some((i) => daily(i) > 0)
+  const cols = DEPT_COLS.filter((c) => hasDaily || !c.dailyOnly)
+  // span ของแต่ละกลุ่ม + คอลัมน์แรกของกลุ่ม (สำหรับเส้นแบ่ง)
+  const groups: { key: DeptGroupKey; span: number }[] = []
+  const groupStart = new Set<number>()
+  cols.forEach((c, idx) => {
+    const last = groups[groups.length - 1]
+    if (!last || last.key !== c.group) { groups.push({ key: c.group, span: 1 }); groupStart.add(idx) }
+    else last.span++
+  })
+
   return (
     <div className="mb-4">
       <div className="mb-1.5 flex items-baseline gap-2">
@@ -196,15 +213,15 @@ function DeptTable({ dept, items }: { dept: string; items: PayrollItemRow[] }) {
               <th rowSpan={2} className="sticky left-0 z-10 border-b border-r bg-white px-2 py-2 text-left align-bottom font-medium text-gray-600">
                 พนักงาน
               </th>
-              {DEPT_GROUPS.map((g) => (
-                <th key={g.label} colSpan={g.span} className={`border-b border-l px-2 py-1 text-center font-semibold ${g.cls}`}>
-                  {g.label}
+              {groups.map((g) => (
+                <th key={g.key} colSpan={g.span} className={`border-b border-l px-2 py-1 text-center font-semibold ${GROUP_META[g.key].cls}`}>
+                  {GROUP_META[g.key].label}
                 </th>
               ))}
             </tr>
             <tr className="bg-slate-50 text-gray-600">
-              {DEPT_COLS.map((c) => (
-                <th key={c.label} className={`border-b px-2 py-2 text-right align-bottom font-medium ${c.groupStart ? 'border-l' : ''}`}>
+              {cols.map((c, idx) => (
+                <th key={c.label} className={`border-b px-2 py-2 text-right align-bottom font-medium ${groupStart.has(idx) ? 'border-l' : ''}`}>
                   {c.label}
                 </th>
               ))}
@@ -219,7 +236,7 @@ function DeptTable({ dept, items }: { dept: string; items: PayrollItemRow[] }) {
                     <span className="text-gray-800">{it.employeeName}</span>
                     <span className="block font-mono text-[10px] text-gray-400">{it.employeeCode}</span>
                   </td>
-                  {DEPT_COLS.map((c) => {
+                  {cols.map((c, idx) => {
                     const v = c.val(it)
                     const tone = c.ssoCheck && ssoMismatch
                       ? 'bg-red-50 text-red-600'
@@ -227,7 +244,7 @@ function DeptTable({ dept, items }: { dept: string; items: PayrollItemRow[] }) {
                       : c.strong ? 'font-semibold text-slate-800 bg-slate-50'
                       : 'text-gray-700'
                     return (
-                      <td key={c.label} className={`whitespace-nowrap px-2 py-1 text-right font-mono ${tone} ${c.groupStart ? 'border-l border-gray-100' : ''}`}
+                      <td key={c.label} className={`whitespace-nowrap px-2 py-1 text-right font-mono ${tone} ${groupStart.has(idx) ? 'border-l border-gray-100' : ''}`}
                         title={c.ssoCheck && ssoMismatch ? 'ต่างจากที่คำนวณ' : undefined}>
                         {v ? fmt(v) : '-'}
                       </td>
@@ -240,10 +257,10 @@ function DeptTable({ dept, items }: { dept: string; items: PayrollItemRow[] }) {
           <tfoot>
             <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold text-slate-800">
               <td className="sticky left-0 z-10 whitespace-nowrap border-r bg-slate-50 px-2 py-2">รวม {dept}</td>
-              {DEPT_COLS.map((c) => {
+              {cols.map((c, idx) => {
                 const total = items.reduce((a, i) => a + c.val(i), 0)
                 return (
-                  <td key={c.label} className={`whitespace-nowrap px-2 py-2 text-right font-mono ${c.groupStart ? 'border-l border-gray-200' : ''}`}>
+                  <td key={c.label} className={`whitespace-nowrap px-2 py-2 text-right font-mono ${groupStart.has(idx) ? 'border-l border-gray-200' : ''}`}>
                     {total ? fmt(total) : '-'}
                   </td>
                 )
