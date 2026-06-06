@@ -186,6 +186,46 @@ export interface PayrollRunDetail {
   totalNet: number
 }
 
+// ── สรุปรายได้ทั้งปี (แถว=เดือน) ─────────────────────────────────────────────────
+export interface PayrollSummaryRow {
+  month: number // 1-12 ; 0 = แถวรวมทั้งปี
+  employeeCount: number
+  hasRun: boolean
+  // รายได้
+  salary: number
+  absenceLate: number
+  netSalary: number
+  housing: number
+  food: number
+  overtime: number
+  diligence: number
+  bonus: number
+  netIncomeAfterAbsence: number
+  totalIncome: number
+  // กท.20ก
+  wage: number
+  wageOver20000: number
+  // รายการหัก
+  ssoReportable: number
+  ssoCalc: number
+  ssoShortfall: number
+  ssoActual: number
+  tax: number
+  absence: number
+  advance: number
+  // รวม
+  totalDeduction: number
+  pnd1Income: number
+  employerSso: number
+  netPay: number
+}
+
+export interface PayrollYearSummary {
+  year: number
+  months: PayrollSummaryRow[]
+  total: PayrollSummaryRow
+}
+
 export interface PayrollItemInput {
   id: number
   salary: number

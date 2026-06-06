@@ -112,6 +112,11 @@ public class PayrollController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetRun(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
         => Ok(await mediator.Send(new GetPayrollRunQuery(clientCompanyId, id), ct));
 
+    /// <summary>GET /api/v1/payroll/year-summary?clientCompanyId=1&amp;year=2025 — สรุปรายได้ทั้งปี (แถว=เดือน)</summary>
+    [HttpGet("year-summary")]
+    public async Task<IActionResult> GetYearSummary([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPayrollYearSummaryQuery(clientCompanyId, year), ct));
+
     /// <summary>POST /api/v1/payroll/runs?clientCompanyId=1 (body: {year,month}) — สร้างงวด + prefill พนักงาน</summary>
     [HttpPost("runs")]
     public async Task<IActionResult> CreateRun([FromQuery] int clientCompanyId, [FromBody] CreateRunBody body, CancellationToken ct)

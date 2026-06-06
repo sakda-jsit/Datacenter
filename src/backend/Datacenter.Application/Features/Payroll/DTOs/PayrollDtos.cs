@@ -145,6 +145,24 @@ public record PayrollRunDetailDto(
     IReadOnlyList<PayrollItemDto> Items,
     decimal TotalGross, decimal TotalSsoEmployee, decimal TotalSsoEmployer, decimal TotalTax, decimal TotalNet);
 
+// ── สรุปรายได้ทั้งปี (แถว=เดือน, รวมทุกพนักงาน) อิง sheet "รายได้ทั้งปี" ─────────────
+/// <summary>หนึ่งแถวสรุป (เดือน 1-12; Month=0 = แถวรวมทั้งปี) คอลัมน์ตรงกับ sheet รายได้ทั้งปี</summary>
+public record PayrollSummaryRow(
+    int Month, int EmployeeCount, bool HasRun,
+    // รายได้
+    decimal Salary, decimal AbsenceLate, decimal NetSalary,
+    decimal Housing, decimal Food, decimal Overtime, decimal Diligence, decimal Bonus,
+    decimal NetIncomeAfterAbsence, decimal TotalIncome,
+    // กรอกในแบบ กท.20 ก
+    decimal Wage, decimal WageOver20000,
+    // รายการหัก
+    decimal SsoReportable, decimal SsoCalc, decimal SsoShortfall, decimal SsoActual,
+    decimal Tax, decimal Absence, decimal Advance,
+    // รวม
+    decimal TotalDeduction, decimal Pnd1Income, decimal EmployerSso, decimal NetPay);
+
+public record PayrollYearSummaryDto(int Year, IReadOnlyList<PayrollSummaryRow> Months, PayrollSummaryRow Total);
+
 /// <summary>ค่าที่กรอกต่อรายการ (key = ItemId)</summary>
 public record PayrollItemInput(
     int Id,

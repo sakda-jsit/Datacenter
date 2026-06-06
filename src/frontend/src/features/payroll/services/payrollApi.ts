@@ -7,6 +7,7 @@ import type {
   PayrollItemInput,
   PayrollRunDetail,
   PayrollRunListItem,
+  PayrollYearSummary,
 } from '../types/payroll.types'
 
 export const payrollApi = {
@@ -85,6 +86,11 @@ export const payrollApi = {
   run: (id: number, clientCompanyId: number) =>
     apiClient
       .get<PayrollRunDetail>(`/payroll/runs/${id}`, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  yearSummary: (clientCompanyId: number, year: number) =>
+    apiClient
+      .get<PayrollYearSummary>('/payroll/year-summary', { params: { clientCompanyId, year } })
       .then((r) => r.data),
 
   createRun: (clientCompanyId: number, year: number, month: number) =>

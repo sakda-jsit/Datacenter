@@ -96,6 +96,14 @@ export function usePayrollRuns(companyId: number, year?: number) {
   })
 }
 
+export function usePayrollYearSummary(companyId: number, year: number) {
+  return useQuery({
+    queryKey: ['payroll-year-summary', companyId, year],
+    queryFn: () => payrollApi.yearSummary(companyId, year),
+    enabled: companyId > 0 && year > 0,
+  })
+}
+
 export function usePayrollRun(companyId: number, runId: number | null) {
   return useQuery({
     queryKey: ['payroll-run', companyId, runId ?? 0],

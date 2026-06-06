@@ -128,17 +128,62 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
           </table>
         </Card>
       )}
-      <p className="mt-2 text-xs text-gray-400">คอลัมน์ "ปกส./ภาษีคำนวณ" = ระบบคำนวณเทียบกับที่กรอก (แดง/เหลือง = ต่างกัน ควรตรวจ)</p>
+      <p className="mt-2 text-xs text-gray-400">
+        คอลัมน์จัดกลุ่มตาม sheet “รายได้ทั้งปี” · คอลัมน์ <span className="text-sky-700">สีฟ้า</span> = ระบบคำนวณเทียบ (ปกส.คำนวณ/นายจ้างสมทบ) · ช่องแดง = ปกส.จริงต่างจากที่คำนวณ ควรตรวจ
+      </p>
     </div>
   )
 }
 
+// ── คอลัมน์ต่อพนักงาน (จัดกลุ่มตาม sheet รายได้ทั้งปี) ───────────────────────────
+const DEPT_GROUPS: { label: string; span: number; cls: string }[] = [
+  { label: 'รายได้', span: 11, cls: 'bg-emerald-50 text-emerald-800' },
+  { label: 'กรอกในแบบ กท.20 ก', span: 2, cls: 'bg-violet-50 text-violet-800' },
+  { label: 'รายการหัก', span: 7, cls: 'bg-rose-50 text-rose-800' },
+  { label: 'รวม', span: 4, cls: 'bg-slate-100 text-slate-800' },
+]
+
+type DeptCol = {
+  label: string
+  val: (i: PayrollItemRow) => number
+  strong?: boolean
+  calc?: boolean
+  groupStart?: boolean
+  ssoCheck?: boolean // ไฮไลต์แดงเมื่อ ปกส.จริงต่างจากคำนวณ
+}
+
+const DEPT_COLS: DeptCol[] = [
+  // รายได้
+  { label: 'เงินเดือน', val: (i) => i.salary, groupStart: true },
+  { label: 'ค่าจ้างวัน', val: (i) => i.dailyWageDays * i.dailyWageRate },
+  { label: 'หยุดงาน+มาสาย', val: (i) => i.absence },
+  { label: 'เงินเดือนสุทธิ', val: (i) => i.salary - i.absence },
+  { label: 'ค่าที่พักอาศัย', val: (i) => i.housingAllowance },
+  { label: 'ค่าอาหาร', val: (i) => i.foodAllowance },
+  { label: 'ค่าล่วงเวลา', val: (i) => i.overtime },
+  { label: 'เบี้ยขยัน', val: (i) => i.diligence },
+  { label: 'โบนัส', val: (i) => i.bonus },
+  { label: 'รายได้สุทธิหลังหักลา (ภงด.1ก)', val: (i) => i.grossIncome - i.absence },
+  { label: 'รวมรายได้ทั้งหมด', val: (i) => i.grossIncome, strong: true },
+  // กท.20ก
+  { label: 'ค่าจ้าง', val: (i) => i.ssoWageBase, groupStart: true },
+  { label: 'ส่วนที่เกิน 20,000', val: (i) => Math.max(i.ssoWageBase - 20000, 0) },
+  // รายการหัก
+  { label: 'รายได้ยื่นปกส.', val: (i) => i.ssoWageBase, groupStart: true },
+  { label: 'คำนวณหักปกส.ได้', val: (i) => i.ssoEmployeeCalc, calc: true },
+  { label: 'ผลต่าง (ขาดไป)', val: (i) => Math.max(i.ssoEmployeeCalc - i.ssoEmployee, 0), calc: true },
+  { label: 'หักปกส.จริง', val: (i) => i.ssoEmployee, ssoCheck: true },
+  { label: 'TAX', val: (i) => i.withholdingTax },
+  { label: 'ขาดงาน', val: (i) => i.absence },
+  { label: 'เบิกล่วงหน้า', val: (i) => i.advance },
+  // รวม
+  { label: 'รวมรายการหัก', val: (i) => i.absence + i.ssoEmployee + i.withholdingTax + i.advance + i.otherDeduction, strong: true, groupStart: true },
+  { label: 'รายได้ยื่น ภงด.1', val: (i) => i.grossIncome - i.absence },
+  { label: 'นายจ้างสมทบ', val: (i) => i.ssoEmployerCalc, calc: true },
+  { label: 'เงินสุทธิ', val: (i) => i.netPay, strong: true },
+]
+
 function DeptTable({ dept, items }: { dept: string; items: PayrollItemRow[] }) {
-  const sum = (sel: (i: PayrollItemRow) => number) => items.reduce((a, i) => a + sel(i), 0)
-  const totalGross = sum((i) => i.grossIncome)
-  const totalSso = sum((i) => i.ssoEmployee)
-  const totalTax = sum((i) => i.withholdingTax)
-  const totalNet = sum((i) => i.netPay)
   return (
     <div className="mb-4">
       <div className="mb-1.5 flex items-baseline gap-2">
@@ -146,64 +191,64 @@ function DeptTable({ dept, items }: { dept: string; items: PayrollItemRow[] }) {
         <span className="text-xs text-gray-500">{items.length} คน</span>
       </div>
       <Card className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead className="border-b bg-slate-50 text-gray-600">
+        <table className="w-full text-[11px]">
+          <thead>
             <tr>
-              <th className="px-2 py-2 text-left font-medium">พนักงาน</th>
-              <th className="px-2 py-2 text-right font-medium">เงินเดือน</th>
-              <th className="px-2 py-2 text-right font-medium">ค่าจ้างวัน</th>
-              <th className="px-2 py-2 text-right font-medium">OT</th>
-              <th className="px-2 py-2 text-right font-medium">เบี้ยขยัน</th>
-              <th className="px-2 py-2 text-right font-medium">โบนัส</th>
-              <th className="px-2 py-2 text-right font-medium bg-slate-100">รวมรายได้</th>
-              <th className="px-2 py-2 text-right font-medium">ฐาน ปกส.</th>
-              <th className="px-2 py-2 text-right font-medium">หัก ปกส.</th>
-              <th className="px-2 py-2 text-right font-medium text-sky-700">ปกส.คำนวณ</th>
-              <th className="px-2 py-2 text-right font-medium">ภาษี</th>
-              <th className="px-2 py-2 text-right font-medium text-sky-700">ภาษีคำนวณ</th>
-              <th className="px-2 py-2 text-right font-medium">ขาดงาน</th>
-              <th className="px-2 py-2 text-right font-medium">เบิกล่วงหน้า</th>
-              <th className="px-2 py-2 text-right font-medium bg-slate-100">สุทธิ</th>
+              <th rowSpan={2} className="sticky left-0 z-10 border-b border-r bg-white px-2 py-2 text-left align-bottom font-medium text-gray-600">
+                พนักงาน
+              </th>
+              {DEPT_GROUPS.map((g) => (
+                <th key={g.label} colSpan={g.span} className={`border-b border-l px-2 py-1 text-center font-semibold ${g.cls}`}>
+                  {g.label}
+                </th>
+              ))}
+            </tr>
+            <tr className="bg-slate-50 text-gray-600">
+              {DEPT_COLS.map((c) => (
+                <th key={c.label} className={`border-b px-2 py-2 text-right align-bottom font-medium ${c.groupStart ? 'border-l' : ''}`}>
+                  {c.label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {items.map((it) => {
               const ssoMismatch = Math.abs(it.ssoDiff) > 0.01
-              const taxMismatch = Math.abs(it.taxDiff) > 0.01
               return (
-                <tr key={it.id} className="border-b border-gray-100">
-                  <td className="px-2 py-1 whitespace-nowrap">
+                <tr key={it.id} className="border-b border-gray-100 hover:bg-slate-50">
+                  <td className="sticky left-0 z-10 whitespace-nowrap border-r bg-white px-2 py-1">
                     <span className="text-gray-800">{it.employeeName}</span>
                     <span className="block font-mono text-[10px] text-gray-400">{it.employeeCode}</span>
                   </td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.salary)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.dailyWageDays * it.dailyWageRate)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.overtime)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.diligence)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.bonus)}</td>
-                  <td className="px-2 py-1 text-right font-mono font-semibold bg-slate-50">{fmt(it.grossIncome)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.ssoWageBase)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.ssoEmployee)}</td>
-                  <td className={`px-2 py-1 text-right font-mono ${ssoMismatch ? 'bg-red-50 text-red-600' : 'text-gray-400'}`} title={ssoMismatch ? 'ต่างจากที่กรอก' : 'ตรง'}>{fmt(it.ssoEmployeeCalc)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.withholdingTax)}</td>
-                  <td className={`px-2 py-1 text-right font-mono ${taxMismatch ? 'bg-amber-50 text-amber-700' : 'text-gray-400'}`} title="ประมาณการ">{fmt(it.taxCalc)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.absence)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{fmt(it.advance)}</td>
-                  <td className="px-2 py-1 text-right font-mono font-semibold bg-slate-50">{fmt(it.netPay)}</td>
+                  {DEPT_COLS.map((c) => {
+                    const v = c.val(it)
+                    const tone = c.ssoCheck && ssoMismatch
+                      ? 'bg-red-50 text-red-600'
+                      : c.calc ? 'text-sky-700'
+                      : c.strong ? 'font-semibold text-slate-800 bg-slate-50'
+                      : 'text-gray-700'
+                    return (
+                      <td key={c.label} className={`whitespace-nowrap px-2 py-1 text-right font-mono ${tone} ${c.groupStart ? 'border-l border-gray-100' : ''}`}
+                        title={c.ssoCheck && ssoMismatch ? 'ต่างจากที่คำนวณ' : undefined}>
+                        {v ? fmt(v) : '-'}
+                      </td>
+                    )
+                  })}
                 </tr>
               )
             })}
           </tbody>
           <tfoot>
-            <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
-              <td className="px-2 py-2">รวม {dept}</td>
-              <td colSpan={5} />
-              <td className="px-2 py-2 text-right font-mono">{fmt(totalGross)}</td>
-              <td colSpan={2} className="px-2 py-2 text-right font-mono">{fmt(totalSso)}</td>
-              <td />
-              <td className="px-2 py-2 text-right font-mono">{fmt(totalTax)}</td>
-              <td colSpan={3} />
-              <td className="px-2 py-2 text-right font-mono">{fmt(totalNet)}</td>
+            <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold text-slate-800">
+              <td className="sticky left-0 z-10 whitespace-nowrap border-r bg-slate-50 px-2 py-2">รวม {dept}</td>
+              {DEPT_COLS.map((c) => {
+                const total = items.reduce((a, i) => a + c.val(i), 0)
+                return (
+                  <td key={c.label} className={`whitespace-nowrap px-2 py-2 text-right font-mono ${c.groupStart ? 'border-l border-gray-200' : ''}`}>
+                    {total ? fmt(total) : '-'}
+                  </td>
+                )
+              })}
             </tr>
           </tfoot>
         </table>
