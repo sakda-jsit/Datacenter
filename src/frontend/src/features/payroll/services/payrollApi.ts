@@ -12,6 +12,8 @@ import type {
   PayrollPosting,
   SsoFiling,
   SsoFilingStatusInput,
+  StatutoryFiling,
+  StatutoryFilingStatusInput,
 } from '../types/payroll.types'
 
 type MappingInput = { accountCode: string; role: number; department?: string | null; note?: string }
@@ -197,6 +199,39 @@ export const payrollApi = {
   downloadSsoFilingDoc: (runId: number, clientCompanyId: number, kind: 'form' | 'receipt') =>
     apiClient
       .get(`/payroll/runs/${runId}/sso-filing/document`, { params: { clientCompanyId, kind }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
+
+  // ── ติดตามสถานะยื่น ภ.ง.ด.1/1ก + กท.20ก (filingType: 1/2/3, month=0=รายปี) ──
+  getStatutoryFiling: (clientCompanyId: number, filingType: number, year: number, month: number) =>
+    apiClient
+      .get<StatutoryFiling>('/payroll/filing', { params: { clientCompanyId, filingType, year, month } })
+      .then((r) => r.data),
+
+  setStatutoryFilingStatus: (
+    clientCompanyId: number, filingType: number, year: number, month: number, body: StatutoryFilingStatusInput,
+  ) =>
+    apiClient
+      .put('/payroll/filing/status', body, { params: { clientCompanyId, filingType, year, month } })
+      .then((r) => r.data),
+
+  uploadStatutoryFilingDoc: (
+    clientCompanyId: number, filingType: number, year: number, month: number, kind: 'form' | 'receipt', file: File,
+  ) => {
+    const form = new FormData()
+    form.append('file', file)
+    return apiClient
+      .post('/payroll/filing/document', form, {
+        params: { clientCompanyId, filingType, year, month, kind },
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data)
+  },
+
+  downloadStatutoryFilingDoc: (
+    clientCompanyId: number, filingType: number, year: number, month: number, kind: 'form' | 'receipt',
+  ) =>
+    apiClient
+      .get('/payroll/filing/document', { params: { clientCompanyId, filingType, year, month, kind }, responseType: 'blob' })
       .then((r) => r.data as Blob),
 
   downloadTemplate: (runId: number, clientCompanyId: number) =>

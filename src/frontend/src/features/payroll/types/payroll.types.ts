@@ -244,6 +244,7 @@ export interface PayrollChecklistMonth {
   ssoFiled: boolean
   ssoReceiptReceived: boolean
   ssoReceiptMatch: boolean
+  pnd1Filed: boolean
   stepRecorded: boolean
   stepBalanced: boolean
   stepSsoReady: boolean
@@ -264,6 +265,10 @@ export interface PayrollDashboard {
   kt20Contribution: number
   taxConsistent: boolean
   taxConsistencyDiff: number
+  pnd1kFiled: boolean
+  pnd1kReceipt: boolean
+  kt20Filed: boolean
+  kt20Receipt: boolean
 }
 
 // ── สปส.1-10 ─────────────────────────────────────────────────────────────────────
@@ -319,6 +324,32 @@ export interface SsoFilingStatusInput {
   receiptNo?: string | null
   note?: string | null
 }
+
+// ── ติดตามสถานะยื่น ภ.ง.ด.1/1ก + กท.20ก (StatutoryFiling) ─────────────────────────
+// filingType: 1=ภ.ง.ด.1 (รายเดือน), 2=ภ.ง.ด.1ก (รายปี), 3=กท.20ก (รายปี); month=0=รายปี
+export interface StatutoryFiling {
+  filingType: number
+  year: number
+  month: number
+  status: number // 0=ยังไม่ยื่น 1=ยื่นแล้ว 2=ได้ใบเสร็จ
+  submittedDate?: string | null
+  receiptDate?: string | null
+  receiptAmount?: number | null
+  receiptNo?: string | null
+  note?: string | null
+  hasForm: boolean
+  hasReceipt: boolean
+  snapshotBase: number
+  snapshotAmount: number
+  snapshotCount: number
+  currentBase: number
+  currentAmount: number
+  currentCount: number
+  amountMatch: boolean
+  receiptMatch: boolean
+}
+
+export type StatutoryFilingStatusInput = SsoFilingStatusInput
 
 export interface PayrollItemInput {
   id: number

@@ -35,6 +35,14 @@ public class GetPayrollDashboardQueryHandler(IApplicationDbContext db, ISender s
             .Where(f => f.ClientCompanyId == request.ClientCompanyId && f.Year == request.Year)
             .ToListAsync(ct);
 
+        var statFilings = await db.StatutoryFilings.AsNoTracking()
+            .Where(f => f.ClientCompanyId == request.ClientCompanyId && f.Year == request.Year)
+            .ToListAsync(ct);
+        bool StatFiled(StatutoryFilingType t, int mo) =>
+            statFilings.Any(f => f.FilingType == t && f.Month == mo && f.SubmittedDate != null);
+        bool StatReceipt(StatutoryFilingType t, int mo) =>
+            statFilings.Any(f => f.FilingType == t && f.Month == mo && f.Status == FilingStatus.ReceiptReceived);
+
         var months = new List<PayrollChecklistMonth>();
         for (int m = 1; m <= 12; m++)
         {
@@ -42,7 +50,7 @@ public class GetPayrollDashboardQueryHandler(IApplicationDbContext db, ISender s
             if (run is null)
             {
                 months.Add(new PayrollChecklistMonth(m, false, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, 0,
-                    false, false, false, false, false, false, false));
+                    false, false, false, false /*pnd1Filed*/, false, false, false, false));
                 continue;
             }
 
@@ -77,6 +85,7 @@ public class GetPayrollDashboardQueryHandler(IApplicationDbContext db, ISender s
                 ssoEmp, ssoEr, grand, tax,
                 ssoDiff, balanced, glDiff,
                 ssoFiled, ssoReceipt, receiptMatch,
+                Pnd1Filed: StatFiled(StatutoryFilingType.Pnd1, m),
                 StepRecorded: (int)run.Status >= 1,
                 StepBalanced: balanced,
                 StepSsoReady: ssoEmp > 0,
@@ -111,6 +120,10 @@ public class GetPayrollDashboardQueryHandler(IApplicationDbContext db, ISender s
             PayrollCalculator.Round2(months.Sum(x => x.SsoTotal)),
             pnd1kTax, pnd1kCount,
             kt20Wage, kt20Count, kt20Contrib,
-            Math.Abs(taxDiff) < 0.05m, taxDiff);
+            Math.Abs(taxDiff) < 0.05m, taxDiff,
+            Pnd1kFiled: StatFiled(StatutoryFilingType.Pnd1k, 0),
+            Pnd1kReceipt: StatReceipt(StatutoryFilingType.Pnd1k, 0),
+            Kt20Filed: StatFiled(StatutoryFilingType.Kt20, 0),
+            Kt20Receipt: StatReceipt(StatutoryFilingType.Kt20, 0));
     }
 }

@@ -48,6 +48,7 @@ public interface IApplicationDbContext
     DbSet<PayrollItem> PayrollItems { get; }
     DbSet<PayrollAccountMapping> PayrollAccountMappings { get; }
     DbSet<SsoMonthlyFiling> SsoMonthlyFilings { get; }
+    DbSet<StatutoryFiling> StatutoryFilings { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

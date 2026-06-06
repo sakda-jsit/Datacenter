@@ -7,6 +7,7 @@ import { usePayrollYearSummary } from '../../hooks/usePayroll'
 import { MONTH_TH, type PayrollSummaryRow } from '../../types/payroll.types'
 import Salary50TawiModal from '../../components/Salary50TawiModal'
 import Kt20Modal from '../../components/Kt20Modal'
+import FilingStatusModal from '../../components/FilingStatusModal'
 
 async function dl(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob)
@@ -65,6 +66,7 @@ export default function YearSummaryTab({ companyId }: Props) {
   const [year, setYear] = useState(thisYear)
   const [show50Tawi, setShow50Tawi] = useState(false)
   const [showKt20, setShowKt20] = useState(false)
+  const [filingModal, setFilingModal] = useState<null | 'pnd1k' | 'kt20'>(null)
   const { data, isLoading, isError } = usePayrollYearSummary(companyId, year)
 
   const yearOptions = Array.from({ length: 6 }, (_, i) => thisYear - i)
@@ -100,6 +102,12 @@ export default function YearSummaryTab({ companyId }: Props) {
           </Button>
           <Button type="button" variant="secondary" onClick={() => setShowKt20(true)}>
             🏭 กท.20ก
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => setFilingModal('pnd1k')}>
+            🗂 สถานะ ภ.ง.ด.1ก
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => setFilingModal('kt20')}>
+            🗂 สถานะ กท.20ก
           </Button>
           <label className="flex items-center gap-2 text-xs text-gray-600">
             ปี
@@ -179,6 +187,14 @@ export default function YearSummaryTab({ companyId }: Props) {
       )}
       {showKt20 && (
         <Kt20Modal companyId={companyId} year={year} onClose={() => setShowKt20(false)} />
+      )}
+      {filingModal === 'pnd1k' && (
+        <FilingStatusModal companyId={companyId} filingType={2} year={year} title="ภ.ง.ด.1ก"
+          baseLabel="เงินได้รวม" amountLabel="ภาษีนำส่ง" onClose={() => setFilingModal(null)} />
+      )}
+      {filingModal === 'kt20' && (
+        <FilingStatusModal companyId={companyId} filingType={3} year={year} title="กท.20ก"
+          baseLabel="ค่าจ้างรวม" amountLabel="เงินสมทบ" onClose={() => setFilingModal(null)} />
       )}
     </div>
   )

@@ -215,6 +215,54 @@ public class PayrollController(IMediator mediator) : ControllerBase
         return File(d.Content, d.ContentType, d.FileName);
     }
 
+    // ── ติดตามสถานะยื่น ภ.ง.ด.1/1ก + กท.20ก (filingType: 1=ภ.ง.ด.1, 2=ภ.ง.ด.1ก, 3=กท.20ก; month=0=รายปี) ──
+    /// <summary>GET /api/v1/payroll/filing?clientCompanyId=1&amp;filingType=2&amp;year=2025&amp;month=0 — สถานะยื่น + กระทบยอด</summary>
+    [HttpGet("filing")]
+    public async Task<IActionResult> GetStatutoryFiling(
+        [FromQuery] int clientCompanyId, [FromQuery] int filingType, [FromQuery] int year, [FromQuery] int month, CancellationToken ct)
+        => Ok(await mediator.Send(new GetStatutoryFilingQuery(clientCompanyId, filingType, year, month), ct));
+
+    /// <summary>PUT /api/v1/payroll/filing/status?clientCompanyId=1&amp;filingType=2&amp;year=2025&amp;month=0</summary>
+    [HttpPut("filing/status")]
+    public async Task<IActionResult> UpsertStatutoryFilingStatus(
+        [FromQuery] int clientCompanyId, [FromQuery] int filingType, [FromQuery] int year, [FromQuery] int month,
+        [FromBody] StatutoryFilingStatusInput body, CancellationToken ct)
+    {
+        var id = await mediator.Send(new UpsertStatutoryFilingStatusCommand(
+            clientCompanyId, filingType, year, month,
+            body.SubmittedDate, body.ReceiptDate, body.ReceiptAmount, body.ReceiptNo, body.Note), ct);
+        return Ok(new { id });
+    }
+
+    /// <summary>POST /api/v1/payroll/filing/document?clientCompanyId=1&amp;filingType=2&amp;year=2025&amp;month=0&amp;kind=form|receipt (multipart: file)</summary>
+    [HttpPost("filing/document")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> UploadStatutoryFilingDocument(
+        [FromQuery] int clientCompanyId, [FromQuery] int filingType, [FromQuery] int year, [FromQuery] int month,
+        [FromQuery] string kind, IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { detail = "กรุณาเลือกไฟล์" });
+        if (file.Length > 8 * 1024 * 1024)
+            return BadRequest(new { detail = "ไฟล์ใหญ่เกิน 8 MB" });
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        var id = await mediator.Send(new UploadStatutoryFilingDocumentCommand(
+            clientCompanyId, filingType, year, month, kind,
+            file.FileName, file.ContentType ?? "application/octet-stream", ms.ToArray()), ct);
+        return Ok(new { id });
+    }
+
+    /// <summary>GET /api/v1/payroll/filing/document?clientCompanyId=1&amp;filingType=2&amp;year=2025&amp;month=0&amp;kind=form|receipt</summary>
+    [HttpGet("filing/document")]
+    public async Task<IActionResult> GetStatutoryFilingDocument(
+        [FromQuery] int clientCompanyId, [FromQuery] int filingType, [FromQuery] int year, [FromQuery] int month,
+        [FromQuery] string kind, CancellationToken ct)
+    {
+        var d = await mediator.Send(new GetStatutoryFilingDocumentQuery(clientCompanyId, filingType, year, month, kind), ct);
+        return File(d.Content, d.ContentType, d.FileName);
+    }
+
     /// <summary>GET /api/v1/payroll/year-summary?clientCompanyId=1&amp;year=2025 — สรุปรายได้ทั้งปี (แถว=เดือน)</summary>
     [HttpGet("year-summary")]
     public async Task<IActionResult> GetYearSummary([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)

@@ -129,6 +129,20 @@ public record Pnd1kDto(
     int Year, string CompanyName, string TaxId, string? Address,
     IReadOnlyList<Pnd1kRow> Rows, decimal TotalIncome, decimal TotalTax, int PersonCount);
 
+// ── ติดตามสถานะยื่น ภ.ง.ด.1/1ก + กท.20ก (StatutoryFiling) ───────────────────────
+public record StatutoryFilingStatusInput(
+    DateTime? SubmittedDate, DateTime? ReceiptDate, decimal? ReceiptAmount, string? ReceiptNo, string? Note);
+
+public record StatutoryFilingDto(
+    int FilingType, int Year, int Month, int Status,
+    DateTime? SubmittedDate, DateTime? ReceiptDate, decimal? ReceiptAmount, string? ReceiptNo, string? Note,
+    bool HasForm, bool HasReceipt,
+    // snapshot ณ วันยื่น เทียบยอดปัจจุบัน
+    decimal SnapshotBase, decimal SnapshotAmount, int SnapshotCount,
+    decimal CurrentBase, decimal CurrentAmount, int CurrentCount,
+    // กระทบยอด: ยอดที่ยื่น==ปัจจุบัน (ไม่ drift) / ใบเสร็จ==ยอดปัจจุบัน
+    bool AmountMatch, bool ReceiptMatch);
+
 // ── P6 Dashboard/Checklist + กระทบยอด 3 ทาง (รวม P3/P4/P5) ──────────────────────
 /// <summary>สถานะ + กระทบยอดของหนึ่งเดือน</summary>
 public record PayrollChecklistMonth(
@@ -141,6 +155,8 @@ public record PayrollChecklistMonth(
     bool PostingBalanced, decimal GlDiff,
     // สถานะยื่น ปกส. (จาก SsoMonthlyFiling)
     bool SsoFiled, bool SsoReceiptReceived, bool SsoReceiptMatch,
+    // สถานะยื่น ภ.ง.ด.1 รายเดือน (จาก StatutoryFiling)
+    bool Pnd1Filed,
     // checklist (derive จากข้อมูล)
     bool StepRecorded, bool StepBalanced, bool StepSsoReady, bool StepHasTax);
 
@@ -153,7 +169,9 @@ public record PayrollDashboardDto(
     decimal Pnd1kTotalTax, int Pnd1kPersonCount,
     decimal Kt20Wage, int Kt20EmployeeCount, decimal Kt20Contribution,
     // ความสอดคล้อง Σ ภาษีรายเดือน == ภ.ง.ด.1ก
-    bool TaxConsistent, decimal TaxConsistencyDiff);
+    bool TaxConsistent, decimal TaxConsistencyDiff,
+    // สถานะยื่นแบบรายปี (จาก StatutoryFiling)
+    bool Pnd1kFiled, bool Pnd1kReceipt, bool Kt20Filed, bool Kt20Receipt);
 
 // ── กท.20ก (แบบแสดงเงินค่าจ้างประจำปี กองทุนเงินทดแทน) ───────────────────────────
 public record Kt20Row(
