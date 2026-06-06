@@ -44,6 +44,8 @@ public interface IApplicationDbContext
     DbSet<EmployeeDocument> EmployeeDocuments { get; }
     DbSet<SsoEnrollment> SsoEnrollments { get; }
     DbSet<PayrollRateConfig> PayrollRateConfigs { get; }
+    DbSet<PayrollRun> PayrollRuns { get; }
+    DbSet<PayrollItem> PayrollItems { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

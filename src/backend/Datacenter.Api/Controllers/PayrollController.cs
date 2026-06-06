@@ -100,4 +100,47 @@ public class PayrollController(IMediator mediator) : ControllerBase
 
     public record CreateEnrollmentBody(int EmployeeId, SsoEnrollmentType Type, DateTime EventDate, string? Note);
     public record UpdateEnrollmentBody(DateTime? SubmittedDate, SsoEnrollmentStatus Status, int? ProofDocumentId, string? Note);
+
+    // ── งวดเงินเดือนรายเดือน ───────────────────────────────────────────────────
+    /// <summary>GET /api/v1/payroll/runs?clientCompanyId=1&amp;year=2025</summary>
+    [HttpGet("runs")]
+    public async Task<IActionResult> GetRuns([FromQuery] int clientCompanyId, [FromQuery] int? year, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPayrollRunsQuery(clientCompanyId, year), ct));
+
+    /// <summary>GET /api/v1/payroll/runs/{id}?clientCompanyId=1 — รายละเอียด + ค่าคำนวณเทียบ</summary>
+    [HttpGet("runs/{id:int}")]
+    public async Task<IActionResult> GetRun(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPayrollRunQuery(clientCompanyId, id), ct));
+
+    /// <summary>POST /api/v1/payroll/runs?clientCompanyId=1 (body: {year,month}) — สร้างงวด + prefill พนักงาน</summary>
+    [HttpPost("runs")]
+    public async Task<IActionResult> CreateRun([FromQuery] int clientCompanyId, [FromBody] CreateRunBody body, CancellationToken ct)
+        => Ok(new { id = await mediator.Send(new CreatePayrollRunCommand(clientCompanyId, body.Year, body.Month), ct) });
+
+    /// <summary>PUT /api/v1/payroll/runs/{id}/items?clientCompanyId=1 (body: PayrollItemInput[]) — บันทึก grid</summary>
+    [HttpPut("runs/{id:int}/items")]
+    public async Task<IActionResult> SaveItems(int id, [FromQuery] int clientCompanyId, [FromBody] List<PayrollItemInput> items, CancellationToken ct)
+    {
+        await mediator.Send(new SavePayrollItemsCommand(clientCompanyId, id, items ?? []), ct);
+        return NoContent();
+    }
+
+    /// <summary>PUT /api/v1/payroll/runs/{id}/status?clientCompanyId=1 (body: {status})</summary>
+    [HttpPut("runs/{id:int}/status")]
+    public async Task<IActionResult> SetRunStatus(int id, [FromQuery] int clientCompanyId, [FromBody] SetStatusBody body, CancellationToken ct)
+    {
+        await mediator.Send(new SetPayrollRunStatusCommand(clientCompanyId, id, body.Status), ct);
+        return NoContent();
+    }
+
+    /// <summary>DELETE /api/v1/payroll/runs/{id}?clientCompanyId=1</summary>
+    [HttpDelete("runs/{id:int}")]
+    public async Task<IActionResult> DeleteRun(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+    {
+        await mediator.Send(new DeletePayrollRunCommand(clientCompanyId, id), ct);
+        return NoContent();
+    }
+
+    public record CreateRunBody(int Year, int Month);
+    public record SetStatusBody(int Status);
 }

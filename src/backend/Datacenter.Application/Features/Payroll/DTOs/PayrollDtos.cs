@@ -111,3 +111,37 @@ public record PayrollRateConfigInput(
     decimal WcfRatePct,
     decimal WcfWageCapPerYear,
     string? Note);
+
+// ── งวดเงินเดือนรายเดือน ─────────────────────────────────────────────────────────
+
+public record PayrollRunListItemDto(
+    int Id, int Year, int Month, int Status, int EmployeeCount,
+    decimal TotalGross, decimal TotalSsoEmployee, decimal TotalTax, decimal TotalNet);
+
+/// <summary>รายการต่อพนักงาน + ค่าคำนวณเทียบ (cross-check)</summary>
+public record PayrollItemDto(
+    int Id, int EmployeeId, string EmployeeCode, string EmployeeName, int SalaryType,
+    decimal Salary, decimal DailyWageDays, decimal DailyWageRate,
+    decimal HousingAllowance, decimal FoodAllowance, decimal Overtime, decimal Diligence,
+    decimal Bonus, decimal OtherIncome, decimal GrossIncome,
+    decimal SsoWageBase, decimal SsoEmployee, decimal WithholdingTax,
+    decimal Absence, decimal OtherDeduction, decimal NetPay,
+    // ── ระบบคำนวณเทียบ ──
+    decimal SsoEmployeeCalc, decimal SsoEmployerCalc, decimal SsoDiff,
+    decimal TaxCalc, decimal TaxDiff,
+    string? Note);
+
+public record PayrollRunDetailDto(
+    int Id, int ClientCompanyId, int Year, int Month, int Status, string? Note,
+    decimal? RateSsoEmployeePct, decimal? RateSsoEmployerPct, decimal? RateWageFloor, decimal? RateWageCap,
+    IReadOnlyList<PayrollItemDto> Items,
+    decimal TotalGross, decimal TotalSsoEmployee, decimal TotalSsoEmployer, decimal TotalTax, decimal TotalNet);
+
+/// <summary>ค่าที่กรอกต่อรายการ (key = ItemId)</summary>
+public record PayrollItemInput(
+    int Id,
+    decimal Salary, decimal DailyWageDays, decimal DailyWageRate,
+    decimal HousingAllowance, decimal FoodAllowance, decimal Overtime, decimal Diligence,
+    decimal Bonus, decimal OtherIncome,
+    decimal SsoWageBase, decimal SsoEmployee, decimal WithholdingTax,
+    decimal Absence, decimal OtherDeduction, string? Note);

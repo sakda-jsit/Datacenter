@@ -45,3 +45,11 @@ public enum SsoEnrollmentStatus
     Pending = 0,    // รอแจ้ง
     Submitted = 1,  // แจ้งแล้ว
 }
+
+/// <summary>สถานะงวดเงินเดือนรายเดือน</summary>
+public enum PayrollRunStatus
+{
+    Draft = 0,      // ร่าง (กำลังกรอก)
+    Recorded = 1,   // บันทึกแล้ว (กระทบยอด/พร้อมยื่น)
+    Closed = 2,     // ปิดงวด
+}
