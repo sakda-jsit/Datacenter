@@ -43,6 +43,12 @@ public class GetPayrollDashboardQueryHandler(IApplicationDbContext db, ISender s
         bool StatReceipt(StatutoryFilingType t, int mo) =>
             statFilings.Any(f => f.FilingType == t && f.Month == mo && f.Status == FilingStatus.ReceiptReceived);
 
+        var expressLinks = await db.ExpressPostingLinks.AsNoTracking()
+            .Where(x => x.ClientCompanyId == request.ClientCompanyId && x.Year == request.Year)
+            .ToListAsync(ct);
+        bool ExpressPosted(ExpressPostingSourceType t, int mo) =>
+            expressLinks.Any(x => x.SourceType == t && x.Month == mo && x.PostedDate != null);
+
         var months = new List<PayrollChecklistMonth>();
         for (int m = 1; m <= 12; m++)
         {
@@ -50,7 +56,7 @@ public class GetPayrollDashboardQueryHandler(IApplicationDbContext db, ISender s
             if (run is null)
             {
                 months.Add(new PayrollChecklistMonth(m, false, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, 0,
-                    false, false, false, false /*pnd1Filed*/, false, false, false, false));
+                    false, false, false, false /*pnd1Filed*/, false /*expressPosted*/, false, false, false, false));
                 continue;
             }
 
@@ -86,6 +92,7 @@ public class GetPayrollDashboardQueryHandler(IApplicationDbContext db, ISender s
                 ssoDiff, balanced, glDiff,
                 ssoFiled, ssoReceipt, receiptMatch,
                 Pnd1Filed: StatFiled(StatutoryFilingType.Pnd1, m),
+                ExpressPosted: ExpressPosted(ExpressPostingSourceType.PayrollExpense, m),
                 StepRecorded: (int)run.Status >= 1,
                 StepBalanced: balanced,
                 StepSsoReady: ssoEmp > 0,

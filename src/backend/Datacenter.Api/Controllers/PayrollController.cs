@@ -263,6 +263,25 @@ public class PayrollController(IMediator mediator) : ControllerBase
         return File(d.Content, d.ContentType, d.FileName);
     }
 
+    // ── ExpressPostingLink: ติดตามการคีย์ลง Express (sourceType: 1=ค่าใช้จ่ายเงินเดือน, 2=นำส่ง ปกส., 3=ใบแจ้งหนี้ กท., 4=นำส่ง กท.) ──
+    /// <summary>GET /api/v1/payroll/express-posting?clientCompanyId=1&amp;sourceType=1&amp;year=2025&amp;month=1 — สถานะคีย์ Express + กระทบยอด</summary>
+    [HttpGet("express-posting")]
+    public async Task<IActionResult> GetExpressPosting(
+        [FromQuery] int clientCompanyId, [FromQuery] int sourceType, [FromQuery] int year, [FromQuery] int month, CancellationToken ct)
+        => Ok(await mediator.Send(new GetExpressPostingLinkQuery(clientCompanyId, sourceType, year, month), ct));
+
+    /// <summary>PUT /api/v1/payroll/express-posting?clientCompanyId=1&amp;sourceType=1&amp;year=2025&amp;month=1</summary>
+    [HttpPut("express-posting")]
+    public async Task<IActionResult> UpsertExpressPosting(
+        [FromQuery] int clientCompanyId, [FromQuery] int sourceType, [FromQuery] int year, [FromQuery] int month,
+        [FromBody] ExpressPostingLinkInput body, CancellationToken ct)
+    {
+        var id = await mediator.Send(new UpsertExpressPostingLinkCommand(
+            clientCompanyId, sourceType, year, month,
+            body.PostedDate, body.ExpressDocNo, body.PostedAmount, body.Note), ct);
+        return Ok(new { id });
+    }
+
     /// <summary>GET /api/v1/payroll/year-summary?clientCompanyId=1&amp;year=2025 — สรุปรายได้ทั้งปี (แถว=เดือน)</summary>
     [HttpGet("year-summary")]
     public async Task<IActionResult> GetYearSummary([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)

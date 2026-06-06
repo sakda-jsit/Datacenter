@@ -143,6 +143,16 @@ public record StatutoryFilingDto(
     // กระทบยอด: ยอดที่ยื่น==ปัจจุบัน (ไม่ drift) / ใบเสร็จ==ยอดปัจจุบัน
     bool AmountMatch, bool ReceiptMatch);
 
+// ── ExpressPostingLink: ติดตามการคีย์ลง Express + กระทบยอด ──────────────────────
+public record ExpressPostingLinkInput(
+    DateTime? PostedDate, string? ExpressDocNo, decimal? PostedAmount, string? Note);
+
+public record ExpressPostingLinkDto(
+    int SourceType, int Year, int Month,
+    bool Posted, DateTime? PostedDate, string? ExpressDocNo, decimal? PostedAmount, string? Note,
+    decimal ExpectedAmount,   // ยอดที่ควรลง (คำนวณตาม source)
+    bool AmountMatch);        // ยอดที่คีย์ == ยอดที่ควรลง (ถ้ายังไม่กรอกยอด = ไม่เตือน)
+
 // ── P6 Dashboard/Checklist + กระทบยอด 3 ทาง (รวม P3/P4/P5) ──────────────────────
 /// <summary>สถานะ + กระทบยอดของหนึ่งเดือน</summary>
 public record PayrollChecklistMonth(
@@ -157,6 +167,8 @@ public record PayrollChecklistMonth(
     bool SsoFiled, bool SsoReceiptReceived, bool SsoReceiptMatch,
     // สถานะยื่น ภ.ง.ด.1 รายเดือน (จาก StatutoryFiling)
     bool Pnd1Filed,
+    // คีย์ค่าใช้จ่ายเงินเดือนลง Express แล้ว (จาก ExpressPostingLink)
+    bool ExpressPosted,
     // checklist (derive จากข้อมูล)
     bool StepRecorded, bool StepBalanced, bool StepSsoReady, bool StepHasTax);
 

@@ -245,6 +245,7 @@ export interface PayrollChecklistMonth {
   ssoReceiptReceived: boolean
   ssoReceiptMatch: boolean
   pnd1Filed: boolean
+  expressPosted: boolean
   stepRecorded: boolean
   stepBalanced: boolean
   stepSsoReady: boolean
@@ -350,6 +351,28 @@ export interface StatutoryFiling {
 }
 
 export type StatutoryFilingStatusInput = SsoFilingStatusInput
+
+// ── ExpressPostingLink: ติดตามการคีย์ลง Express ─────────────────────────────────
+// sourceType: 1=ค่าใช้จ่ายเงินเดือน, 2=นำส่ง ปกส., 3=ใบแจ้งหนี้ กท., 4=นำส่ง กท.; month=0=รายปี
+export interface ExpressPostingLink {
+  sourceType: number
+  year: number
+  month: number
+  posted: boolean
+  postedDate?: string | null
+  expressDocNo?: string | null
+  postedAmount?: number | null
+  note?: string | null
+  expectedAmount: number
+  amountMatch: boolean
+}
+
+export interface ExpressPostingLinkInput {
+  postedDate?: string | null
+  expressDocNo?: string | null
+  postedAmount?: number | null
+  note?: string | null
+}
 
 export interface PayrollItemInput {
   id: number

@@ -14,6 +14,8 @@ import type {
   SsoFilingStatusInput,
   StatutoryFiling,
   StatutoryFilingStatusInput,
+  ExpressPostingLink,
+  ExpressPostingLinkInput,
 } from '../types/payroll.types'
 
 type MappingInput = { accountCode: string; role: number; department?: string | null; note?: string }
@@ -233,6 +235,19 @@ export const payrollApi = {
     apiClient
       .get('/payroll/filing/document', { params: { clientCompanyId, filingType, year, month, kind }, responseType: 'blob' })
       .then((r) => r.data as Blob),
+
+  // ── ExpressPostingLink: ติดตามการคีย์ลง Express ──
+  getExpressPosting: (clientCompanyId: number, sourceType: number, year: number, month: number) =>
+    apiClient
+      .get<ExpressPostingLink>('/payroll/express-posting', { params: { clientCompanyId, sourceType, year, month } })
+      .then((r) => r.data),
+
+  setExpressPosting: (
+    clientCompanyId: number, sourceType: number, year: number, month: number, body: ExpressPostingLinkInput,
+  ) =>
+    apiClient
+      .put('/payroll/express-posting', body, { params: { clientCompanyId, sourceType, year, month } })
+      .then((r) => r.data),
 
   downloadTemplate: (runId: number, clientCompanyId: number) =>
     apiClient

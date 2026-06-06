@@ -5,6 +5,7 @@ import StateMessage from '../../../../shared/components/ui/StateMessage'
 import { usePayrollDashboard } from '../../hooks/usePayroll'
 import { MONTH_TH, type PayrollChecklistMonth } from '../../types/payroll.types'
 import FilingStatusModal from '../../components/FilingStatusModal'
+import ExpressPostingModal from '../../components/ExpressPostingModal'
 
 interface Props {
   companyId: number
@@ -44,6 +45,7 @@ export default function DashboardTab({ companyId }: Props) {
   const thisYear = new Date().getFullYear()
   const [year, setYear] = useState(thisYear)
   const [pnd1Month, setPnd1Month] = useState<number | null>(null)
+  const [expressMonth, setExpressMonth] = useState<number | null>(null)
   const qc = useQueryClient()
   const { data, isLoading, isError } = usePayrollDashboard(companyId, year)
   const yearOptions = Array.from({ length: 6 }, (_, i) => thisYear - i)
@@ -130,6 +132,10 @@ export default function DashboardTab({ companyId }: Props) {
               {' · '}<span className="text-gray-500">ได้ใบเสร็จ</span> <span className="font-semibold">{data.months.filter((m) => m.ssoReceiptReceived).length} เดือน</span>
             </div>
             <div>
+              <span className="text-gray-500">คีย์ Express (เงินเดือน):</span>{' '}
+              <span className="font-semibold">{data.months.filter((m) => m.expressPosted).length}/{data.monthsWithRun} เดือน</span>
+            </div>
+            <div>
               <span className="text-gray-500">ภ.ง.ด.1ก:</span> <span className="font-semibold">{data.pnd1kPersonCount} ราย</span> · ภาษี {fmt(data.pnd1kTotalTax)}
               {' '}<FiledBadge filed={data.pnd1kFiled} receipt={data.pnd1kReceipt} />
             </div>
@@ -156,6 +162,7 @@ export default function DashboardTab({ companyId }: Props) {
                   <th className="px-3 py-2 text-center font-medium">ยื่น ปกส.</th>
                   <th className="px-3 py-2 text-center font-medium">ใบเสร็จ</th>
                   <th className="px-3 py-2 text-center font-medium">ภ.ง.ด.1</th>
+                  <th className="px-3 py-2 text-center font-medium">ลง Express</th>
                   <th className="px-3 py-2 text-right font-medium">ส่วนต่าง GL</th>
                 </tr>
               </thead>
@@ -195,6 +202,14 @@ export default function DashboardTab({ companyId }: Props) {
                         </button>
                       ) : '-'}
                     </td>
+                    <td className="px-3 py-1.5 text-center">
+                      {m.hasRun ? (
+                        <button type="button" onClick={() => setExpressMonth(m.month)}
+                          className="text-xs underline decoration-dotted underline-offset-2 hover:text-sky-600" title="บันทึกการคีย์ลง Express">
+                          {m.expressPosted ? <span className="text-emerald-600">✓</span> : <span className="text-amber-600">คีย์</span>}
+                        </button>
+                      ) : '-'}
+                    </td>
                     <td className="px-3 py-1.5 text-right font-mono text-gray-500">{m.hasRun ? fmt(m.glDiff) : '-'}</td>
                   </tr>
                 ))}
@@ -213,6 +228,11 @@ export default function DashboardTab({ companyId }: Props) {
         <FilingStatusModal companyId={companyId} filingType={1} year={year} month={pnd1Month}
           title={`ภ.ง.ด.1 (${MONTH_TH[pnd1Month]})`} baseLabel="เงินได้สุทธิ" amountLabel="ภาษีนำส่ง"
           onClose={() => { setPnd1Month(null); qc.invalidateQueries({ queryKey: ['payroll-dashboard', companyId, year] }) }} />
+      )}
+      {expressMonth !== null && (
+        <ExpressPostingModal companyId={companyId} sourceType={1} year={year} month={expressMonth}
+          title={`ค่าใช้จ่ายเงินเดือน (${MONTH_TH[expressMonth]})`}
+          onClose={() => { setExpressMonth(null); qc.invalidateQueries({ queryKey: ['payroll-dashboard', companyId, year] }) }} />
       )}
     </div>
   )

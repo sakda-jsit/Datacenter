@@ -50,6 +50,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PayrollAccountMapping> PayrollAccountMappings => Set<PayrollAccountMapping>();
     public DbSet<SsoMonthlyFiling> SsoMonthlyFilings => Set<SsoMonthlyFiling>();
     public DbSet<StatutoryFiling> StatutoryFilings => Set<StatutoryFiling>();
+    public DbSet<ExpressPostingLink> ExpressPostingLinks => Set<ExpressPostingLink>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
