@@ -56,7 +56,8 @@ public static class PayrollEmployeeImporter
                 e.ModifiedAt = DateTime.UtcNow;
             }
 
-            // อัปเดตข้อมูลจาก Express (ชื่อ/ที่อยู่/เลขผู้เสียภาษี/ฝ่าย) — คงข้อมูลที่กรอกมือ (เงินเดือน/ปกส.)
+            // อัปเดตข้อมูลจาก Express (รหัส/ชื่อ/ที่อยู่/เลขผู้เสียภาษี/ฝ่าย) — คงข้อมูลที่กรอกมือ (เงินเดือน/ปกส.)
+            e.EmployeeCode = x.SupplierCode;   // รหัสพนักงาน = รหัสเจ้าหนี้ Express (SUPCOD) ทุกคน
             e.SourceSupplierCode = x.SupplierCode;
             ApplyName(x.Prefix, x.Name, e);
             if (tax.Length > 0) e.NationalId = tax;
