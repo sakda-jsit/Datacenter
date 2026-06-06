@@ -61,3 +61,6 @@ tmp_*/
 # Claude Code: transient marker for repomix-on-code-change hook + personal local settings
 .claude/.repomix-dirty
 .claude/settings.local.json
+
+# ข้อมูลส่วนบุคคล/ลูกค้าจริง (PDPA) — ห้าม commit
+reference/payroll/
