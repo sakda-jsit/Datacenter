@@ -8,6 +8,7 @@ import type {
   PayrollRunDetail,
   PayrollRunListItem,
   PayrollYearSummary,
+  PayrollDashboard,
   PayrollPosting,
   SsoFiling,
 } from '../types/payroll.types'
@@ -95,6 +96,11 @@ export const payrollApi = {
   yearSummary: (clientCompanyId: number, year: number) =>
     apiClient
       .get<PayrollYearSummary>('/payroll/year-summary', { params: { clientCompanyId, year } })
+      .then((r) => r.data),
+
+  dashboard: (clientCompanyId: number, year: number) =>
+    apiClient
+      .get<PayrollDashboard>('/payroll/dashboard', { params: { clientCompanyId, year } })
       .then((r) => r.data),
 
   downloadPnd1kExcel: (clientCompanyId: number, year: number) =>

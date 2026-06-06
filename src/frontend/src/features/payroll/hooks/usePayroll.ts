@@ -104,6 +104,14 @@ export function usePayrollYearSummary(companyId: number, year: number) {
   })
 }
 
+export function usePayrollDashboard(companyId: number, year: number) {
+  return useQuery({
+    queryKey: ['payroll-dashboard', companyId, year],
+    queryFn: () => payrollApi.dashboard(companyId, year),
+    enabled: companyId > 0 && year > 0,
+  })
+}
+
 export function usePayrollPosting(companyId: number, runId: number | null) {
   return useQuery({
     queryKey: ['payroll-posting', companyId, runId ?? 0],

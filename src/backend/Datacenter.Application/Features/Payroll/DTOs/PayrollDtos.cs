@@ -129,6 +129,30 @@ public record Pnd1kDto(
     int Year, string CompanyName, string TaxId, string? Address,
     IReadOnlyList<Pnd1kRow> Rows, decimal TotalIncome, decimal TotalTax, int PersonCount);
 
+// ── P6 Dashboard/Checklist + กระทบยอด 3 ทาง (รวม P3/P4/P5) ──────────────────────
+/// <summary>สถานะ + กระทบยอดของหนึ่งเดือน</summary>
+public record PayrollChecklistMonth(
+    int Month, bool HasRun, int Status, int EmployeeCount,
+    decimal TotalGross, decimal TotalNet,
+    decimal SsoEmployee, decimal SsoEmployer, decimal SsoTotal, decimal Tax,
+    // กระทบยอด #1 slip ↔ ระบบคำนวณ (Σ ค่าจริง − ค่าคำนวณ)
+    decimal SsoCrossCheckDiff,
+    // กระทบยอด #2 เงินเดือน ↔ GL (จากใบสำคัญ P4)
+    bool PostingBalanced, decimal GlDiff,
+    // checklist (derive จากข้อมูล)
+    bool StepRecorded, bool StepBalanced, bool StepSsoReady, bool StepHasTax);
+
+public record PayrollDashboardDto(
+    int Year, int MonthsWithRun,
+    IReadOnlyList<PayrollChecklistMonth> Months,
+    // annual rollup
+    decimal YearGross, decimal YearTax, decimal YearSsoTotal,
+    // กระทบยอด #3 รายปี: ภ.ง.ด.1ก / กท.20ก / 50 ทวิ
+    decimal Pnd1kTotalTax, int Pnd1kPersonCount,
+    decimal Kt20Wage, int Kt20EmployeeCount, decimal Kt20Contribution,
+    // ความสอดคล้อง Σ ภาษีรายเดือน == ภ.ง.ด.1ก
+    bool TaxConsistent, decimal TaxConsistencyDiff);
+
 // ── กท.20ก (แบบแสดงเงินค่าจ้างประจำปี กองทุนเงินทดแทน) ───────────────────────────
 public record Kt20Row(
     int Seq, string NationalId, string Prefix, string FirstName, string LastName,

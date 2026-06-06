@@ -172,6 +172,11 @@ public class PayrollController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetKt20Images([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)
         => Ok(await mediator.Send(new GetKt20ImagesQuery(clientCompanyId, year), ct));
 
+    /// <summary>GET /api/v1/payroll/dashboard?clientCompanyId=1&amp;year=2025 — แดชบอร์ด/checklist + กระทบยอด 3 ทาง</summary>
+    [HttpGet("dashboard")]
+    public async Task<IActionResult> GetDashboard([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPayrollDashboardQuery(clientCompanyId, year), ct));
+
     /// <summary>GET /api/v1/payroll/year-summary?clientCompanyId=1&amp;year=2025 — สรุปรายได้ทั้งปี (แถว=เดือน)</summary>
     [HttpGet("year-summary")]
     public async Task<IActionResult> GetYearSummary([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)

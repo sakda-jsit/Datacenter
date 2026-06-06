@@ -8,9 +8,11 @@ import EmployeesTab from './tabs/EmployeesTab'
 import PayrollRunsTab from './tabs/PayrollRunsTab'
 import YearSummaryTab from './tabs/YearSummaryTab'
 import AccountMappingTab from './tabs/AccountMappingTab'
+import DashboardTab from './tabs/DashboardTab'
 
-type Tab = 'employees' | 'runs' | 'year' | 'mapping'
+type Tab = 'dashboard' | 'employees' | 'runs' | 'year' | 'mapping'
 const TABS: { key: Tab; label: string }[] = [
+  { key: 'dashboard', label: 'ภาพรวม / กระทบยอด' },
   { key: 'employees', label: 'ทะเบียนพนักงาน' },
   { key: 'runs', label: 'งวดเงินเดือน' },
   { key: 'year', label: 'รายได้ทั้งปี' },
@@ -19,7 +21,7 @@ const TABS: { key: Tab; label: string }[] = [
 
 export default function PayrollPage() {
   const { companyId } = useCurrentCompany()
-  const [tab, setTab] = useState<Tab>('employees')
+  const [tab, setTab] = useState<Tab>('dashboard')
 
   return (
     <div>
@@ -32,6 +34,7 @@ export default function PayrollPage() {
         <Card><StateMessage centered>เลือกบริษัทที่ header ก่อน</StateMessage></Card>
       ) : (
         <>
+          {tab === 'dashboard' && <DashboardTab companyId={companyId} />}
           {tab === 'employees' && <EmployeesTab companyId={companyId} />}
           {tab === 'runs' && <PayrollRunsTab companyId={companyId} />}
           {tab === 'year' && <YearSummaryTab companyId={companyId} />}

@@ -226,6 +226,43 @@ export interface PayrollYearSummary {
   total: PayrollSummaryRow
 }
 
+// ── P6 แดชบอร์ด/Checklist + กระทบยอด 3 ทาง ───────────────────────────────────────
+export interface PayrollChecklistMonth {
+  month: number
+  hasRun: boolean
+  status: number // 0=ร่าง 1=บันทึกแล้ว 2=ปิดงวด
+  employeeCount: number
+  totalGross: number
+  totalNet: number
+  ssoEmployee: number
+  ssoEmployer: number
+  ssoTotal: number
+  tax: number
+  ssoCrossCheckDiff: number
+  postingBalanced: boolean
+  glDiff: number
+  stepRecorded: boolean
+  stepBalanced: boolean
+  stepSsoReady: boolean
+  stepHasTax: boolean
+}
+
+export interface PayrollDashboard {
+  year: number
+  monthsWithRun: number
+  months: PayrollChecklistMonth[]
+  yearGross: number
+  yearTax: number
+  yearSsoTotal: number
+  pnd1kTotalTax: number
+  pnd1kPersonCount: number
+  kt20Wage: number
+  kt20EmployeeCount: number
+  kt20Contribution: number
+  taxConsistent: boolean
+  taxConsistencyDiff: number
+}
+
 // ── สปส.1-10 ─────────────────────────────────────────────────────────────────────
 export interface SsoFilingRow {
   seq: number
