@@ -120,7 +120,7 @@ public class WhtCertificatePdfService(string fontFamily) : IWhtCertificatePdfSer
                 table.Cell().Element(TotalCell).AlignRight().Text("รวมเงินที่จ่ายและภาษีที่หักนำส่ง").Bold().FontSize(9);
                 table.Cell().Element(TotalCell).Text("");
                 table.Cell().Element(TotalCell).AlignRight().Text(Money(c.Amount)).Bold().FontSize(9);
-                table.Cell().Element(TotalCell).AlignRight().Text(Money(c.TaxAmount)).Bold().FontSize(9);
+                table.Cell().Element(TotalCell).AlignRight().Text(Money0(c.TaxAmount)).Bold().FontSize(9);
             });
 
             col.Item().PaddingTop(3).Text(txt =>
@@ -128,6 +128,27 @@ public class WhtCertificatePdfService(string fontFamily) : IWhtCertificatePdfSer
                 txt.Span("รวมเงินภาษีที่หักนำส่ง (ตัวอักษร)  ").Bold();
                 txt.Span($"({c.AmountInWords})");
             });
+
+            // ── เฉพาะหนังสือรับรองเงินเดือน (ภ.ง.ด.1ก): กองทุนประกันสังคม + กองทุนสำรองเลี้ยงชีพ ──
+            if (c.SsoContribution.HasValue)
+            {
+                col.Item().PaddingTop(3).Row(r =>
+                {
+                    r.RelativeItem().Text("เงินสะสมเข้ากองทุนประกันสังคม").FontSize(10);
+                    r.ConstantItem(110).AlignRight().Text(Money(c.SsoContribution.Value)).FontSize(10);
+                    r.ConstantItem(28).AlignRight().Text("บาท").FontSize(10);
+                });
+                col.Item().Row(r =>
+                {
+                    r.RelativeItem().Text(t =>
+                    {
+                        t.Span("เงินสะสมจ่ายเข้ากองทุนสำรองเลี้ยงชีพ").FontSize(10);
+                        t.Span("    ใบอนุญาตเลขที่ .................................").FontSize(9);
+                    });
+                    r.ConstantItem(110).AlignRight().Text(c.ProvidentFund is > 0 ? Money(c.ProvidentFund.Value) : "").FontSize(10);
+                    r.ConstantItem(28).AlignRight().Text("บาท").FontSize(10);
+                });
+            }
 
             // ── ส่วนท้าย: ผู้จ่ายเงิน (ซ้าย) | ลงชื่อ-ประทับตรา (ขวา) ในกรอบเดียว ──
             col.Item().PaddingTop(4).Border(0.6f).Row(row =>
@@ -180,7 +201,7 @@ public class WhtCertificatePdfService(string fontFamily) : IWhtCertificatePdfSer
         // จัดชิดล่าง — กรณี label หลายบรรทัด (ข้อ 5) ข้อมูลจะตรงกับบรรทัดสุดท้าย (ประเภทที่ระบุ)
         table.Cell().Element(BodyCell).AlignBottom().AlignCenter().Text(active ? FormatThaiDate(c.PayDate) : "").FontSize(9);
         table.Cell().Element(BodyCell).AlignBottom().AlignRight().Text(active ? Money(c.Amount) : "").FontSize(9);
-        table.Cell().Element(BodyCell).AlignBottom().AlignRight().Text(active ? Money(c.TaxAmount) : "").FontSize(9);
+        table.Cell().Element(BodyCell).AlignBottom().AlignRight().Text(active ? Money0(c.TaxAmount) : "").FontSize(9);
     }
 
     /// <summary>แถวข้อความย่อย (ไม่มีช่องจำนวนเงิน)</summary>
@@ -239,6 +260,9 @@ public class WhtCertificatePdfService(string fontFamily) : IWhtCertificatePdfSer
 
     private static string Money(decimal v) =>
         v.ToString("#,##0.00", CultureInfo.InvariantCulture);
+
+    /// <summary>เว้นว่างเมื่อค่าเป็น 0 (ตามแบบราชการที่ไม่พิมพ์ 0.00) — เช่น ภาษีเงินเดือนที่ไม่ถึงเกณฑ์</summary>
+    private static string Money0(decimal v) => v == 0 ? "" : Money(v);
 
     /// <summary>dd/MM/ปีพ.ศ.(2 หลัก) เช่น 01/04/69</summary>
     private static string FormatThaiDate(DateTime? d)

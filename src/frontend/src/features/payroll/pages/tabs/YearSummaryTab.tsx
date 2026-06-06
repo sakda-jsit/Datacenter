@@ -5,6 +5,7 @@ import StateMessage from '../../../../shared/components/ui/StateMessage'
 import { payrollApi } from '../../services/payrollApi'
 import { usePayrollYearSummary } from '../../hooks/usePayroll'
 import { MONTH_TH, type PayrollSummaryRow } from '../../types/payroll.types'
+import Salary50TawiModal from '../../components/Salary50TawiModal'
 
 async function dl(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob)
@@ -61,6 +62,7 @@ const GROUPS: { label: string; span: number; cls: string }[] = [
 export default function YearSummaryTab({ companyId }: Props) {
   const thisYear = new Date().getFullYear()
   const [year, setYear] = useState(thisYear)
+  const [show50Tawi, setShow50Tawi] = useState(false)
   const { data, isLoading, isError } = usePayrollYearSummary(companyId, year)
 
   const yearOptions = Array.from({ length: 6 }, (_, i) => thisYear - i)
@@ -90,6 +92,9 @@ export default function YearSummaryTab({ companyId }: Props) {
           </Button>
           <Button type="button" variant="secondary" onClick={async () => dl(await payrollApi.downloadPnd1kPdf(companyId, year), `pnd1k-${year}.pdf`)}>
             ⬇ ภ.ง.ด.1ก (PDF)
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => setShow50Tawi(true)}>
+            📄 50 ทวิ เงินเดือน
           </Button>
           <label className="flex items-center gap-2 text-xs text-gray-600">
             ปี
@@ -163,6 +168,10 @@ export default function YearSummaryTab({ companyId }: Props) {
       <p className="mt-2 text-xs text-gray-400">
         หมายเหตุ: “ค่าจ้าง/รายได้ยื่นปกส.” อ้างฐานยื่น ปกส. ที่กรอกในแต่ละงวด · “ส่วนที่เกิน 20,000” = ส่วนที่เกินเพดานฐานกองทุนทดแทน (กท.20ก) ต่อคน/เดือน
       </p>
+
+      {show50Tawi && (
+        <Salary50TawiModal companyId={companyId} year={year} onClose={() => setShow50Tawi(false)} />
+      )}
     </div>
   )
 }

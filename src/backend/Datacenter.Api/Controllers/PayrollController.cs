@@ -133,6 +133,19 @@ public class PayrollController(IMediator mediator) : ControllerBase
         return File(bytes, "application/pdf", $"pnd1k-{year}.pdf");
     }
 
+    /// <summary>GET /api/v1/payroll/50tawi/pdf?clientCompanyId=1&amp;year=2025&amp;employeeIds=1&amp;employeeIds=2 — 50 ทวิ เงินเดือน (employeeIds ว่าง = ทุกคน)</summary>
+    [HttpGet("50tawi/pdf")]
+    public async Task<IActionResult> Get50TawiPdf([FromQuery] int clientCompanyId, [FromQuery] int year, [FromQuery] int[]? employeeIds, CancellationToken ct)
+    {
+        var bytes = await mediator.Send(new Get50TawiSalaryPdfQuery(clientCompanyId, year, employeeIds), ct);
+        return File(bytes, "application/pdf", $"50tawi-salary-{year}.pdf");
+    }
+
+    /// <summary>GET /api/v1/payroll/50tawi/images?clientCompanyId=1&amp;year=2025&amp;employeeIds=1 — รูป PNG (data URL) สำหรับ preview</summary>
+    [HttpGet("50tawi/images")]
+    public async Task<IActionResult> Get50TawiImages([FromQuery] int clientCompanyId, [FromQuery] int year, [FromQuery] int[]? employeeIds, CancellationToken ct)
+        => Ok(await mediator.Send(new Get50TawiSalaryImagesQuery(clientCompanyId, year, employeeIds), ct));
+
     /// <summary>GET /api/v1/payroll/year-summary?clientCompanyId=1&amp;year=2025 — สรุปรายได้ทั้งปี (แถว=เดือน)</summary>
     [HttpGet("year-summary")]
     public async Task<IActionResult> GetYearSummary([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)

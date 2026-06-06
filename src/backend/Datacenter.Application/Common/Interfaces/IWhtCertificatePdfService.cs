@@ -27,7 +27,12 @@ public record WhtCertificateModel(
     // รหัสสาขาผู้หัก ("00000"/ว่าง = สำนักงานใหญ่) — แสดงเป็นข้อความในกล่องผู้มีหน้าที่หัก
     string? PayerBranchCode = null,
     // รูปลายเซ็นผู้มีหน้าที่หัก ณ ที่จ่าย (PNG/JPG) — ถ้ามีจะวางเหนือเส้นลงชื่อ
-    byte[]? PayerSignature = null);
+    byte[]? PayerSignature = null,
+    // ── เฉพาะหนังสือรับรองเงินเดือน (ภ.ง.ด.1ก) — ถ้า SsoContribution != null จะแสดงบล็อกท้ายฟอร์ม ──
+    // เงินสะสมเข้ากองทุนประกันสังคม (ผู้ประกันตนสมทบทั้งปี)
+    decimal? SsoContribution = null,
+    // เงินสะสมจ่ายเข้ากองทุนสำรองเลี้ยงชีพ (ว่าง = ไม่มี)
+    decimal? ProvidentFund = null);
 
 /// <summary>สร้าง PDF หนังสือรับรองหัก ณ ที่จ่าย (QuestPDF + ฟอนต์ไทย) — 1 ใบ/หน้า</summary>
 public interface IWhtCertificatePdfService

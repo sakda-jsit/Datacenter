@@ -106,6 +106,16 @@ export const payrollApi = {
       .get('/payroll/pnd1k/pdf', { params: { clientCompanyId, year }, responseType: 'blob' })
       .then((r) => r.data as Blob),
 
+  // 50 ทวิ เงินเดือน (ภ.ง.ด.1ก) — employeeIds ว่าง = ทุกคน
+  download50TawiPdf: (clientCompanyId: number, year: number, employeeIds?: number[]) =>
+    apiClient
+      .get('/payroll/50tawi/pdf', { params: { clientCompanyId, year, employeeIds }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
+  tawiImages: (clientCompanyId: number, year: number, employeeIds?: number[]) =>
+    apiClient
+      .get<string[]>('/payroll/50tawi/images', { params: { clientCompanyId, year, employeeIds } })
+      .then((r) => r.data),
+
   createRun: (clientCompanyId: number, year: number, month: number) =>
     apiClient
       .post<{ id: number }>('/payroll/runs', { year, month }, { params: { clientCompanyId } })
