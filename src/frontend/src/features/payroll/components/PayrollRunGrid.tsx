@@ -155,7 +155,11 @@ type DeptCol = {
   dailyOnly?: boolean // แสดงเฉพาะเมื่อมีพนักงานรายวันในฝ่ายนั้น
 }
 
-const daily = (i: PayrollItemRow) => i.dailyWageDays * i.dailyWageRate
+// ค่าจ้างรายวัน = รวมรายได้ − เงินเดือน − เบี้ยเลี้ยง/OT/อื่น (อิงยอดบันทึกจริง; วัน×เรท อาจปัดเศษไม่ตรง)
+const daily = (i: PayrollItemRow) => {
+  const v = i.grossIncome - i.salary - i.housingAllowance - i.foodAllowance - i.overtime - i.diligence - i.bonus - i.otherIncome
+  return Math.round(v * 100) / 100
+}
 
 const DEPT_COLS: DeptCol[] = [
   // รายได้ (เงินเดือน = เงินเดือนล้วน, ค่าจ้างวันแยกคอลัมน์เมื่อมี)
