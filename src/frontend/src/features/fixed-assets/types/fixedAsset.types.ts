@@ -94,6 +94,7 @@ export interface FixedAsset {
   notes?: string
   attachmentPath?: string
   isActive: boolean
+  isFromExpress: boolean
 }
 
 export interface DepreciationAsOf {

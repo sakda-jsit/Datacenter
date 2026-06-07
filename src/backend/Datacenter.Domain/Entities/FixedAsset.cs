@@ -75,6 +75,14 @@ public class FixedAsset : BaseEntity
     public string? AttachmentPath { get; set; }
     public bool IsActive { get; set; } = true;
 
+    /// <summary>
+    /// true = สินทรัพย์มาจากการนำเข้า Express FAMAS → ฟิลด์ที่ Express เป็นเจ้าของ
+    /// (รหัส/ชื่อ/ราคาทุน/วันได้มา/มูลค่าซาก/ยอดยกมา/หมวด) เป็น read-only แก้ผ่าน CRUD ไม่ได้
+    /// (ปรับที่ Express แล้ว re-import). false = ป้อนเอง (FAMAS ว่าง) → แก้ได้ทุกฟิลด์.
+    /// ฟิลด์ที่ app เป็นเจ้าของ (อัตราบัญชี/ภาษี, บัญชี GL, สถานะ/จำหน่าย, หมายเหตุ) แก้ได้เสมอ.
+    /// </summary>
+    public bool IsFromExpress { get; set; }
+
     public ClientCompany ClientCompany { get; set; } = null!;
     public AssetTypeMaster? AssetType { get; set; }
 }

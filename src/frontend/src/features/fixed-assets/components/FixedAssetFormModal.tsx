@@ -113,6 +113,10 @@ export default function FixedAssetFormModal({ companyId, fiscalYear, editingId, 
   const f = form
   const set = (patch: Partial<FormState>) => setForm((p) => ({ ...(p as FormState), ...patch }))
 
+  // สินทรัพย์ที่มาจาก Express: ล็อกฟิลด์ที่ Express เป็นเจ้าของ (รหัส/ชื่อ/ราคาทุน/วัน/ยอดยกมา)
+  // — แก้ที่ Express แล้ว re-import; แก้ได้เฉพาะ อัตรา override / บัญชี GL / สถานะ / หมายเหตุ
+  const lockExpress = editingId !== null && detail?.asset.isFromExpress === true
+
   function pickType(typeId: number) {
     const t = assetTypes?.find((x) => x.id === typeId)
     if (t) set({ assetTypeId: typeId, bookRatePct: String(t.defaultBookRatePct), taxRatePct: String(t.defaultTaxRatePct) })
@@ -176,18 +180,26 @@ export default function FixedAssetFormModal({ companyId, fiscalYear, editingId, 
   const inputCls =
     'w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400'
   const numCls = inputCls + ' text-right font-mono'
+  const lockedCls = inputCls + ' bg-slate-50 text-gray-500'
+  const lockedNumCls = numCls + ' bg-slate-50 text-gray-500'
 
   return (
     <Overlay onClose={onClose} title={editingId !== null ? 'แก้ไขสินทรัพย์' : 'สร้างสินทรัพย์'}>
       <form onSubmit={handleSubmit} className="px-6 py-4">
+        {lockExpress && (
+          <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+            สินทรัพย์นี้มาจาก Express (FAMAS) — ฟิลด์ รหัส/ชื่อ/ราคาทุน/มูลค่าซาก/วันได้มา/ยอดยกมา/หมวด <b>แก้ที่นี่ไม่ได้</b>
+            (ปรับที่ Express แล้วนำเข้าใหม่) · แก้ได้เฉพาะ อัตราค่าเสื่อม (override) / บัญชี GL / สถานะ-การจำหน่าย / หมายเหตุ
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">รหัสสินทรัพย์ *</label>
-            <input value={f.assetCode} onChange={(e) => set({ assetCode: e.target.value })} className={inputCls} placeholder="เช่น FA-001" />
+            <input value={f.assetCode} onChange={(e) => set({ assetCode: e.target.value })} disabled={lockExpress} className={lockExpress ? lockedCls : inputCls} placeholder="เช่น FA-001" />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">ชื่อสินทรัพย์ *</label>
-            <input value={f.assetName} onChange={(e) => set({ assetName: e.target.value })} className={inputCls} />
+            <input value={f.assetName} onChange={(e) => set({ assetName: e.target.value })} disabled={lockExpress} className={lockExpress ? lockedCls : inputCls} />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">ประเภทสินทรัพย์</label>
@@ -200,7 +212,7 @@ export default function FixedAssetFormModal({ companyId, fiscalYear, editingId, 
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">วันที่ได้มา</label>
-            <input type="date" value={f.acquireDate} onChange={(e) => set({ acquireDate: e.target.value })} className={inputCls} />
+            <input type="date" value={f.acquireDate} onChange={(e) => set({ acquireDate: e.target.value })} disabled={lockExpress} className={lockExpress ? lockedCls : inputCls} />
           </div>
         </div>
 
@@ -208,11 +220,11 @@ export default function FixedAssetFormModal({ companyId, fiscalYear, editingId, 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">ราคาทุน *</label>
-            <input type="number" step="0.01" value={f.cost} onChange={(e) => set({ cost: e.target.value })} className={numCls} />
+            <input type="number" step="0.01" value={f.cost} onChange={(e) => set({ cost: e.target.value })} disabled={lockExpress} className={lockExpress ? lockedNumCls : numCls} />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">มูลค่าซาก</label>
-            <input type="number" step="0.01" value={f.salvageValue} onChange={(e) => set({ salvageValue: e.target.value })} className={numCls} />
+            <input type="number" step="0.01" value={f.salvageValue} onChange={(e) => set({ salvageValue: e.target.value })} disabled={lockExpress} className={lockExpress ? lockedNumCls : numCls} />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">อัตราบัญชี (%/ปี)</label>
@@ -232,12 +244,12 @@ export default function FixedAssetFormModal({ companyId, fiscalYear, editingId, 
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">ค่าเสื่อมสะสมยกมา</label>
             <input type="number" step="0.01" value={f.accumulatedBroughtForward}
-              onChange={(e) => set({ accumulatedBroughtForward: e.target.value })} className={numCls} />
+              onChange={(e) => set({ accumulatedBroughtForward: e.target.value })} disabled={lockExpress} className={lockExpress ? lockedNumCls : numCls} />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">ปีของยอดยกมา</label>
             <input type="number" value={f.broughtForwardYear || ''}
-              onChange={(e) => set({ broughtForwardYear: Number(e.target.value) || 0 })} className={numCls} placeholder="เช่น 2025" />
+              onChange={(e) => set({ broughtForwardYear: Number(e.target.value) || 0 })} disabled={lockExpress} className={lockExpress ? lockedNumCls : numCls} placeholder="เช่น 2025" />
           </div>
           {f.categoryCode && (
             <div>

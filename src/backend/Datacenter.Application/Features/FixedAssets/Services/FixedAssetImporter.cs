@@ -49,19 +49,24 @@ public static class FixedAssetImporter
 
             var acquire = row.AcquireDate ?? new DateTime(fiscalYear, 1, 1);
 
+            bool isNew;
             if (!existing.TryGetValue(row.AssetCode, out var asset))
             {
                 asset = new FixedAsset { ClientCompanyId = clientCompanyId, CreatedBy = username };
                 db.FixedAssets.Add(asset);
                 created++;
+                isNew = true;
             }
             else
             {
                 asset.ModifiedBy = username;
                 asset.ModifiedAt = DateTime.UtcNow;
                 updated++;
+                isNew = false;
             }
 
+            // ฟิลด์ที่ Express เป็นเจ้าของ — refresh ทุกครั้ง (Express = source of truth)
+            asset.IsFromExpress = true;
             asset.AssetCode = row.AssetCode;
             asset.AssetName = row.AssetName;
             asset.AssetGroupCode = string.IsNullOrWhiteSpace(row.GroupCode) ? null : row.GroupCode.Trim();
@@ -69,14 +74,20 @@ public static class FixedAssetImporter
             asset.AcquireDate = acquire;
             asset.Cost = row.Cost;
             asset.SalvageValue = row.Salvage;
-            asset.BookRatePct = row.RatePct;
-            asset.TaxRatePct = row.RatePct;   // Express เก็บอัตราเดียว — ตั้งทั้งสองชุดเท่ากัน, override ได้ภายหลัง
             asset.AccumulatedBroughtForward = row.AccumulatedBroughtForward;
             asset.BroughtForwardYear = fiscalYear;
             asset.Status = status;
             asset.DisposalDate = disposalDate;
             asset.DisposalProceeds = proceeds;
             asset.IsActive = true;
+
+            // อัตราค่าเสื่อม: Express เก็บอัตราเดียว → seed ทั้งชุดบัญชี/ภาษี "เฉพาะตอนสร้างใหม่"
+            // ตอน re-import ไม่ทับ เพื่อคง override (book/tax split) ที่ผู้ใช้ปรับไว้
+            if (isNew)
+            {
+                asset.BookRatePct = row.RatePct;
+                asset.TaxRatePct = row.RatePct;
+            }
 
             // เติมบัญชี GL จากการแมพหมวด (ถ้ายังไม่แมพ = ว่าง → ตั้งภายหลังที่หน้า "แมพบัญชี")
             // ไม่ทับบัญชีที่ตั้งไว้แล้ว (กรณี re-import)

@@ -5,21 +5,32 @@ namespace Datacenter.Application.Features.FixedAssets;
 
 internal static class FixedAssetMapper
 {
-    /// <summary>คัดลอกค่าจาก input ลง entity (ใช้ทั้ง create/update)</summary>
+    /// <summary>คัดลอกค่าจาก input ลง entity ทั้งหมด (สร้างใหม่ / สินทรัพย์ป้อนเองที่ไม่ได้มาจาก Express)</summary>
     public static void Apply(FixedAsset e, FixedAssetInput d)
     {
+        // ฟิลด์ที่ Express เป็นเจ้าของ — เขียนได้เฉพาะตอนสร้าง/สินทรัพย์ป้อนเอง
         e.AssetCode = d.AssetCode.Trim();
         e.AssetName = d.AssetName.Trim();
-        e.AssetTypeId = d.AssetTypeId;
         e.AcquireDate = d.AcquireDate;
         e.Cost = d.Cost;
         e.SalvageValue = d.SalvageValue;
-        e.BookRatePct = d.BookRatePct;
-        e.TaxRatePct = d.TaxRatePct;
         e.AccumulatedBroughtForward = d.AccumulatedBroughtForward;
         e.BroughtForwardYear = d.BroughtForwardYear;
         e.AssetGroupCode = string.IsNullOrWhiteSpace(d.AssetGroupCode) ? null : d.AssetGroupCode.Trim();
         e.CategoryCode = string.IsNullOrWhiteSpace(d.CategoryCode) ? null : d.CategoryCode.Trim();
+
+        ApplyEditable(e, d);
+    }
+
+    /// <summary>
+    /// คัดลอกเฉพาะฟิลด์ที่ "app เป็นเจ้าของ" (แก้ได้เสมอ) — ใช้ตอนแก้ไขสินทรัพย์ที่มาจาก Express
+    /// (IsFromExpress) เพื่อล็อกฟิลด์ที่ Express เป็นเจ้าของไว้ ไม่ให้ CRUD ทับ.
+    /// </summary>
+    public static void ApplyEditable(FixedAsset e, FixedAssetInput d)
+    {
+        e.AssetTypeId = d.AssetTypeId;
+        e.BookRatePct = d.BookRatePct;
+        e.TaxRatePct = d.TaxRatePct;
         e.Status = d.Status;
         e.DisposalDate = d.DisposalDate;
         e.DisposalProceeds = d.DisposalProceeds;
@@ -47,7 +58,7 @@ internal static class FixedAssetMapper
             e.AssetAccountId, Code(e.AssetAccountId),
             e.AccumDepreciationAccountId, Code(e.AccumDepreciationAccountId),
             e.DepreciationExpenseAccountId, Code(e.DepreciationExpenseAccountId),
-            e.Notes, e.AttachmentPath, e.IsActive);
+            e.Notes, e.AttachmentPath, e.IsActive, e.IsFromExpress);
     }
 
     public static AssetTypeDto ToDto(AssetTypeMaster t)

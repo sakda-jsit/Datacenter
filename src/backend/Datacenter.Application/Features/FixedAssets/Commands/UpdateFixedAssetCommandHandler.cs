@@ -29,7 +29,15 @@ public class UpdateFixedAssetCommandHandler(
         if (dup) throw new DomainException($"มีสินทรัพย์รหัส {request.Data.AssetCode} อยู่แล้ว");
 
         var before = $"{entity.AssetName} / ราคาทุน {entity.Cost:N2} / สถานะ {entity.Status}";
-        FixedAssetMapper.Apply(entity, request.Data);
+
+        // สินทรัพย์ที่มาจาก Express: ล็อกฟิลด์ที่ Express เป็นเจ้าของ (รหัส/ชื่อ/ราคาทุน/วัน/ยอดยกมา/หมวด)
+        // — แก้ได้เฉพาะฟิลด์ที่ app เป็นเจ้าของ (อัตรา override, บัญชี GL, สถานะ/จำหน่าย, หมายเหตุ).
+        // ป้อนเอง (ไม่ได้มาจาก Express) → แก้ได้ทุกฟิลด์.
+        if (entity.IsFromExpress)
+            FixedAssetMapper.ApplyEditable(entity, request.Data);
+        else
+            FixedAssetMapper.Apply(entity, request.Data);
+
         entity.ModifiedBy = currentUser.Username;
         entity.ModifiedAt = DateTime.UtcNow;
 

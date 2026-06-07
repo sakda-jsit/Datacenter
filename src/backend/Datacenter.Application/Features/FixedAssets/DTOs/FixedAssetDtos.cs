@@ -60,7 +60,8 @@ public record FixedAssetDto(
     string? DepreciationExpenseAccountCode,
     string? Notes,
     string? AttachmentPath,
-    bool IsActive);
+    bool IsActive,
+    bool IsFromExpress);
 
 /// <summary>ฟิลด์ที่แก้ไขได้ของสินทรัพย์ (ใช้ทั้ง create/update)</summary>
 public record FixedAssetInput(
