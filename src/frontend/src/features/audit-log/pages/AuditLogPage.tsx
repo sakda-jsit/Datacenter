@@ -118,6 +118,7 @@ export default function AuditLogPage() {
       render: (r) =>
         r.beforeValue || r.afterValue ? (
           <span>
+            {r.fieldName && <span className="mr-1 font-medium text-slate-600">{r.fieldName}:</span>}
             <span className="text-red-500">{r.beforeValue ?? '—'}</span>
             {' → '}
             <span className="text-green-600">{r.afterValue ?? '—'}</span>

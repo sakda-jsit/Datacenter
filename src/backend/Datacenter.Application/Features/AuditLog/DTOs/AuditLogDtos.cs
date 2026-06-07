@@ -9,6 +9,7 @@ public record AuditLogDto(
     string Action,
     string EntityName,
     string? EntityId,
+    string? FieldName,
     string? BeforeValue,
     string? AfterValue,
     DateTime CreatedAt);

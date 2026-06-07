@@ -7,12 +7,12 @@
 - **ไม่มี approval workflow** — ชดเชยด้วย field-level audit trail (คำตอบ #7: ทุกคนลบได้ + audit trail)
 - ยังคงผูก multi-company isolation (CompanyUserAccess) เดิม — เปิดสิทธิ์ภายในบริษัทที่เข้าถึงได้เท่านั้น
 
-## Field-Level Audit Trail
+## Field-Level Audit Trail ✅ เสร็จ (2026-06-07)
 ทุก create/update/delete ของ field ที่ผู้ใช้แก้ได้ ต้องบันทึก:
 - module/entity, record ref, field name, old value, new value
 - action type (create/update/delete), user, datetime, reason/note, attachment ref
 
-แนวทาง implement: ขยาย `AuditLog` → `FieldAuditLog` (เช่น EF Core SaveChanges interceptor บันทึก diff)
+> **Implement:** เพิ่ม `AuditLog.FieldName` + `FieldAuditSaveChangesInterceptor` (EF Core SaveChanges interceptor) บันทึก diff อัตโนมัติเมื่อ entity ที่ผู้ใช้แก้ได้ถูก **Modified** → 1 แถว/ฟิลด์ที่เปลี่ยน (action="Update", FieldName, before→after, entityId, user, time). `AuditableEntityRegistry` whitelist เฉพาะ entity ที่ผู้ใช้แก้เอง (adjustment/lease/asset/prepaid/attachment/report package/mapping/cash count/loan/payroll/company ฯลฯ) — **ไม่รวม** ข้อมูลจาก Express (Account/Customer/Supplier/AR/AP/VAT/WHT/Stock/Bank/Journal) และ staging/snapshot. `AuditScope.Suppress()` (AsyncLocal) ปิด interceptor ระหว่าง sync Express (StartExpressImport ครอบทั้ง flow) เพื่อไม่ให้ import ถูกนับเป็น user edit. create/delete ยังลงเป็น action-level ผ่าน `IAuditService` ใน command เดิม. แสดง FieldName ใน viewer/export ของ "ประวัติการใช้งาน". migration AddAuditLogFieldName. — ปิด docs/18 ครบทั้ง 3 ขา (field audit + audit log export + evidence)
 
 ## Attachment / Evidence Management ✅ เสร็จ (2026-06-07)
 - รายการสำคัญต้องแนบเอกสารได้: bank statement, ใบกำกับภาษี, ใบหัก ณ ที่จ่าย, PDF สรรพากร, เอกสาร asset/prepaid, ไฟล์ Express/import

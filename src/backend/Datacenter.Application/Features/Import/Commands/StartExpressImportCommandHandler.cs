@@ -1,3 +1,4 @@
+using Datacenter.Application.Common.Auditing;
 using Datacenter.Application.Common.Exceptions;
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Features.Import.Services;
@@ -19,6 +20,9 @@ public class StartExpressImportCommandHandler(
 {
     public async Task<int> Handle(StartExpressImportCommand request, CancellationToken ct)
     {
+        // การนำเข้าจาก Express = sync ข้อมูล ไม่ใช่ user edit → ปิด field-level audit ตลอด flow
+        using var auditSuppression = AuditScope.Suppress();
+
         var client = await db.ClientCompanies
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == request.ClientCompanyId && x.IsActive, ct)

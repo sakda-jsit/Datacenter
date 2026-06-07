@@ -2,6 +2,7 @@ using System.Text;
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Infrastructure.Identity;
 using Datacenter.Infrastructure.Persistence;
+using Datacenter.Infrastructure.Persistence.Interceptors;
 using Datacenter.Infrastructure.Services;
 using Datacenter.Infrastructure.Services.Email;
 using Datacenter.Infrastructure.Services.Notes;
@@ -20,9 +21,12 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContext<AppDbContext>(options =>
+        // field-level audit interceptor — scoped (อ่าน current user); ลง diff อัตโนมัติเมื่อ entity ถูกแก้
+        services.AddScoped<FieldAuditSaveChangesInterceptor>();
+        services.AddDbContext<AppDbContext>((sp, options) =>
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"),
-                sql => sql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
+                    sql => sql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName))
+                .AddInterceptors(sp.GetRequiredService<FieldAuditSaveChangesInterceptor>()));
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IJwtTokenService, JwtTokenService>();

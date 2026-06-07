@@ -76,6 +76,7 @@ internal static class AuditLogQuerySupport
             l.Action,
             l.EntityName,
             l.EntityId,
+            l.FieldName,
             l.BeforeValue,
             l.AfterValue,
             l.CreatedAt)).ToList();

@@ -25,6 +25,7 @@ function buildSections(rows: AuditLogDto[], fmtDateTime: (iso: string) => string
       { key: 'action', header: 'การกระทำ' },
       { key: 'entityName', header: 'รายการ' },
       { key: 'entityId', header: 'รหัส' },
+      { key: 'fieldName', header: 'ฟิลด์', value: (r) => r.fieldName ?? '' },
       { key: 'clientName', header: 'บริษัท', value: (r) => r.clientName ?? '' },
       { key: 'beforeValue', header: 'ก่อน', value: (r) => r.beforeValue ?? '' },
       { key: 'afterValue', header: 'หลัง', value: (r) => r.afterValue ?? '' },

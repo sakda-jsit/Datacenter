@@ -7,6 +7,7 @@ export interface AuditLogDto {
   action: string
   entityName: string
   entityId: string | null
+  fieldName: string | null
   beforeValue: string | null
   afterValue: string | null
   createdAt: string
