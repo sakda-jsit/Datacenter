@@ -14,21 +14,22 @@ import { useClientList } from '../../clients/hooks/useClients'
 import type { ExportSection } from '../../../shared/utils/exportTable'
 import { useDeleteImportBatch, useImportHistory, usePostImportBatch, useStartExpressImport } from '../hooks/useImport'
 import type { ImportBatchListDto, ImportStatus } from '../types/import.types'
+import SnapshotModal from '../components/SnapshotModal'
 
 const STATUS_LABEL: Record<ImportStatus, string> = {
-  Pending: 'รอดำเนินการ',
-  Running: 'กำลังนำเข้า',
-  Success: 'สำเร็จ',
-  Failed: 'มีข้อผิดพลาด',
-  Cancelled: 'ยกเลิก',
+  0: 'รอดำเนินการ',
+  1: 'กำลังนำเข้า',
+  2: 'สำเร็จ',
+  3: 'มีข้อผิดพลาด',
+  4: 'ยกเลิก',
 }
 
 const STATUS_TONE: Record<ImportStatus, 'yellow' | 'blue' | 'green' | 'red' | 'gray'> = {
-  Pending: 'yellow',
-  Running: 'blue',
-  Success: 'green',
-  Failed: 'red',
-  Cancelled: 'gray',
+  0: 'yellow',
+  1: 'blue',
+  2: 'green',
+  3: 'red',
+  4: 'gray',
 }
 
 function apiErrorMessage(err: unknown): string {
@@ -172,7 +173,7 @@ export default function ImportPage() {
                     { key: 'createdAt', header: 'เวลา', value: (b) => b.createdAt?.slice(0, 19).replace('T', ' ') ?? '' },
                     { key: 'clientName', header: 'บริษัท' },
                     { key: 'fiscalYear', header: 'ปีบัญชี', align: 'right' },
-                    { key: 'status', header: 'สถานะ', value: (b) => STATUS_LABEL[b.status as keyof typeof STATUS_LABEL] ?? b.status },
+                    { key: 'status', header: 'สถานะ', value: (b) => STATUS_LABEL[b.status as ImportStatus] ?? String(b.status) },
                     { key: 'totalRows', header: 'รวมแถว', align: 'right' },
                     { key: 'successRows', header: 'สำเร็จ', align: 'right' },
                     { key: 'errorRows', header: 'ผิดพลาด', align: 'right' },
@@ -269,6 +270,7 @@ export default function ImportPage() {
 function ImportBatchAction({ batch }: { batch: ImportBatchListDto }) {
   const postBatch = usePostImportBatch()
   const deleteBatch = useDeleteImportBatch()
+  const [showSnapshot, setShowSnapshot] = useState(false)
 
   function handleDelete() {
     const warn = batch.isPosted
@@ -286,11 +288,18 @@ function ImportBatchAction({ batch }: { batch: ImportBatchListDto }) {
         </Link>
       )}
 
-      {batch.status === 'Success' && batch.errorRows === 0 && (
+      {batch.status === 2 && batch.errorRows === 0 && (
         <>
           <Link to={`/import/${batch.id}/validation`} className="text-xs font-medium text-blue-600 hover:text-blue-800">
             รายละเอียด
           </Link>
+          <button
+            type="button"
+            onClick={() => setShowSnapshot(true)}
+            className="text-xs font-medium text-slate-600 hover:text-slate-800"
+          >
+            หลักฐาน
+          </button>
           {batch.isPosted ? (
             <StatusBadge tone="green">ลงบัญชีแล้ว</StatusBadge>
           ) : (
@@ -320,6 +329,15 @@ function ImportBatchAction({ batch }: { batch: ImportBatchListDto }) {
       >
         {deleteBatch.isPending ? 'กำลังลบ...' : 'ลบ'}
       </Button>
+
+      {showSnapshot && (
+        <SnapshotModal
+          batchId={batch.id}
+          fiscalYear={batch.fiscalYear}
+          clientName={batch.clientName}
+          onClose={() => setShowSnapshot(false)}
+        />
+      )}
     </div>
   )
 }

@@ -52,6 +52,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<StatutoryFiling> StatutoryFilings => Set<StatutoryFiling>();
     public DbSet<ExpressPostingLink> ExpressPostingLinks => Set<ExpressPostingLink>();
     public DbSet<PrepaidExpense> PrepaidExpenses => Set<PrepaidExpense>();
+    public DbSet<ImportSnapshot> ImportSnapshots => Set<ImportSnapshot>();
+    public DbSet<ImportSnapshotFile> ImportSnapshotFiles => Set<ImportSnapshotFile>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

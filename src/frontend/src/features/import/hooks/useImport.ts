@@ -47,3 +47,11 @@ export function useDeleteImportBatch() {
     onSuccess: () => qc.invalidateQueries({ queryKey: [IMPORT_KEY] }),
   })
 }
+
+export function useImportSnapshot(id: number, enabled = true) {
+  return useQuery({
+    queryKey: [IMPORT_KEY, 'snapshot', id],
+    queryFn: () => importApi.getSnapshot(id),
+    enabled: enabled && id > 0,
+  })
+}

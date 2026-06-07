@@ -2,6 +2,7 @@ import apiClient from '../../../shared/services/apiClient'
 import type { PaginatedResult } from '../../../shared/types/api.types'
 import type {
   ImportBatchListDto,
+  ImportSnapshotDto,
   ImportValidationSummaryDto,
   PostImportResultDto,
   StartExpressImportRequest,
@@ -31,4 +32,12 @@ export const importApi = {
 
   deleteBatch: (id: number) =>
     apiClient.delete(`/import/${id}`).then((r) => r.data),
+
+  getSnapshot: (id: number) =>
+    apiClient.get<ImportSnapshotDto | null>(`/import/${id}/snapshot`).then((r) => r.data),
+
+  downloadSnapshot: (id: number) =>
+    apiClient
+      .get(`/import/${id}/snapshot/download`, { responseType: 'blob' })
+      .then((r) => r.data as Blob),
 }

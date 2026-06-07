@@ -13,6 +13,7 @@ public class StartExpressImportCommandHandler(
     ICurrentUserService currentUser,
     IExpressDbfAdapter dbfAdapter,
     IImportStorageService storage,
+    IImportSnapshotService snapshotService,
     IAuditService audit)
     : IRequestHandler<StartExpressImportCommand, int>
 {
@@ -363,6 +364,18 @@ public class StartExpressImportCommandHandler(
                     batch.Message += $" (นำเข้าพนักงานไม่สำเร็จ: {ex.Message})";
                     await db.SaveChangesAsync(CancellationToken.None);
                 }
+
+                // เก็บ snapshot ไฟล์ DBF ต้นฉบับเป็นหลักฐานเก็บถาวร 10 ปี (docs/20)
+                // — เพื่อให้ยอดที่ปิดงบแล้วตรวจสอบย้อนกลับได้แม้ Express จะถูกแก้ภายหลัง
+                try
+                {
+                    await CaptureSnapshotAsync(batch, client.Code, folderPath, ct);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    batch.Message += $" (เก็บหลักฐานไฟล์ต้นฉบับไม่สำเร็จ: {ex.Message})";
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
             }
 
             return batch.Id;
@@ -444,6 +457,14 @@ public class StartExpressImportCommandHandler(
 
         var oldIds = oldBatches.Select(b => b.Id).ToList();
 
+        // ลบไฟล์ zip หลักฐานของ batch เก่า (row ลบตาม cascade) — re-import แทนที่ของเดิมทั้งชุด
+        var oldSnapshots = await db.ImportSnapshots
+            .Where(s => oldIds.Contains(s.ImportBatchId))
+            .ToListAsync(ct);
+        foreach (var s in oldSnapshots)
+            snapshotService.DeleteArchive(s.ArchiveRelativePath);
+        if (oldSnapshots.Count > 0) db.ImportSnapshots.RemoveRange(oldSnapshots);
+
         var postedEntries = await db.JournalEntries
             .Include(j => j.Lines)
             .Where(j => j.ImportBatchId != null && oldIds.Contains(j.ImportBatchId.Value))
@@ -461,6 +482,62 @@ public class StartExpressImportCommandHandler(
 
         db.ImportBatches.RemoveRange(oldBatches);
         return oldBatches.Count;
+    }
+
+    /// <summary>
+    /// เก็บ snapshot ไฟล์ DBF ต้นฉบับของ Express เป็น zip + metadata (Import Evidence) เก็บถาวร 10 ปี.
+    /// เพิ่มสรุปจำนวนไฟล์ไว้ใน batch.Message และลง audit. ทำหลังนำเข้าสำเร็จ (1 snapshot/batch).
+    /// </summary>
+    private async Task CaptureSnapshotAsync(ImportBatch batch, string clientCode, string folderPath, CancellationToken ct)
+    {
+        var result = await snapshotService.CaptureAsync(folderPath, clientCode, batch.FiscalYear, ct);
+
+        var status = result.FileCount == 0
+            ? Domain.Enums.ImportSnapshotStatus.Failed
+            : result.Partial
+                ? Domain.Enums.ImportSnapshotStatus.Partial
+                : Domain.Enums.ImportSnapshotStatus.Captured;
+
+        var capturedAt = DateTime.UtcNow;
+        var snapshot = new ImportSnapshot
+        {
+            ImportBatchId       = batch.Id,
+            ClientCompanyId     = batch.ClientCompanyId,
+            FiscalYear          = batch.FiscalYear,
+            CapturedAt          = capturedAt,
+            SourceFolderPath    = folderPath,
+            ArchiveRelativePath = result.ArchiveRelativePath,
+            ArchiveFileName     = result.ArchiveFileName,
+            ArchiveByteSize     = result.ArchiveByteSize,
+            ArchiveSha256       = result.ArchiveSha256,
+            FileCount           = result.FileCount,
+            TotalSourceBytes    = result.TotalSourceBytes,
+            Status              = status,
+            Note                = result.Note,
+            RetainUntil         = capturedAt.AddYears(10),
+            CreatedBy           = currentUser.Username,
+            Files = result.Files.Select(f => new ImportSnapshotFile
+            {
+                TableName        = f.TableName,
+                FileName         = f.FileName,
+                ByteSize         = f.ByteSize,
+                Sha256           = f.Sha256,
+                RowCount         = f.RowCount,
+                SourceModifiedAt = f.SourceModifiedAt,
+                CreatedBy        = currentUser.Username,
+            }).ToList(),
+        };
+        db.ImportSnapshots.Add(snapshot);
+
+        batch.Message += $" · เก็บหลักฐานไฟล์ต้นฉบับ {result.FileCount} ไฟล์";
+        await audit.LogAsync(
+            action: "CaptureImportSnapshot",
+            entityName: "ImportBatch",
+            entityId: batch.Id.ToString(),
+            afterValue: $"snapshot {result.FileCount} ไฟล์ ({result.ArchiveByteSize:N0} ไบต์), sha256={result.ArchiveSha256}",
+            companyId: batch.ClientCompanyId,
+            cancellationToken: ct);
+        await db.SaveChangesAsync(ct);
     }
 
     /// <summary>

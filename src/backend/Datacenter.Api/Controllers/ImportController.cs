@@ -41,4 +41,17 @@ public class ImportController(IMediator mediator) : ControllerBase
         await mediator.Send(new DeleteImportBatchCommand(id), ct);
         return NoContent();
     }
+
+    /// <summary>GET /api/v1/import/{id}/snapshot — metadata + รายไฟล์ของหลักฐานการนำเข้า (null ถ้ายังไม่มี)</summary>
+    [HttpGet("{id:int}/snapshot")]
+    public async Task<IActionResult> GetSnapshot(int id, CancellationToken ct)
+        => Ok(await mediator.Send(new GetImportSnapshotQuery(id), ct));
+
+    /// <summary>GET /api/v1/import/{id}/snapshot/download — ดาวน์โหลด zip ไฟล์ DBF ต้นฉบับ</summary>
+    [HttpGet("{id:int}/snapshot/download")]
+    public async Task<IActionResult> DownloadSnapshot(int id, CancellationToken ct)
+    {
+        var d = await mediator.Send(new DownloadImportSnapshotQuery(id), ct);
+        return File(d.Content, "application/zip", d.FileName);
+    }
 }

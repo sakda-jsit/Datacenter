@@ -51,6 +51,8 @@ public interface IApplicationDbContext
     DbSet<StatutoryFiling> StatutoryFilings { get; }
     DbSet<ExpressPostingLink> ExpressPostingLinks { get; }
     DbSet<PrepaidExpense> PrepaidExpenses { get; }
+    DbSet<ImportSnapshot> ImportSnapshots { get; }
+    DbSet<ImportSnapshotFile> ImportSnapshotFiles { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

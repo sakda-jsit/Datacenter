@@ -12,11 +12,12 @@
 - ยัง validate field/column สำคัญทุกครั้งก่อนประมวลผล (กัน export เปลี่ยนรูปแบบจาก config อื่น)
 - Account code/name คงที่ (A-006) → mapping ใช้ซ้ำข้ามปี แต่แจ้งเตือน account ใหม่ที่ยังไม่ map
 
-## Snapshot ตามรอบปิดงบ (คำตอบ #10) — สำคัญ
+## Snapshot ตามรอบปิดงบ (คำตอบ #10) — สำคัญ ✅ เสร็จ (2026-06-07)
 - ดึงข้อมูลแบบ **snapshot ตามรอบปิดงบ และเก็บถาวร** ไม่ใช่ real-time
 - เหตุผล: ยอดที่ปิดงบแล้วต้องไม่เปลี่ยนเมื่อ Express ถูกแก้ภายหลัง
-- เก็บ `ImportSnapshot`: ปีบัญชี, source type, วันที่ดึง, source file path, checksum, row count, สถานะ
-- เก็บไฟล์ต้นฉบับ (A-008/BR-016) ต่อ import batch — retention ≥ 10 ปี
+- เก็บ `ImportSnapshot`: ปีบัญชี, source file path, checksum (SHA-256), row count, สถานะ, RetainUntil (+10 ปี) + `ImportSnapshotFile` รายไฟล์
+- เก็บไฟล์ต้นฉบับ (A-008/BR-016) ต่อ import batch เป็น **zip บน filesystem** (`Import:SnapshotBasePath`) — retention ≥ 10 ปี
+- **Implemented:** capture อัตโนมัติใน StartExpressImport; ปุ่ม "หลักฐาน" + ดาวน์โหลด zip ในหน้านำเข้า. รายละเอียดใน docs/12 หัวข้อ "Snapshot Express DBF เก็บถาวร 10 ปี"
 
 ## Import Evidence Log (RPT-020)
 ประเภทข้อมูล, ชื่อไฟล์/batch, ปีบัญชี/รอบ, ผู้นำเข้า/วันที่, สถานะ validation, จำนวนรายการ, link หลักฐาน
