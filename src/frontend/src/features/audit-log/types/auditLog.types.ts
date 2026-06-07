@@ -23,6 +23,27 @@ export interface AuditLogParams {
   pageSize: number
 }
 
+export interface AuditLogExportParams {
+  clientCompanyId?: number
+  action?: string
+  entityName?: string
+  search?: string
+  fromDate?: string
+  toDate?: string
+}
+
+export interface AuditLogExportResult {
+  items: AuditLogDto[]
+  totalCount: number
+  capped: boolean
+  cap: number
+}
+
+export interface AuditLogFilterOptions {
+  actions: string[]
+  entityNames: string[]
+}
+
 export interface PaginatedResult<T> {
   items: T[]
   totalCount: number

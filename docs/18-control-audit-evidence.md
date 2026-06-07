@@ -19,10 +19,11 @@
 - metadata: ประเภท, ชื่อไฟล์, module/record, ปีบัญชี, ผู้อัปโหลด, วันที่, สถานะตรวจสอบ, checksum
 - **Evidence completeness check**: ก่อน mark พร้อมปิดงบ/สร้าง final report ต้องตรวจว่าแนบเอกสารครบ ไม่ครบ → warning
 
-## Audit Log Export (A-034)
-- export ให้ผู้สอบบัญชี: รูปแบบ **Excel / PDF / CSV** (คำตอบ #8)
-- filter: บริษัท, ปีบัญชี/รอบ, module, ประเภทรายการ, ผู้แก้, ช่วงวันที่, report package
-- แสดงจำนวนรายการรวมเพื่อยืนยันความครบ
+## Audit Log Export (A-034) ✅ เสร็จ (2026-06-07)
+- export ให้ผู้สอบบัญชี: รูปแบบ **Excel / PDF / CSV** (คำตอบ #8) — ดึง **ทั้งชุดตามตัวกรอง** (ไม่ใช่แค่หน้าปัจจุบัน) ผ่าน `GET /audit-log/export` (cap 50,000 + เตือนถ้าเกิน)
+- filter: บริษัท, module (EntityName), ประเภทรายการ (Action), ผู้แก้/รหัส (search), ช่วงวันที่ — ตัวเลือก Action/EntityName จาก `GET /audit-log/filter-options`
+- แสดงจำนวนรายการรวมใน subtitle ของไฟล์เพื่อยืนยันความครบ
+- **ยังไม่ครอบ:** filter ตาม ปีบัญชี/report package โดยตรง (ใช้ช่วงวันที่แทนได้)
 
 ## Report Package & Final Version Control (ยืนยัน 2026-06-04)
 - จัดชุดรายงานตามผู้รับ: ผู้สอบบัญชี / กรมพัฒนาธุรกิจการค้า / กรมสรรพากร / ประกันสังคม / อื่น ๆ

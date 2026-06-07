@@ -6,11 +6,10 @@ import Pagination from '../../../shared/components/ui/Pagination'
 import SearchInput from '../../../shared/components/ui/SearchInput'
 import StateMessage from '../../../shared/components/ui/StateMessage'
 import StatusBadge from '../../../shared/components/ui/StatusBadge'
-import ExportMenu from '../../../shared/components/ui/ExportMenu'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
-import { useAuditLogs } from '../hooks/useAuditLog'
+import { useAuditLogFilterOptions, useAuditLogs } from '../hooks/useAuditLog'
 import type { AuditLogDto } from '../types/auditLog.types'
-import type { ExportSection } from '../../../shared/utils/exportTable'
+import AuditLogExportMenu from '../components/AuditLogExportMenu'
 
 const PAGE_SIZE = 20
 
@@ -34,24 +33,44 @@ function fmtDateTime(iso: string) {
 export default function AuditLogPage() {
   const { companyId } = useCurrentCompany()
   const [search, setSearch] = useState('')
+  const [action, setAction] = useState('')
+  const [entityName, setEntityName] = useState('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [scopeToCompany, setScopeToCompany] = useState(false)
   const [page, setPage] = useState(1)
+
+  const scopedCompanyId = scopeToCompany && companyId > 0 ? companyId : undefined
 
   const params = useMemo(
     () => ({
       pageNumber: page,
       pageSize: PAGE_SIZE,
       search: search.trim() || undefined,
+      action: action || undefined,
+      entityName: entityName || undefined,
       fromDate: fromDate || undefined,
       toDate: toDate || undefined,
-      clientCompanyId: scopeToCompany && companyId > 0 ? companyId : undefined,
+      clientCompanyId: scopedCompanyId,
     }),
-    [page, search, fromDate, toDate, scopeToCompany, companyId],
+    [page, search, action, entityName, fromDate, toDate, scopedCompanyId],
   )
 
   const { data, isLoading, isError } = useAuditLogs(params)
+  const { data: filterOptions } = useAuditLogFilterOptions(scopedCompanyId)
+
+  const exportParams = {
+    search: search.trim() || undefined,
+    action: action || undefined,
+    entityName: entityName || undefined,
+    fromDate: fromDate || undefined,
+    toDate: toDate || undefined,
+    clientCompanyId: scopedCompanyId,
+  }
+  const exportSubtitle = [
+    fromDate || toDate ? `${fromDate || '...'} – ${toDate || '...'}` : null,
+    scopedCompanyId ? 'เฉพาะบริษัทปัจจุบัน' : null,
+  ].filter(Boolean).join(' · ') || undefined
 
   function resetToFirstPage() {
     setPage(1)
@@ -109,32 +128,12 @@ export default function AuditLogPage() {
     },
   ]
 
-  const exportSections = (): ExportSection[] => [{
-    name: 'ประวัติการใช้งาน',
-    columns: [
-      { key: 'createdAt', header: 'เวลา', value: (r) => fmtDateTime(r.createdAt) },
-      { key: 'username', header: 'ผู้ใช้', value: (r) => r.username || '' },
-      { key: 'action', header: 'การกระทำ' },
-      { key: 'entityName', header: 'รายการ' },
-      { key: 'entityId', header: 'รหัส' },
-      { key: 'clientName', header: 'บริษัท', value: (r) => r.clientName ?? '' },
-      { key: 'beforeValue', header: 'ก่อน', value: (r) => r.beforeValue ?? '' },
-      { key: 'afterValue', header: 'หลัง', value: (r) => r.afterValue ?? '' },
-    ],
-    rows: data?.items ?? [],
-  }]
-
   return (
     <div>
       <PageHeader
         title="ประวัติการใช้งาน"
-        description="Audit log การกระทำสำคัญทั้งหมดในระบบ"
-        action={data && data.items.length > 0 ? (
-          <ExportMenu
-            meta={{ title: 'ประวัติการใช้งาน (Audit Log)', subtitle: `หน้า ${data.pageNumber}/${data.totalPages}`, fileName: 'audit-log' }}
-            getSections={exportSections}
-          />
-        ) : undefined}
+        description="Audit log การกระทำสำคัญทั้งหมดในระบบ — ส่งออกทั้งชุดตามตัวกรองให้ผู้สอบบัญชี"
+        action={<AuditLogExportMenu params={exportParams} subtitle={exportSubtitle} fmtDateTime={fmtDateTime} />}
       />
 
       <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg bg-white p-4 shadow">
@@ -146,6 +145,28 @@ export default function AuditLogPage() {
             onChange={(e) => { setSearch(e.target.value); resetToFirstPage() }}
             className="w-64"
           />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-600">การกระทำ</label>
+          <select
+            value={action}
+            onChange={(e) => { setAction(e.target.value); resetToFirstPage() }}
+            className="rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+          >
+            <option value="">ทั้งหมด</option>
+            {filterOptions?.actions.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-600">รายการ/โมดูล</label>
+          <select
+            value={entityName}
+            onChange={(e) => { setEntityName(e.target.value); resetToFirstPage() }}
+            className="rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+          >
+            <option value="">ทั้งหมด</option>
+            {filterOptions?.entityNames.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">ตั้งแต่วันที่</label>

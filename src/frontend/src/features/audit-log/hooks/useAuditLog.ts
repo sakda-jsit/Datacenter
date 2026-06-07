@@ -8,3 +8,10 @@ export function useAuditLogs(params: AuditLogParams) {
     queryFn: () => auditLogApi.getLogs(params),
   })
 }
+
+export function useAuditLogFilterOptions(clientCompanyId?: number) {
+  return useQuery({
+    queryKey: ['audit-log-filter-options', clientCompanyId ?? null],
+    queryFn: () => auditLogApi.filterOptions(clientCompanyId),
+  })
+}

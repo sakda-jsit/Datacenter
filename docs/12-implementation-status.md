@@ -96,7 +96,7 @@ Requirement v11 เพิ่มขอบเขตจาก workbook ปิดง
 | PND.3/53 จาก ISTAX | ✅ เสร็จ (2026-06-05) | ไม่ (ISTAX) | นำเข้า ISTAX.DBF → รายงาน ภ.ง.ด.3/53 รายเดือน + รายละเอียด — ดูหัวข้อด้านล่าง (ไม่ต้องพึ่ง PDF) |
 | Field-level audit ทุก field | 🟡 มี Audit Log พื้นฐาน | ไม่ | ยังไม่ field-level (docs/18) |
 | Attachment / Evidence | ❌ ยังไม่เริ่ม | ไม่ | docs/18 |
-| Audit log export | 🟡 มี viewer/filter | ไม่ | ยังไม่มี export Excel/PDF/CSV |
+| Audit log export | ✅ เสร็จ (2026-06-07) | ไม่ | export **ทั้งชุดตามตัวกรอง** (Excel/CSV/PDF) ผ่าน /audit-log/export (cap 50k) + ตัวกรอง Action/EntityName (/filter-options) + แสดงจำนวนรวม |
 | Report package (draft/review/final/lock + version) | ✅ เสร็จ (2026-06-05) | ไม่ | ReportPackage + workflow + snapshot ชื่อบริษัท/ยอดงบ ตอน finalize — ดูหัวข้อด้านล่าง |
 | Snapshot อัตลักษณ์บริษัทตอนล็อกงบ | ✅ เสร็จ (ใน Report Package) | ไม่ | snapshot LegalName/TaxId/Branch/Address + ยอดงบต่อ version (แก้ deferred จากงาน LegalName) |
 | Snapshot Express DBF เก็บถาวร 10 ปี | ✅ เสร็จ (2026-06-07) | ไม่ | ImportSnapshot/ImportSnapshotFile + zip ไฟล์ DBF ต้นฉบับ + checksum/row count + RetainUntil; ปุ่ม "หลักฐาน" ในหน้านำเข้า — ดูหัวข้อด้านล่าง |
