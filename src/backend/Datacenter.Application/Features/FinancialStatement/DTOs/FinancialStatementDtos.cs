@@ -72,3 +72,19 @@ public record FsExternalInputDto(
     string RefCode,
     decimal Amount,
     string? Note);
+
+/// <summary>บัญชีที่มียอดสิ้นปีแต่ยังไม่ถูก map เข้างบ (หนึ่งบัญชี).</summary>
+public record UnmappedAccountDto(
+    string AccountCode,
+    string AccountName,
+    /// <summary>ยอดสะสมสิ้นปี (debit−credit)</summary>
+    decimal NetBalance);
+
+/// <summary>ผลตรวจบัญชีตกหล่น — เตือนก่อนปิดงบ.</summary>
+public record UnmappedAccountsResultDto(
+    int FiscalYear,
+    int MappedCount,
+    int UnmappedWithBalanceCount,
+    /// <summary>ผลรวมยอดของบัญชีตกหล่น = ผลต่างที่จะทำให้งบไม่สมดุล (0 = ไม่กระทบสมดุล)</summary>
+    decimal TotalNet,
+    IReadOnlyList<UnmappedAccountDto> Items);

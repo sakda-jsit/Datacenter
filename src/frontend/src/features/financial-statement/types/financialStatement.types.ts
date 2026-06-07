@@ -49,6 +49,20 @@ export interface ProfitLossDto {
   netProfit: number
 }
 
+export interface UnmappedAccountDto {
+  accountCode: string
+  accountName: string
+  netBalance: number
+}
+
+export interface UnmappedAccountsResult {
+  fiscalYear: number
+  mappedCount: number
+  unmappedWithBalanceCount: number
+  totalNet: number
+  items: UnmappedAccountDto[]
+}
+
 export interface AccountMappingDto {
   accountCode: string
   accountName: string

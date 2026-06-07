@@ -97,4 +97,10 @@ public class FinancialStatementController(IMediator mediator) : ControllerBase
         await mediator.Send(command, ct);
         return NoContent();
     }
+
+    /// <summary>GET /api/v1/financial-statement/unmapped-accounts?clientCompanyId=1&amp;fiscalYear=2025 — บัญชีที่มียอดแต่ยังไม่ map (เตือนก่อนปิดงบ)</summary>
+    [HttpGet("unmapped-accounts")]
+    public async Task<IActionResult> GetUnmappedAccounts(
+        [FromQuery] int clientCompanyId, [FromQuery] int fiscalYear, CancellationToken ct)
+        => Ok(await mediator.Send(new GetUnmappedAccountsQuery(clientCompanyId, fiscalYear), ct));
 }

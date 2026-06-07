@@ -7,6 +7,7 @@ import type {
   NotesToFsDto,
   NoteTemplateSectionDto,
   ProfitLossDto,
+  UnmappedAccountsResult,
 } from '../types/financialStatement.types'
 
 const BASE = '/financial-statement'
@@ -39,6 +40,9 @@ export const financialStatementApi = {
 
   deleteMapping: (clientCompanyId: number, accountCode: string) =>
     apiClient.delete(`${BASE}/mappings/${clientCompanyId}/${accountCode}`),
+
+  getUnmappedAccounts: (params: { clientCompanyId: number; fiscalYear: number }) =>
+    apiClient.get<UnmappedAccountsResult>(`${BASE}/unmapped-accounts`, { params }).then((r) => r.data),
 
   getExternalInputs: (params: { clientCompanyId: number; fiscalYear: number }) =>
     apiClient.get<FsExternalInputDto[]>(`${BASE}/external-inputs`, { params }).then((r) => r.data),

@@ -44,11 +44,25 @@ export function useAccountMappings(clientCompanyId: number) {
   })
 }
 
+export function useUnmappedAccounts(
+  params: { clientCompanyId: number; fiscalYear: number },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [FS_KEY, 'unmapped-accounts', params],
+    queryFn: () => financialStatementApi.getUnmappedAccounts(params),
+    enabled: enabled && params.clientCompanyId > 0,
+  })
+}
+
 export function useUpsertMapping() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: financialStatementApi.upsertMapping,
-    onSuccess: () => qc.invalidateQueries({ queryKey: [FS_KEY, 'mappings'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [FS_KEY, 'mappings'] })
+      qc.invalidateQueries({ queryKey: [FS_KEY, 'unmapped-accounts'] })
+    },
   })
 }
 
@@ -57,7 +71,10 @@ export function useDeleteMapping() {
   return useMutation({
     mutationFn: ({ clientCompanyId, accountCode }: { clientCompanyId: number; accountCode: string }) =>
       financialStatementApi.deleteMapping(clientCompanyId, accountCode),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [FS_KEY, 'mappings'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [FS_KEY, 'mappings'] })
+      qc.invalidateQueries({ queryKey: [FS_KEY, 'unmapped-accounts'] })
+    },
   })
 }
 

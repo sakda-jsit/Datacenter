@@ -3,7 +3,11 @@ import Button from '../../../../shared/components/ui/Button'
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
 import type { ClientListDto } from '../../../clients/types/client.types'
-import { useAccountMappings, useDeleteMapping, useUpsertMapping } from '../../hooks/useFinancialStatement'
+import { useAccountMappings, useDeleteMapping, useUnmappedAccounts, useUpsertMapping } from '../../hooks/useFinancialStatement'
+
+function fmtAmt(n: number) {
+  return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
 // All 23 REF codes
 const REF_CODES = [
@@ -54,10 +58,18 @@ export default function MappingTab({ clientId, clients }: Props) {
   const [editCode, setEditCode] = useState('')
   const [editName, setEditName] = useState('')
   const [editRef, setEditRef] = useState('')
+  const [checkYear, setCheckYear] = useState(new Date().getFullYear())
 
   const { data: mappings, isLoading } = useAccountMappings(clientId)
+  const { data: check } = useUnmappedAccounts({ clientCompanyId: clientId, fiscalYear: checkYear })
   const upsert = useUpsertMapping()
   const del = useDeleteMapping()
+
+  // คลิก "แมพ" จากรายการตกหล่น → เติมรหัส/ชื่อลงฟอร์มด้านล่าง (เหลือแค่เลือก REF + บันทึก)
+  function prefillMap(code: string, name: string) {
+    setEditCode(code); setEditName(name); setEditRef('')
+    document.getElementById('mapping-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -89,8 +101,69 @@ export default function MappingTab({ clientId, clients }: Props) {
 
       {clientId > 0 && (
         <>
-          {/* Add mapping form */}
+          {/* ตรวจบัญชีตกหล่น (เตือนก่อนปิดงบ) */}
           <Card className="mb-4 p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-700">ตรวจบัญชีตกหล่น (ก่อนปิดงบ)</p>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-600">ปีบัญชี (AD)</label>
+                <input
+                  type="number" value={checkYear} min={2000} max={2100}
+                  onChange={(e) => setCheckYear(Number(e.target.value))}
+                  className="w-24 rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                />
+              </div>
+            </div>
+
+            {!check && <StateMessage>กำลังตรวจ...</StateMessage>}
+            {check && check.unmappedWithBalanceCount === 0 && (
+              <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                ✓ ไม่มีบัญชีตกหล่น — บัญชีที่มียอดสิ้นปี {checkYear} ถูก map เข้างบครบ ({check.mappedCount} บัญชี)
+              </div>
+            )}
+            {check && check.unmappedWithBalanceCount > 0 && (
+              <div>
+                <div className={`mb-2 rounded-lg border px-3 py-2 text-sm ${
+                  Math.abs(check.totalNet) > 0.01
+                    ? 'border-rose-200 bg-rose-50 text-rose-700'
+                    : 'border-amber-200 bg-amber-50 text-amber-700'
+                }`}>
+                  {Math.abs(check.totalNet) > 0.01 ? (
+                    <>⚠ พบ <b>{check.unmappedWithBalanceCount}</b> บัญชีมียอดแต่ยังไม่ map → <b>งบจะไม่สมดุล {fmtAmt(check.totalNet)}</b> บาท (map แล้ว {check.mappedCount})</>
+                  ) : (
+                    <>พบ <b>{check.unmappedWithBalanceCount}</b> บัญชียังไม่ map (ยอดสุทธิ 0 — งบยังไม่สมดุลผิด แต่บัญชีเหล่านี้จะตกหล่นจากงบ; map แล้วเพียง {check.mappedCount})</>
+                  )}
+                </div>
+                <div className="max-h-72 overflow-y-auto rounded border border-gray-100">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-slate-50 text-xs text-gray-600">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium w-28">รหัสบัญชี</th>
+                        <th className="px-3 py-2 text-left font-medium">ชื่อบัญชี</th>
+                        <th className="px-3 py-2 text-right font-medium w-36">ยอดสิ้นปี</th>
+                        <th className="px-3 py-2 w-20"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {check.items.map((a) => (
+                        <tr key={a.accountCode} className="border-b border-gray-100 hover:bg-amber-50/40">
+                          <td className="px-3 py-2 font-mono text-gray-600">{a.accountCode}</td>
+                          <td className="px-3 py-2 text-gray-700">{a.accountName || '—'}</td>
+                          <td className="px-3 py-2 text-right font-mono text-gray-800">{fmtAmt(a.netBalance)}</td>
+                          <td className="px-3 py-2 text-right">
+                            <Button type="button" variant="ghost" onClick={() => prefillMap(a.accountCode, a.accountName)} className="px-2 py-1 text-xs text-sky-600">แมพ →</Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Add mapping form */}
+          <Card id="mapping-form" className="mb-4 p-4">
             <p className="text-sm font-semibold text-slate-700 mb-3">เพิ่ม / แก้ไข Mapping</p>
             <form onSubmit={handleSave} className="flex flex-wrap gap-3 items-end">
               <div>
