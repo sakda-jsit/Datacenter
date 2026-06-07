@@ -57,6 +57,7 @@ public interface IApplicationDbContext
     DbSet<CashCountLine> CashCountLines { get; }
     DbSet<InterestBearingLoan> InterestBearingLoans { get; }
     DbSet<LoanPrincipalMovement> LoanPrincipalMovements { get; }
+    DbSet<Attachment> Attachments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

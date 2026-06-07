@@ -58,6 +58,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CashCountLine> CashCountLines => Set<CashCountLine>();
     public DbSet<InterestBearingLoan> InterestBearingLoans => Set<InterestBearingLoan>();
     public DbSet<LoanPrincipalMovement> LoanPrincipalMovements => Set<LoanPrincipalMovement>();
+    public DbSet<Attachment> Attachments => Set<Attachment>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

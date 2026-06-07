@@ -20,6 +20,7 @@ import ArPage from '../features/ar/pages/ArPage'
 import ApPage from '../features/ap/pages/ApPage'
 import StockPage from '../features/stock/pages/StockPage'
 import ReportPackagesPage from '../features/report-packages/pages/ReportPackagesPage'
+import EvidencePage from '../features/attachments/pages/EvidencePage'
 import PayrollPage from '../features/payroll/pages/PayrollPage'
 import PayrollRatesPage from '../features/settings/pages/PayrollRatesPage'
 import BankReconciliationPage from '../features/bank-reconciliation/pages/BankReconciliationPage'
@@ -65,6 +66,7 @@ export default function AppRouter() {
           <Route path="compliance" element={<ComplianceCalendarRoute />} />
           <Route path="closing-period" element={<ClosingPeriodPage />} />
           <Route path="report-packages" element={<ReportPackagesPage />} />
+          <Route path="evidence" element={<EvidencePage />} />
           <Route path="audit-log" element={<AuditLogPage />} />
           <Route path="settings/payroll-rates" element={<PayrollRatesPage />} />
         </Route>

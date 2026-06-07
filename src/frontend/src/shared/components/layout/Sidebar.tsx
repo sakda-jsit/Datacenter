@@ -105,6 +105,7 @@ const navGroups: NavGroup[] = [
       { to: '/financial-statement', icon: 'chart', label: 'งบการเงิน', desc: 'กำไรขาดทุนและฐานะการเงิน' },
       { to: '/closing-period', icon: 'lock', label: 'ปิดรอบบัญชี', desc: 'ตรวจสอบและ lock period' },
       { to: '/report-packages', icon: 'fileText', label: 'ชุดรายงานงบ', desc: 'เวอร์ชัน + ล็อกงบที่ยื่น' },
+      { to: '/evidence', icon: 'fileText', label: 'คลังเอกสาร / หลักฐาน', desc: 'แนบหลักฐาน + ตรวจครบถ้วน' },
     ],
   },
   {

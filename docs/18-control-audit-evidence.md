@@ -14,10 +14,12 @@
 
 แนวทาง implement: ขยาย `AuditLog` → `FieldAuditLog` (เช่น EF Core SaveChanges interceptor บันทึก diff)
 
-## Attachment / Evidence Management
+## Attachment / Evidence Management ✅ เสร็จ (2026-06-07)
 - รายการสำคัญต้องแนบเอกสารได้: bank statement, ใบกำกับภาษี, ใบหัก ณ ที่จ่าย, PDF สรรพากร, เอกสาร asset/prepaid, ไฟล์ Express/import
 - metadata: ประเภท, ชื่อไฟล์, module/record, ปีบัญชี, ผู้อัปโหลด, วันที่, สถานะตรวจสอบ, checksum
 - **Evidence completeness check**: ก่อน mark พร้อมปิดงบ/สร้าง final report ต้องตรวจว่าแนบเอกสารครบ ไม่ครบ → warning
+
+> **Implement:** `Attachment` entity (blob ใน DB + SHA-256, polymorphic `ModuleName`+`RecordId`+`FiscalYear`) + enum `AttachmentCategory` (12 หมวด) / `AttachmentVerificationStatus` (Pending/Verified/Rejected). CQRS Upload(multipart)/UpdateMetadata/SetVerification/Delete + GetAttachments(filter)/GetAttachmentContent(audit ทุกการดาวน์โหลด)/GetEvidenceCompleteness. `EvidenceChecklist` (static: 4 หมวดบังคับ = งบการเงิน/หนังสือยืนยันยอดธนาคาร/bank statement/แบบสรรพากร) → completeness query นับต่อหมวด/ปี (เอกสาร FiscalYear=null ใช้ได้ทุกปี). `AttachmentsController` /api/v1/attachments (GET, /completeness, /{id}/download, POST multipart, PUT /{id}, PUT /{id}/verification, DELETE). Frontend เมนู "คลังเอกสาร / หลักฐาน" `/evidence` 2 แท็บ (เอกสารแนบ+filter+upload/verify/delete/download / ความครบถ้วน checklist). ทุก action ลง audit trail. เก็บถาวร ≥ 10 ปี. migration AddAttachments.
 
 ## Audit Log Export (A-034) ✅ เสร็จ (2026-06-07)
 - export ให้ผู้สอบบัญชี: รูปแบบ **Excel / PDF / CSV** (คำตอบ #8) — ดึง **ทั้งชุดตามตัวกรอง** (ไม่ใช่แค่หน้าปัจจุบัน) ผ่าน `GET /audit-log/export` (cap 50,000 + เตือนถ้าเกิน)
