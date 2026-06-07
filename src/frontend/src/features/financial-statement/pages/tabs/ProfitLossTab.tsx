@@ -64,7 +64,8 @@ export default function ProfitLossTab({ data, isLoading, isError, queried, clien
             getSections={(): ExportSection[] => {
               const cols = [
                 { key: 'refCode', header: 'รหัส' },
-                { key: 'label', header: 'รายการ' },
+                { key: 'noteNo', header: 'หมายเหตุ', value: (r: FsLineDto) => r.noteNo ?? '' },
+                { key: 'lineName', header: 'รายการ', value: (r: FsLineDto) => r.lineName },
                 { key: 'amount', header: 'จำนวนเงิน', align: 'right' as const },
               ]
               return [{
@@ -196,6 +197,7 @@ function FsRow({ line, indent }: { line: FsLineDto; indent?: boolean }) {
             <span className="mr-2 text-gray-400 text-xs">{expanded ? '▼' : '▶'}</span>
           )}
           {line.lineName}
+          {line.noteNo && <span className="ml-2 text-[11px] font-medium text-sky-600">หมายเหตุ {line.noteNo}</span>}
         </td>
         <td className="px-5 py-2.5 text-right font-mono text-xs text-gray-400">{line.refCode}</td>
         <td className={`px-5 py-2.5 text-right font-mono font-medium ${isNegative ? 'text-red-600' : 'text-gray-800'}`}>

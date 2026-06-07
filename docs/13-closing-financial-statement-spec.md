@@ -44,6 +44,10 @@ group code   = VLOOKUP(account, T, group)
 2. **Data binding** — ตัวเลขดึงจาก TB ปีปัจจุบัน/ปีก่อน + schedule (SUM/FA) อัตโนมัติ ห้ามแก้ตรง
 - `OLE_LINK` = report header ให้เหมือนหน้าแรกเท่านั้น → ทำเป็น page header ไม่ใช่ data source
 - migrate เฉพาะพื้นที่ Page Break Preview; hidden sheet 2016–2024 อยู่นอก scope
+- **คอลัมน์ "หมายเหตุ" ในงบดุล/PL (เต็มรูป DBD) ✅ เสร็จ 2026-06-07:** ทุกบรรทัดงบที่มีหมายเหตุประกอบ
+  แสดงเลข note (A1→6.1, A3→6.3, A5→6.6, A10→6.7, A9→6.5, A6→6.8, A7/A8→6.2, A4/TXR→6.4,
+  L1/L2/TXP→6.9, L4/L5→6.10, L6→6.11, C→6.13, X1→6.14, X2→6.15). map อยู่ใน `NotesEngine.NoteNoFor`
+  (single source — ชี้ไปที่ note ที่ตัวเลขปรากฏจริง). บรรทัดที่ไม่มีหมายเหตุ (A2/L3/C1/RE/I1–I4/X3/X4) เว้นว่าง.
 
 ## 6. Cash Count (CASH COUNT)
 - บันทึกตรวจนับเงินสด: ชนิดธนบัตร × จำนวนฉบับ = มูลค่า (`ROUND(qty×value,2)`)

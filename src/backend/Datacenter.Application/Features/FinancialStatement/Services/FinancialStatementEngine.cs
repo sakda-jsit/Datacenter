@@ -103,7 +103,7 @@ public static class FinancialStatementEngine
             line?.LineName ?? fallbackName,
             line?.Section ?? fallbackSection,
             line?.SortOrder ?? fallbackSort,
-            amount, []);
+            amount, [], NotesEngine.NoteNoFor(refCode));
     }
 
     // ── Profit & Loss ──────────────────────────────────────────────────────────
@@ -214,7 +214,7 @@ public static class FinancialStatementEngine
         decimal presentation = -Math.Abs(externalAmount);
         return new FsLineDto(
             line.RefCode, line.LineName, line.Section, line.SortOrder,
-            presentation, []);
+            presentation, [], NotesEngine.NoteNoFor(line.RefCode));
     }
 
     private static IReadOnlyList<FsLineDto> BuildEquityLines(
@@ -236,7 +236,8 @@ public static class FinancialStatementEngine
                     decimal reAmount = -reOpeningNetBalance + netProfit;
                     var accs = lineAmounts.TryGetValue("RE", out var list) ? list : [];
                     return new FsLineDto(
-                        l.RefCode, l.LineName, l.Section, l.SortOrder, reAmount, accs);
+                        l.RefCode, l.LineName, l.Section, l.SortOrder, reAmount, accs,
+                        NotesEngine.NoteNoFor(l.RefCode));
                 }
                 return ToFsLine(l, lineAmounts);
             })
@@ -269,6 +270,6 @@ public static class FinancialStatementEngine
         }
 
         return new FsLineDto(line.RefCode, line.LineName, line.Section, line.SortOrder,
-            presentation, accs);
+            presentation, accs, NotesEngine.NoteNoFor(line.RefCode));
     }
 }

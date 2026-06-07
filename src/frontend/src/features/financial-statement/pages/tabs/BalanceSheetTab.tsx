@@ -7,7 +7,8 @@ import type { ExportSection } from '../../../../shared/utils/exportTable'
 
 const FS_COLS = [
   { key: 'refCode', header: 'รหัส' },
-  { key: 'label', header: 'รายการ' },
+  { key: 'noteNo', header: 'หมายเหตุ', value: (r: FsLineDto) => r.noteNo ?? '' },
+  { key: 'lineName', header: 'รายการ', value: (r: FsLineDto) => r.lineName },
   { key: 'amount', header: 'จำนวนเงิน', align: 'right' as const },
 ]
 
@@ -148,6 +149,7 @@ function BsRow({ line }: { line: FsLineDto }) {
         <td className="px-2 py-2.5 text-gray-800">
           {hasAccounts && <span className="mr-1 text-gray-400 text-xs">{expanded ? '▼' : '▶'}</span>}
           {line.lineName}
+          {line.noteNo && <span className="ml-2 text-[11px] font-medium text-sky-600">หมายเหตุ {line.noteNo}</span>}
         </td>
         <td className="px-5 py-2.5 text-right font-mono text-gray-800 w-36">
           {line.amount !== 0 ? fmt(line.amount) : '—'}

@@ -34,6 +34,35 @@ public static class NotesEngine
         new("6.15", "ค่าใช้จ่ายในการบริหาร",                  75, ["X2"]),
     ];
 
+    /// <summary>
+    /// แผนที่ RefCode (บรรทัดงบ) → เลขหมายเหตุ (NOTE2) สำหรับคอลัมน์ "หมายเหตุ" ในงบดุล/PL
+    /// (รูปแบบ DBD). อ้างอิงตำแหน่งที่ตัวเลขปรากฏจริงในชุดหมายเหตุของระบบ:
+    ///   schedule (6.1–6.4/6.8–6.10/6.14/6.15) + cost (6.13) + movement (6.6/6.7) + narrative (6.5/6.11).
+    /// บรรทัดที่ไม่มีหมายเหตุ (A2, L3, C1, RE, I1–I4, X3, X4) = ไม่อยู่ใน map → คืน null.
+    /// L2 (หนี้สินหมุนเวียนอื่น) จัดอยู่หมายเหตุ 6.9 ตามโครงสร้างหมายเหตุของระบบ.
+    /// </summary>
+    private static readonly Dictionary<string, string> RefCodeToNoteNo = new()
+    {
+        ["A1"] = "6.1",
+        ["A7"] = "6.2", ["A8"] = "6.2",
+        ["A3"] = "6.3",
+        ["A4"] = "6.4", ["TXR"] = "6.4",
+        ["A9"] = "6.5",
+        ["A5"] = "6.6",
+        ["A10"] = "6.7",
+        ["A6"] = "6.8",
+        ["L1"] = "6.9", ["L2"] = "6.9", ["TXP"] = "6.9",
+        ["L4"] = "6.10", ["L5"] = "6.10",
+        ["L6"] = "6.11",
+        ["C"] = "6.13",
+        ["X1"] = "6.14",
+        ["X2"] = "6.15",
+    };
+
+    /// <summary>เลขหมายเหตุของบรรทัดงบ (null = บรรทัดนี้ไม่มีหมายเหตุประกอบ).</summary>
+    public static string? NoteNoFor(string refCode)
+        => RefCodeToNoteNo.GetValueOrDefault(refCode);
+
     /// <summary>RefCode ที่ใช้คิดสินค้าคงเหลือ (สำหรับต้นทุนขาย 6.13)</summary>
     private const string InventoryRef = "A3";
 

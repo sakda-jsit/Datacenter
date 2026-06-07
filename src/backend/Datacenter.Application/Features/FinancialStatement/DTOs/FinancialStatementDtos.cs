@@ -14,7 +14,9 @@ public record FsLineDto(
     /// </summary>
     decimal Amount,
     /// <summary>Account codes + names that contribute to this line (for drill-down).</summary>
-    IReadOnlyList<FsLineAccountDto> Accounts);
+    IReadOnlyList<FsLineAccountDto> Accounts,
+    /// <summary>เลขหมายเหตุประกอบงบ (NOTE2) ของบรรทัดนี้ เช่น "6.1" — null ถ้าไม่มีหมายเหตุ.</summary>
+    string? NoteNo = null);
 
 public record FsLineAccountDto(
     string AccountCode,

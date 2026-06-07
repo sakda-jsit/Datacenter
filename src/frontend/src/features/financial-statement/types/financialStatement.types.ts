@@ -11,6 +11,7 @@ export interface FsLineDto {
   sortOrder: number
   amount: number
   accounts: FsLineAccountDto[]
+  noteNo?: string | null
 }
 
 export interface BalanceSheetDto {
