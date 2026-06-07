@@ -53,6 +53,10 @@ public interface IApplicationDbContext
     DbSet<PrepaidExpense> PrepaidExpenses { get; }
     DbSet<ImportSnapshot> ImportSnapshots { get; }
     DbSet<ImportSnapshotFile> ImportSnapshotFiles { get; }
+    DbSet<CashCount> CashCounts { get; }
+    DbSet<CashCountLine> CashCountLines { get; }
+    DbSet<InterestBearingLoan> InterestBearingLoans { get; }
+    DbSet<LoanPrincipalMovement> LoanPrincipalMovements { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

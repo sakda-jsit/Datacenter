@@ -54,6 +54,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PrepaidExpense> PrepaidExpenses => Set<PrepaidExpense>();
     public DbSet<ImportSnapshot> ImportSnapshots => Set<ImportSnapshot>();
     public DbSet<ImportSnapshotFile> ImportSnapshotFiles => Set<ImportSnapshotFile>();
+    public DbSet<CashCount> CashCounts => Set<CashCount>();
+    public DbSet<CashCountLine> CashCountLines => Set<CashCountLine>();
+    public DbSet<InterestBearingLoan> InterestBearingLoans => Set<InterestBearingLoan>();
+    public DbSet<LoanPrincipalMovement> LoanPrincipalMovements => Set<LoanPrincipalMovement>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

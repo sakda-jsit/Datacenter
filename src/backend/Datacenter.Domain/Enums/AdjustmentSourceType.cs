@@ -20,5 +20,9 @@ public enum AdjustmentSourceType
     /// <summary>มาจากกระดาษทำการสินทรัพย์ถาวร (ค่าเสื่อมราคา/จำหน่าย)</summary>
     FixedAsset = 5,
     /// <summary>มาจากกระดาษทำการค่าใช้จ่ายจ่ายล่วงหน้า (ตัดจ่ายตามงวด)</summary>
-    Prepaid = 6
+    Prepaid = 6,
+    /// <summary>มาจากกระดาษทำการตรวจนับเงินสด (เงินสดขาด/เกิน)</summary>
+    CashCount = 7,
+    /// <summary>มาจากกระดาษทำการดอกเบี้ยรับเงินให้กู้ (รับรู้ดอกเบี้ยค้างรับ)</summary>
+    InterestIncome = 8
 }
