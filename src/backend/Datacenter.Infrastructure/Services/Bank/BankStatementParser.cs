@@ -9,7 +9,7 @@ namespace Datacenter.Infrastructure.Services.Bank;
 
 /// <summary>
 /// แปลงไฟล์ statement → บรรทัดมาตรฐาน.
-/// - PDF: coordinate-based (PdfPig) auto-detect SCB/KBANK/TTB → group แถวด้วย y, แยกคอลัมน์ด้วยช่วง x,
+/// - PDF: coordinate-based (PdfPig) auto-detect SCB/KBANK/TTB/BAY → group แถวด้วย y, แยกคอลัมน์ด้วยช่วง x,
 ///   ระบุทิศ (ฝาก/ถอน) จาก balance-delta แล้ว self-check (ยอดต้น + Σฝาก − Σถอน = ยอดปลาย).
 /// - Excel/CSV: คอลัมน์คงที่ A=วันที่ B=รายละเอียด C=ถอน D=ฝาก E=ยอดคงเหลือ (data เริ่มแถว 2).
 /// </summary>
@@ -59,13 +59,16 @@ public class BankStatementParser : IBankStatementParser
 
     private sealed record BankConfig(string Code, Regex DateRegex, string DateFormat, double MergeTol);
 
+    // เรียงตาม "ความเฉพาะเจาะจง" (specificity) — DetectBank assign แต่ละบรรทัดให้ config แรกที่ match
+    // จึงต้องวาง BAY (สแลช ปี 4 หลัก) ก่อน SCB (สแลช ปี 2 หลัก prefix) ไม่งั้น SCB จะกินวันที่ของ BAY
     private static readonly BankConfig[] Configs =
     {
-        // แยกธนาคารด้วยตัวคั่นวันที่ (exclusive): SCB=/ KBANK=- TTB=.
+        // แยกธนาคารด้วยตัวคั่นวันที่: TTB=. KBANK=- BAY=/(ปี 4 หลัก) SCB=/(ปี 2 หลัก)
         // ใช้ prefix match (ไม่ anchor ท้าย) เผื่อ PdfPig รวม date+time เป็น token เดียว เช่น "30-04-2602:49"
-        new("SCB",   new(@"^\d{2}/\d{2}/\d{2}"),   "dd/MM/yy",   4.0),
-        new("KBANK", new(@"^\d{2}-\d{2}-\d{2}"),   "dd-MM-yy",   4.0),
         new("TTB",   new(@"^\d{2}\.\d{2}\.\d{4}"), "dd.MM.yyyy", 4.0),
+        new("KBANK", new(@"^\d{2}-\d{2}-\d{2}"),   "dd-MM-yy",   4.0),
+        new("BAY",   new(@"^\d{2}/\d{2}/\d{4}"),   "dd/MM/yyyy", 4.0),
+        new("SCB",   new(@"^\d{2}/\d{2}/\d{2}"),   "dd/MM/yy",   4.0),
     };
 
     private sealed class VLine { public int Page; public double Y; public List<(double X, string T)> W = new(); }
@@ -191,16 +194,23 @@ public class BankStatementParser : IBankStatementParser
         return new BankStatementParseResult(cfg.Code, accNo, ps, pe, open, closing, computed, ok, outLines, warn);
     }
 
-    /// <summary>เลือกธนาคารจากความถี่ของรูปแบบวันที่ (ตัวคั่น / - . แยกแบงก์ได้ชัด ไม่ปนกับชื่อคู่ค้า)</summary>
+    /// <summary>
+    /// เลือกธนาคารจากความถี่ของรูปแบบวันที่ (ตัวคั่น / - . แยกแบงก์ได้ชัด ไม่ปนกับชื่อคู่ค้า).
+    /// assign แต่ละบรรทัดให้ config แรกที่ match (เรียงตาม specificity ใน Configs) — กัน SCB(ปี 2 หลัก)
+    /// กินวันที่ของ BAY(ปี 4 หลัก) ที่ใช้สแลชเหมือนกัน เพราะ prefix regex ของ SCB ก็ match ปี 4 หลักได้.
+    /// </summary>
     private static BankConfig? DetectBank(List<VLine> lines)
     {
-        BankConfig? best = null; int bestCount = 0;
-        foreach (var cfg in Configs)
-        {
-            int c = lines.Count(l => l.W.Any(w => w.X < 120 && cfg.DateRegex.IsMatch(w.T)));
-            if (c > bestCount) { bestCount = c; best = cfg; }
-        }
-        return bestCount > 0 ? best : null;
+        var counts = new int[Configs.Length];
+        foreach (var l in lines)
+            for (int i = 0; i < Configs.Length; i++)
+                if (l.W.Any(w => w.X < 120 && Configs[i].DateRegex.IsMatch(w.T)))
+                { counts[i]++; break; } // นับให้ config ที่เฉพาะเจาะจงสุดที่ match บรรทัดนี้
+
+        int bestIdx = -1, bestCount = 0;
+        for (int i = 0; i < counts.Length; i++)
+            if (counts[i] > bestCount) { bestCount = counts[i]; bestIdx = i; }
+        return bestIdx >= 0 ? Configs[bestIdx] : null;
     }
 
     private static DateTime? ParseDate(string s, string fmt)

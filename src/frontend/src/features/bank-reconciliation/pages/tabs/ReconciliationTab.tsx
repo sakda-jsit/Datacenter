@@ -115,7 +115,7 @@ export default function ReconciliationTab({ companyId }: Props) {
         </div>
         {err && <p className="mt-2 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{err}</p>}
         <p className="mt-2 text-xs text-gray-400">
-          รองรับ PDF ของ SCB / KBANK / TTB (อ่านอัตโนมัติ) — ธนาคารอื่น/สแกน ใช้เทมเพลต Excel/CSV หรือกรอกมือ
+          รองรับ PDF ของ SCB / KBANK / TTB / กรุงศรี-BAY (อ่านอัตโนมัติ) — ธนาคารอื่น/สแกน (GSB/KTB/BBL) ใช้เทมเพลต Excel/CSV หรือกรอกมือ
         </p>
       </Card>
 
