@@ -71,6 +71,23 @@ export interface AccountMappingDto {
   section: string
 }
 
+// ผังมาตรฐาน DBD (master taxonomy — single source ของ RefCode)
+export interface StatementTaxonomyLine {
+  refCode: string
+  lineName: string
+  section: string
+  sortOrder: number
+  mappedAccountCount: number
+}
+
+export interface StatementTaxonomy {
+  clientCompanyId: number
+  lines: StatementTaxonomyLine[]
+  totalLines: number
+  usedLines: number
+  mappedAccounts: number
+}
+
 export interface FsExternalInputDto {
   id: number
   fiscalYear: number

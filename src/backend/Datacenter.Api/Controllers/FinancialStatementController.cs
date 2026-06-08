@@ -67,6 +67,11 @@ public class FinancialStatementController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetMappings([FromQuery] GetAccountMappingsQuery query, CancellationToken ct)
         => Ok(await mediator.Send(query, ct));
 
+    /// <summary>GET /api/v1/financial-statement/taxonomy?clientCompanyId=1 — ผังมาตรฐาน DBD (master taxonomy) + ความครอบคลุม</summary>
+    [HttpGet("taxonomy")]
+    public async Task<IActionResult> GetTaxonomy([FromQuery] GetStatementTaxonomyQuery query, CancellationToken ct)
+        => Ok(await mediator.Send(query, ct));
+
     /// <summary>PUT /api/v1/financial-statement/mappings</summary>
     [HttpPut("mappings")]
     public async Task<IActionResult> UpsertMapping([FromBody] UpsertAccountMappingCommand command, CancellationToken ct)

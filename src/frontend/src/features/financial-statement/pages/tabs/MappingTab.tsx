@@ -3,42 +3,11 @@ import Button from '../../../../shared/components/ui/Button'
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
 import type { ClientListDto } from '../../../clients/types/client.types'
-import { useAccountMappings, useDeleteMapping, useUnmappedAccounts, useUpsertMapping } from '../../hooks/useFinancialStatement'
+import { useAccountMappings, useDeleteMapping, useStatementTaxonomy, useUnmappedAccounts, useUpsertMapping } from '../../hooks/useFinancialStatement'
 
 function fmtAmt(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
-
-// All 23 REF codes
-const REF_CODES = [
-  { code: 'A1', label: 'เงินสดและรายการเทียบเท่าเงินสด', section: 'A' },
-  { code: 'A2', label: 'เงินลงทุนระยะสั้น', section: 'A' },
-  { code: 'A7', label: 'ลูกหนี้การค้าและลูกหนี้หมุนเวียนอื่น', section: 'A' },
-  { code: 'A8', label: 'ลูกหนี้เงินให้กู้ยืม', section: 'A' },
-  { code: 'A3', label: 'สินค้าคงเหลือ', section: 'A' },
-  { code: 'A4', label: 'สินทรัพย์หมุนเวียนอื่น', section: 'A' },
-  { code: 'A9', label: 'เงินลงทุนระยะยาว', section: 'A' },
-  { code: 'A5', label: 'ที่ดิน อาคารและอุปกรณ์', section: 'A' },
-  { code: 'A10', label: 'สินทรัพย์ไม่มีตัวตน', section: 'A' },
-  { code: 'A6', label: 'สินทรัพย์ไม่หมุนเวียนอื่น', section: 'A' },
-  { code: 'L1', label: 'เจ้าหนี้การค้าและเจ้าหนี้หมุนเวียนอื่น', section: 'L' },
-  { code: 'L5', label: 'หนี้สินสัญญาเช่า (ส่วนหมุนเวียน)', section: 'L' },
-  { code: 'L3', label: 'เงินกู้ยืมระยะสั้น', section: 'L' },
-  { code: 'L2', label: 'หนี้สินหมุนเวียนอื่น', section: 'L' },
-  { code: 'L6', label: 'เงินกู้ยืมระยะยาว', section: 'L' },
-  { code: 'L4', label: 'หนี้สินตามสัญญาเช่า (ระยะยาว)', section: 'L' },
-  { code: 'C1', label: 'ทุนที่ออกและชำระแล้ว', section: 'E' },
-  { code: 'RE', label: 'กำไร (ขาดทุน) สะสม', section: 'E' },
-  { code: 'I1', label: 'รายได้จากการขาย', section: 'I' },
-  { code: 'I2', label: 'รายได้จากการให้บริการ', section: 'I' },
-  { code: 'I3', label: 'รายได้ดอกเบี้ย', section: 'I' },
-  { code: 'I4', label: 'รายได้อื่น', section: 'I' },
-  { code: 'C', label: 'ต้นทุนขาย / ต้นทุนบริการ', section: 'X' },
-  { code: 'X1', label: 'ค่าใช้จ่ายในการขาย', section: 'X' },
-  { code: 'X2', label: 'ค่าใช้จ่ายในการบริหาร', section: 'X' },
-  { code: 'X3', label: 'ต้นทุนทางการเงิน', section: 'X' },
-  { code: 'X4', label: 'ภาษีเงินได้ (จากภายนอก)', section: 'X' },
-]
 
 const SECTION_LABEL: Record<string, string> = {
   A: 'สินทรัพย์',
@@ -62,8 +31,12 @@ export default function MappingTab({ clientId, clients }: Props) {
 
   const { data: mappings, isLoading } = useAccountMappings(clientId)
   const { data: check } = useUnmappedAccounts({ clientCompanyId: clientId, fiscalYear: checkYear })
+  const { data: taxonomy } = useStatementTaxonomy(clientId)
   const upsert = useUpsertMapping()
   const del = useDeleteMapping()
+
+  // รหัสกลุ่มมาตรฐาน (single source = master taxonomy จาก backend) — แทนการฮาร์ดโค้ด
+  const refCodes = (taxonomy?.lines ?? []).map((l) => ({ code: l.refCode, label: l.lineName, section: l.section }))
 
   // คลิก "แมพ" จากรายการตกหล่น → เติมรหัส/ชื่อลงฟอร์มด้านล่าง (เหลือแค่เลือก REF + บันทึก)
   function prefillMap(code: string, name: string) {
@@ -190,7 +163,7 @@ export default function MappingTab({ clientId, clients }: Props) {
                 >
                   <option value="">-- เลือก --</option>
                   {Object.entries(
-                    REF_CODES.reduce<Record<string, typeof REF_CODES>>((acc, r) => {
+                    refCodes.reduce<Record<string, typeof refCodes>>((acc, r) => {
                       if (!acc[r.section]) acc[r.section] = []
                       acc[r.section].push(r)
                       return acc
@@ -227,7 +200,7 @@ export default function MappingTab({ clientId, clients }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {REF_CODES.map((ref) => {
+                  {refCodes.map((ref) => {
                     const rows = byRef[ref.code] ?? []
                     if (rows.length === 0) return null
                     return rows.map((m, i) => (

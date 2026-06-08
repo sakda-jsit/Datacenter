@@ -9,8 +9,9 @@ import ProfitLossTab from './tabs/ProfitLossTab'
 import EquityChangesTab from './tabs/EquityChangesTab'
 import NotesTab from './tabs/NotesTab'
 import MappingTab from './tabs/MappingTab'
+import TaxonomyTab from './tabs/TaxonomyTab'
 
-type Tab = 'pl' | 'bs' | 'cap' | 'notes' | 'mapping'
+type Tab = 'pl' | 'bs' | 'cap' | 'notes' | 'mapping' | 'taxonomy'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'pl', label: 'งบกำไรขาดทุน' },
@@ -18,6 +19,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'cap', label: 'งบส่วนผู้ถือหุ้น' },
   { key: 'notes', label: 'หมายเหตุประกอบงบ (NOTE2)' },
   { key: 'mapping', label: 'จัดการ Mapping' },
+  { key: 'taxonomy', label: 'ผังมาตรฐาน (DBD)' },
 ]
 
 export default function FinancialStatementPage() {
@@ -68,7 +70,7 @@ export default function FinancialStatementPage() {
       />
 
       {/* Filter bar — report tabs only */}
-      {tab !== 'mapping' && (
+      {tab !== 'mapping' && tab !== 'taxonomy' && (
         <ReportFilterBar
           clients={[]}
           clientId={companyId}
@@ -120,6 +122,7 @@ export default function FinancialStatementPage() {
           onClientChange={handleClientChange}
         />
       )}
+      {tab === 'taxonomy' && <TaxonomyTab companyId={companyId} />}
     </div>
   )
 }

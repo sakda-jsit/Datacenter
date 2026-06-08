@@ -88,3 +88,22 @@ public record UnmappedAccountsResultDto(
     /// <summary>ผลรวมยอดของบัญชีตกหล่น = ผลต่างที่จะทำให้งบไม่สมดุล (0 = ไม่กระทบสมดุล)</summary>
     decimal TotalNet,
     IReadOnlyList<UnmappedAccountDto> Items);
+
+/// <summary>หนึ่งบรรทัดในผังมาตรฐานงบการเงิน (DBD/NPAE group-code taxonomy) + จำนวนบัญชีที่ map เข้าบรรทัดนี้ของบริษัทที่เลือก.</summary>
+public record StatementTaxonomyLineDto(
+    string RefCode,
+    string LineName,
+    char Section,
+    int SortOrder,
+    /// <summary>จำนวนบัญชีของบริษัทที่ map เข้าบรรทัดนี้ (0 = ยังไม่มีบัญชีใช้)</summary>
+    int MappedAccountCount);
+
+/// <summary>ผังมาตรฐานงบการเงิน (master taxonomy, ใช้ร่วมทุกบริษัท) + ความครอบคลุมของบริษัทที่เลือก.</summary>
+public record StatementTaxonomyDto(
+    int ClientCompanyId,
+    IReadOnlyList<StatementTaxonomyLineDto> Lines)
+{
+    public int TotalLines => Lines.Count;
+    public int UsedLines => Lines.Count(l => l.MappedAccountCount > 0);
+    public int MappedAccounts => Lines.Sum(l => l.MappedAccountCount);
+}

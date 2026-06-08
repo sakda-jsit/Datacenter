@@ -7,6 +7,7 @@ import type {
   NotesToFsDto,
   NoteTemplateSectionDto,
   ProfitLossDto,
+  StatementTaxonomy,
   UnmappedAccountsResult,
 } from '../types/financialStatement.types'
 
@@ -43,6 +44,9 @@ export const financialStatementApi = {
 
   getUnmappedAccounts: (params: { clientCompanyId: number; fiscalYear: number }) =>
     apiClient.get<UnmappedAccountsResult>(`${BASE}/unmapped-accounts`, { params }).then((r) => r.data),
+
+  getTaxonomy: (clientCompanyId: number) =>
+    apiClient.get<StatementTaxonomy>(`${BASE}/taxonomy`, { params: { clientCompanyId } }).then((r) => r.data),
 
   getExternalInputs: (params: { clientCompanyId: number; fiscalYear: number }) =>
     apiClient.get<FsExternalInputDto[]>(`${BASE}/external-inputs`, { params }).then((r) => r.data),

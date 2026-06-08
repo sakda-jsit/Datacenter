@@ -44,6 +44,14 @@ export function useAccountMappings(clientCompanyId: number) {
   })
 }
 
+export function useStatementTaxonomy(clientCompanyId: number, enabled = true) {
+  return useQuery({
+    queryKey: [FS_KEY, 'taxonomy', clientCompanyId],
+    queryFn: () => financialStatementApi.getTaxonomy(clientCompanyId),
+    enabled: enabled && clientCompanyId > 0,
+  })
+}
+
 export function useUnmappedAccounts(
   params: { clientCompanyId: number; fiscalYear: number },
   enabled = true,
