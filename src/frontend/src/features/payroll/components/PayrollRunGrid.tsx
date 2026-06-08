@@ -39,6 +39,22 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
     setTimeout(() => URL.revokeObjectURL(url), 30000)
   }
 
+  async function downloadPnd1() {
+    setMsg(''); setError('')
+    if (!d) return
+    try {
+      const blob = await payrollApi.downloadPnd1Txt(companyId, d.year, d.month)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `pnd1-${d.year + 543}-${String(d.month).padStart(2, '0')}.txt`
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 30000)
+    } catch {
+      setError('สร้างไฟล์ ภ.ง.ด.1 ไม่สำเร็จ')
+    }
+  }
+
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     setMsg(''); setError('')
     const file = e.target.files?.[0]
@@ -94,6 +110,7 @@ export default function PayrollRunGrid({ companyId, runId, onBack }: Props) {
           </Button>
           <Button type="button" variant="secondary" onClick={() => setPostOpen(true)}>📒 ลงบัญชี/กระทบยอด</Button>
           <Button type="button" variant="secondary" onClick={() => setSsoOpen(true)}>📋 สปส.1-10</Button>
+          <Button type="button" variant="secondary" onClick={downloadPnd1}>⬇ ภ.ง.ด.1 (TXT)</Button>
           {d.status === 0 && <Button type="button" variant="secondary" onClick={() => setStatus.mutate({ runId, status: 1 })}>บันทึกแล้ว</Button>}
           {d.status === 1 && <Button type="button" variant="secondary" onClick={() => setStatus.mutate({ runId, status: 0 })}>กลับเป็นร่าง</Button>}
         </div>
