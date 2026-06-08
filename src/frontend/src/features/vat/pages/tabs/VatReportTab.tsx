@@ -1,10 +1,22 @@
 import Card from '../../../../shared/components/ui/Card'
+import Button from '../../../../shared/components/ui/Button'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
 import ExportMenu from '../../../../shared/components/ui/ExportMenu'
 import DataAsOfBanner from '../../../../shared/components/ui/DataAsOfBanner'
 import { useVatReport } from '../../hooks/useVat'
+import { vatApi } from '../../services/vatApi'
 import { MONTH_LABEL } from '../../types/vat.types'
 import type { ExportSection } from '../../../../shared/utils/exportTable'
+
+async function dlVatReport(companyId: number, year: number, vatType: number) {
+  const blob = await vatApi.taxReportExcel(companyId, year, vatType)
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `vat-${vatType === 1 ? 'sales' : 'purchase'}-${year + 543}.xlsx`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 30000)
+}
 
 function fmt(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -42,6 +54,13 @@ export default function VatReportTab({ companyId, year }: Props) {
               <p className="text-sm font-semibold text-slate-800">รายงานภาษีมูลค่าเพิ่ม (ภ.พ.30) รายเดือน · ปี {year}</p>
               <p className="text-xs text-gray-500">{data.clientName} · ภาษีสุทธิ &gt;0 = ชำระเพิ่ม, &lt;0 = ชำระเกิน/ยกไป</p>
             </div>
+            <div className="flex items-center gap-2">
+            {data.totalOutputCount > 0 && (
+              <Button type="button" variant="secondary" onClick={() => dlVatReport(companyId, year, 1)}>⬇ รายงานภาษีขาย</Button>
+            )}
+            {data.totalInputCount > 0 && (
+              <Button type="button" variant="secondary" onClick={() => dlVatReport(companyId, year, 2)}>⬇ รายงานภาษีซื้อ</Button>
+            )}
             <ExportMenu
               meta={{
                 title: `รายงานภาษีมูลค่าเพิ่ม (ภ.พ.30) ปี ${year}`,
@@ -63,6 +82,7 @@ export default function VatReportTab({ companyId, year }: Props) {
                 },
               ]}
             />
+            </div>
           </div>
           <table className="w-full text-xs">
             <thead className="bg-slate-50 text-gray-600">

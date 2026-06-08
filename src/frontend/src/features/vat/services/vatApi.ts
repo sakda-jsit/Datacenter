@@ -14,4 +14,10 @@ export const vatApi = {
     apiClient
       .get<VatEntryItem[]>('/vat', { params: { clientCompanyId, year, month, vatType } })
       .then((r) => r.data),
+
+  // รายงานภาษีขาย (vatType=1) / รายงานภาษีซื้อ (vatType=2) เป็น Excel — month 0 = ทั้งปี
+  taxReportExcel: (clientCompanyId: number, year: number, vatType: number, month = 0) =>
+    apiClient
+      .get('/vat/tax-report/excel', { params: { clientCompanyId, year, vatType, month }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
 }

@@ -33,6 +33,17 @@ public record VatReportDto(
     public int TotalInputCount => Months.Sum(m => m.InputCount);
 }
 
+// ── รายงานภาษีขาย / รายงานภาษีซื้อ (สำหรับยื่น ภ.พ.30 + เก็บหลักฐาน) ──────────────
+public record VatTaxReportRow(
+    int Seq, DateTime? Date, string DocNo, string? Name, string? TaxId,
+    decimal BaseAmount, decimal VatAmount, decimal ZeroRatedAmount);
+
+/// <summary>รายงานภาษีขาย (VatType=1) หรือรายงานภาษีซื้อ (VatType=2) หนึ่งงวด</summary>
+public record VatTaxReportDto(
+    string CompanyName, string TaxId, int Year, int Month, int VatType,
+    IReadOnlyList<VatTaxReportRow> Rows,
+    decimal TotalBase, decimal TotalVat, decimal TotalZeroRated);
+
 /// <summary>หนึ่งรายการในรายละเอียดภาษีซื้อ/ขาย</summary>
 public record VatEntryListItemDto(
     int Id,

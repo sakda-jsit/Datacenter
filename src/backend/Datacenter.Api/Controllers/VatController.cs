@@ -24,4 +24,14 @@ public class VatController(IMediator mediator) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetEntries([FromQuery] GetVatEntriesQuery query, CancellationToken ct)
         => Ok(await mediator.Send(query, ct));
+
+    /// <summary>GET /api/v1/vat/tax-report/excel?clientCompanyId=1&amp;year=2025&amp;vatType=1&amp;month=0 — รายงานภาษีขาย/ซื้อ (Excel)</summary>
+    [HttpGet("tax-report/excel")]
+    public async Task<IActionResult> GetTaxReportExcel([FromQuery] int clientCompanyId, [FromQuery] int year, [FromQuery] int vatType, [FromQuery] int month, CancellationToken ct)
+    {
+        var bytes = await mediator.Send(new GetVatTaxReportExcelQuery(clientCompanyId, year, vatType, month), ct);
+        var kind = vatType == 1 ? "sales" : "purchase";
+        var name = month > 0 ? $"vat-{kind}-{year + 543}-{month:D2}.xlsx" : $"vat-{kind}-{year + 543}.xlsx";
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
+    }
 }
