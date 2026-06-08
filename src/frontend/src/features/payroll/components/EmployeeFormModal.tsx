@@ -26,11 +26,20 @@ interface Props {
 
 const EMPTY: EmployeeInput = {
   employeeCode: '', nationalId: '', prefix: '', firstName: '', lastName: '',
-  birthDate: null, maritalStatus: '', nationality: 'ไทย', address: '', position: '', department: '',
+  birthDate: null, maritalStatus: '', nationality: 'ไทย', address: '', addressDetail: {}, position: '', department: '',
   startDate: new Date().toISOString().slice(0, 10), resignDate: null,
   employmentStatus: 1, salaryType: 1, baseSalary: 0, dailyWage: null,
   ssoNumber: '', ssoHospital: '', ssoStatus: 0, taxId: '', note: '',
 }
+
+// ช่องที่อยู่แยกตามแบบสรรพากร (e-Filing ภ.ง.ด.1ก) — key ใน EmployeeAddress + ป้าย
+const ADDR_FIELDS: { k: keyof NonNullable<EmployeeInput['addressDetail']>; label: string }[] = [
+  { k: 'houseNo', label: 'เลขที่' }, { k: 'moo', label: 'หมู่ที่' }, { k: 'village', label: 'หมู่บ้าน' },
+  { k: 'soi', label: 'ซอย/ตรอก' }, { k: 'yaek', label: 'แยก' }, { k: 'road', label: 'ถนน' },
+  { k: 'building', label: 'อาคาร' }, { k: 'roomNo', label: 'เลขที่ห้อง' }, { k: 'floor', label: 'ชั้น' },
+  { k: 'subDistrict', label: 'ตำบล/แขวง' }, { k: 'district', label: 'อำเภอ/เขต' },
+  { k: 'province', label: 'จังหวัด' }, { k: 'postalCode', label: 'รหัสไปรษณีย์' },
+]
 
 function d(s?: string | null) {
   return s ? s.slice(0, 10) : ''
@@ -49,7 +58,8 @@ export default function EmployeeFormModal({ companyId, employeeId, onClose }: Pr
         employeeCode: detail.employeeCode, nationalId: detail.nationalId, prefix: detail.prefix ?? '',
         firstName: detail.firstName, lastName: detail.lastName, birthDate: d(detail.birthDate) || null,
         maritalStatus: detail.maritalStatus ?? '', nationality: detail.nationality ?? '',
-        address: detail.address ?? '', position: detail.position ?? '', department: detail.department ?? '',
+        address: detail.address ?? '', addressDetail: detail.addressDetail ?? {},
+        position: detail.position ?? '', department: detail.department ?? '',
         startDate: d(detail.startDate), resignDate: d(detail.resignDate) || null,
         employmentStatus: detail.employmentStatus, salaryType: detail.salaryType,
         baseSalary: detail.baseSalary, dailyWage: detail.dailyWage ?? null,
@@ -61,6 +71,9 @@ export default function EmployeeFormModal({ companyId, employeeId, onClose }: Pr
 
   function set<K extends keyof EmployeeInput>(k: K, v: EmployeeInput[K]) {
     setForm((p) => ({ ...p, [k]: v }))
+  }
+  function setAddr(k: keyof NonNullable<EmployeeInput['addressDetail']>, v: string) {
+    setForm((p) => ({ ...p, addressDetail: { ...(p.addressDetail ?? {}), [k]: v } }))
   }
 
   async function handleSave() {
@@ -115,6 +128,20 @@ export default function EmployeeFormModal({ companyId, employeeId, onClose }: Pr
             <Field label="โรงพยาบาล ปกส."><input className={inp} value={form.ssoHospital} onChange={(e) => set('ssoHospital', e.target.value)} /></Field>
             <Field label="เลขผู้เสียภาษี"><input className={inp} value={form.taxId} onChange={(e) => set('taxId', e.target.value)} /></Field>
           </div>
+
+          {/* ── ที่อยู่แยกช่อง (สำหรับ e-Filing ภ.ง.ด.1ก) ── */}
+          <details className="rounded-lg border border-gray-200">
+            <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-slate-800">
+              ที่อยู่แยกช่อง (สำหรับไฟล์ e-Filing ภ.ง.ด.1ก) <span className="font-normal text-gray-400">— optional</span>
+            </summary>
+            <div className="grid grid-cols-2 gap-3 px-3 pb-3 sm:grid-cols-3">
+              {ADDR_FIELDS.map((f) => (
+                <Field key={f.k} label={f.label}>
+                  <input className={inp} value={form.addressDetail?.[f.k] ?? ''} onChange={(e) => setAddr(f.k, e.target.value)} />
+                </Field>
+              ))}
+            </div>
+          </details>
 
           {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 

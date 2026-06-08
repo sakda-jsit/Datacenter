@@ -21,7 +21,22 @@ public class Employee : BaseEntity
     public DateTime? BirthDate { get; set; }
     public string? MaritalStatus { get; set; }                 // โสด/สมรส
     public string? Nationality { get; set; }
-    public string? Address { get; set; }                       // ที่อยู่ (จาก APMAS เมื่อ import)
+    public string? Address { get; set; }                       // ที่อยู่ (จาก APMAS เมื่อ import) — รวมบรรทัดเดียว
+
+    // ── ที่อยู่แยกช่อง (สำหรับ e-Filing ภ.ง.ด.1ก/1 ของกรมสรรพากร) — กรอกมือ, optional ──
+    public string? AddrBuilding { get; set; }                  // อาคาร
+    public string? AddrRoomNo { get; set; }                    // เลขที่ห้อง
+    public string? AddrFloor { get; set; }                     // ชั้นที่
+    public string? AddrVillage { get; set; }                   // หมู่บ้าน
+    public string? AddrHouseNo { get; set; }                   // เลขที่
+    public string? AddrMoo { get; set; }                       // หมู่ที่
+    public string? AddrSoi { get; set; }                       // ซอย/ตรอก
+    public string? AddrYaek { get; set; }                      // แยก
+    public string? AddrRoad { get; set; }                      // ถนน
+    public string? AddrSubDistrict { get; set; }               // ตำบล/แขวง
+    public string? AddrDistrict { get; set; }                  // อำเภอ/เขต
+    public string? AddrProvince { get; set; }                  // จังหวัด
+    public string? AddrPostalCode { get; set; }                // รหัสไปรษณีย์
 
     public string? Position { get; set; }                      // ตำแหน่ง
     public string? Department { get; set; }                    // ฝ่าย (เช่น ฝ่ายบริหาร/ฝ่ายผลิต — จากบัญชีเงินเดือน Express)

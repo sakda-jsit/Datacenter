@@ -35,6 +35,7 @@ public class GetPnd1kQueryHandler(IApplicationDbContext db) : IRequestHandler<Ge
                 return new
                 {
                     Nat = Digits(e.NationalId), e.Prefix, e.FirstName, e.LastName,
+                    Address = Services.EmployeeAddressMapper.ToDto(e),
                     Income = PayrollCalculator.Round2(g.Sum(i => i.GrossIncome - i.Absence)),
                     Tax = PayrollCalculator.Round2(g.Sum(i => i.WithholdingTax)),
                 };
@@ -43,7 +44,7 @@ public class GetPnd1kQueryHandler(IApplicationDbContext db) : IRequestHandler<Ge
             .OrderBy(x => x.Nat, StringComparer.Ordinal)
             .Select((x, idx) => new Pnd1kRow(
                 idx + 1, x.Nat, x.Prefix ?? "", x.FirstName, x.LastName,
-                "40(1)", x.Income, x.Tax, 1)) // 1 = หัก ณ ที่จ่าย
+                "40(1)", x.Income, x.Tax, 1, x.Address)) // 1 = หัก ณ ที่จ่าย
             .ToList();
 
         return new Pnd1kDto(
@@ -70,4 +71,13 @@ public class GetPnd1kPdfQueryHandler(ISender sender, IPnd1kExportService svc)
 {
     public async Task<byte[]> Handle(GetPnd1kPdfQuery req, CancellationToken ct)
         => svc.BuildPdf(await sender.Send(new GetPnd1kQuery(req.ClientCompanyId, req.Year), ct));
+}
+
+// ── TXT (e-Filing กรมสรรพากร) ────────────────────────────────────────────────────
+public record GetPnd1kTxtQuery(int ClientCompanyId, int Year) : IRequest<byte[]>, IRequireCompanyAccess;
+public class GetPnd1kTxtQueryHandler(ISender sender, IPnd1kExportService svc)
+    : IRequestHandler<GetPnd1kTxtQuery, byte[]>
+{
+    public async Task<byte[]> Handle(GetPnd1kTxtQuery req, CancellationToken ct)
+        => svc.BuildTxt(await sender.Send(new GetPnd1kQuery(req.ClientCompanyId, req.Year), ct));
 }

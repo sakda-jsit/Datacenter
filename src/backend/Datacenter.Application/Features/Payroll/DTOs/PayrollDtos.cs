@@ -4,6 +4,12 @@ namespace Datacenter.Application.Features.Payroll.DTOs;
 
 // ── พนักงาน ───────────────────────────────────────────────────────────────────
 
+/// <summary>ที่อยู่แยกช่องตามแบบกรมสรรพากร (e-Filing ภ.ง.ด.1ก/1) — ทุกช่อง optional</summary>
+public record EmployeeAddressDto(
+    string? Building, string? RoomNo, string? Floor, string? Village,
+    string? HouseNo, string? Moo, string? Soi, string? Yaek, string? Road,
+    string? SubDistrict, string? District, string? Province, string? PostalCode);
+
 public record EmployeeListItemDto(
     int Id,
     string EmployeeCode,
@@ -48,6 +54,7 @@ public record EmployeeDetailDto(
     string? MaritalStatus,
     string? Nationality,
     string? Address,
+    EmployeeAddressDto AddressDetail,
     string? Position,
     string? Department,
     string? SourceSupplierCode,
@@ -76,6 +83,7 @@ public record EmployeeInput(
     string? MaritalStatus,
     string? Nationality,
     string? Address,
+    EmployeeAddressDto? AddressDetail,
     string? Position,
     string? Department,
     DateTime StartDate,
@@ -123,7 +131,8 @@ public record PayrollAccountMappingInput(string AccountCode, int Role, string? D
 // ── ภ.ง.ด.1ก (สรุปภาษีเงินได้หัก ณ ที่จ่ายเงินเดือนทั้งปี) ─────────────────────────
 public record Pnd1kRow(
     int Seq, string NationalId, string Prefix, string FirstName, string LastName,
-    string IncomeTypeCode, decimal AnnualIncome, decimal AnnualTax, int Condition);
+    string IncomeTypeCode, decimal AnnualIncome, decimal AnnualTax, int Condition,
+    EmployeeAddressDto? Address = null);
 
 public record Pnd1kDto(
     int Year, string CompanyName, string TaxId, string? Address,

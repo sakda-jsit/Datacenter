@@ -11,11 +11,51 @@ namespace Datacenter.Infrastructure.Services.Payroll;
 /// <summary>ใบแนบ ภ.ง.ด.1ก — Excel (รายชื่อ+เงินได้+ภาษีทั้งปี) + PDF</summary>
 public class Pnd1kExportService(string fontFamily) : IPnd1kExportService
 {
+    static Pnd1kExportService()
+        => System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
     private readonly string _font = string.IsNullOrWhiteSpace(fontFamily) ? "Tahoma" : fontFamily;
     private static string Money(decimal v) => v.ToString("#,##0.00", CultureInfo.InvariantCulture);
 
     private static readonly string[] Headers =
         ["ลำดับ", "เลขประจำตัวผู้เสียภาษี", "คำนำหน้า", "ชื่อ", "สกุล", "ประเภทเงินได้", "เงินได้ทั้งปี", "ภาษีที่หัก", "เงื่อนไข"];
+
+    // ── TXT (e-Filing) : pipe-delimited, TIS-620 (cp874), CRLF — ตรงรูปแบบที่ RD Prep/e-filing นำเข้าได้ ──
+    // 23 คอลัมน์ ที่อยู่แยกช่อง (อาคาร..รหัสไปรษณีย์), เงินได้ ม.40(1) รหัส 401N, เงื่อนไขการหัก 1
+    private static readonly string[] TxtHeaders =
+    [
+        "ลำดับที่", "เลขประจำตัวผู้เสียภาษี", "คำนำหน้าชื่อ", "ชื่อ", "ชื่อกลาง", "นามสกุล",
+        "อาคาร", "เลขห้อง", "ชั้น", "หมู่บ้าน", "เลขที่", "หมู่ที่", "ซอย", "แยก", "ถนน",
+        "ตำบล", "อำเภอ", "จังหวัด", "รหัสไปรษณีย์",
+        "เงินได้ตามมาตรา", "จำนวนเงินที่จ่าย", "จำนวนเงินภาษีที่หัก", "เงื่อนไขการหัก"
+    ];
+
+    /// <summary>เหลือเฉพาะค่า ตัดอักขระที่ชนรูปแบบ (| และขึ้นบรรทัด) ออก</summary>
+    private static string F(string? s)
+        => (s ?? "").Replace("|", " ").Replace("\r", " ").Replace("\n", " ").Trim();
+
+    private static string Amt(decimal v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+
+    public byte[] BuildTxt(Pnd1kDto d)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append(string.Join('|', TxtHeaders)).Append("\r\n");
+        foreach (var r in d.Rows)
+        {
+            var a = r.Address;
+            var cols = new[]
+            {
+                r.Seq.ToString(CultureInfo.InvariantCulture),
+                F(r.NationalId), F(r.Prefix), F(r.FirstName), "", F(r.LastName),
+                F(a?.Building), F(a?.RoomNo), F(a?.Floor), F(a?.Village), F(a?.HouseNo),
+                F(a?.Moo), F(a?.Soi), F(a?.Yaek), F(a?.Road),
+                F(a?.SubDistrict), F(a?.District), F(a?.Province), F(a?.PostalCode),
+                "401N", Amt(r.AnnualIncome), Amt(r.AnnualTax), r.Condition.ToString(CultureInfo.InvariantCulture)
+            };
+            sb.Append(string.Join('|', cols)).Append("\r\n");
+        }
+        return System.Text.Encoding.GetEncoding(874).GetBytes(sb.ToString());
+    }
 
     public byte[] BuildExcel(Pnd1kDto d)
     {

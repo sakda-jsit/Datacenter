@@ -62,7 +62,9 @@ public class GetEmployeeQueryHandler(IApplicationDbContext db)
 
         return new EmployeeDetailDto(
             e.Id, e.ClientCompanyId, e.EmployeeCode, e.NationalId, e.Prefix, e.FirstName, e.LastName,
-            e.BirthDate, e.MaritalStatus, e.Nationality, e.Address, e.Position, e.Department, e.SourceSupplierCode,
+            e.BirthDate, e.MaritalStatus, e.Nationality, e.Address,
+            Datacenter.Application.Features.Payroll.Services.EmployeeAddressMapper.ToDto(e),
+            e.Position, e.Department, e.SourceSupplierCode,
             e.StartDate, e.ResignDate,
             e.EmploymentStatus, e.SalaryType, e.BaseSalary, e.DailyWage, e.SsoNumber, e.SsoHospital,
             e.SsoStatus, e.TaxId, e.Note, docs, enr);

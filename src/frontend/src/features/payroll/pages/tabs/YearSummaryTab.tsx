@@ -97,6 +97,9 @@ export default function YearSummaryTab({ companyId }: Props) {
           <Button type="button" variant="secondary" onClick={async () => dl(await payrollApi.downloadPnd1kPdf(companyId, year), `pnd1k-${year}.pdf`)}>
             ⬇ ภ.ง.ด.1ก (PDF)
           </Button>
+          <Button type="button" variant="secondary" onClick={async () => dl(await payrollApi.downloadPnd1kTxt(companyId, year), `pnd1k-${year + 543}.txt`)}>
+            ⬇ ภ.ง.ด.1ก (TXT e-Filing)
+          </Button>
           <Button type="button" variant="secondary" onClick={() => setShow50Tawi(true)}>
             📄 50 ทวิ เงินเดือน
           </Button>

@@ -116,6 +116,10 @@ export const payrollApi = {
     apiClient
       .get('/payroll/pnd1k/pdf', { params: { clientCompanyId, year }, responseType: 'blob' })
       .then((r) => r.data as Blob),
+  downloadPnd1kTxt: (clientCompanyId: number, year: number) =>
+    apiClient
+      .get('/payroll/pnd1k/txt', { params: { clientCompanyId, year }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
 
   // 50 ทวิ เงินเดือน (ภ.ง.ด.1ก) — employeeIds ว่าง = ทุกคน
   download50TawiPdf: (clientCompanyId: number, year: number, employeeIds?: number[]) =>

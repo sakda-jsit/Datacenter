@@ -66,6 +66,23 @@ export interface SsoEnrollment {
   note?: string | null
 }
 
+/** ที่อยู่แยกช่องตามแบบกรมสรรพากร (e-Filing ภ.ง.ด.1ก/1) */
+export interface EmployeeAddress {
+  building?: string | null
+  roomNo?: string | null
+  floor?: string | null
+  village?: string | null
+  houseNo?: string | null
+  moo?: string | null
+  soi?: string | null
+  yaek?: string | null
+  road?: string | null
+  subDistrict?: string | null
+  district?: string | null
+  province?: string | null
+  postalCode?: string | null
+}
+
 export interface EmployeeDetail {
   id: number
   clientCompanyId: number
@@ -78,6 +95,7 @@ export interface EmployeeDetail {
   maritalStatus?: string | null
   nationality?: string | null
   address?: string | null
+  addressDetail?: EmployeeAddress | null
   position?: string | null
   department?: string | null
   sourceSupplierCode?: string | null
@@ -450,6 +468,7 @@ export interface EmployeeInput {
   maritalStatus?: string
   nationality?: string
   address?: string
+  addressDetail?: EmployeeAddress | null
   position?: string
   department?: string
   startDate: string

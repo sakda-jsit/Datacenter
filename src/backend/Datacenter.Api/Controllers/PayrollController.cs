@@ -133,6 +133,14 @@ public class PayrollController(IMediator mediator) : ControllerBase
         return File(bytes, "application/pdf", $"pnd1k-{year}.pdf");
     }
 
+    /// <summary>GET /api/v1/payroll/pnd1k/txt?clientCompanyId=1&amp;year=2025 — ไฟล์ e-Filing (TIS-620, pipe-delimited)</summary>
+    [HttpGet("pnd1k/txt")]
+    public async Task<IActionResult> GetPnd1kTxt([FromQuery] int clientCompanyId, [FromQuery] int year, CancellationToken ct)
+    {
+        var bytes = await mediator.Send(new GetPnd1kTxtQuery(clientCompanyId, year), ct);
+        return File(bytes, "text/plain", $"pnd1k-{year + 543}.txt");
+    }
+
     /// <summary>GET /api/v1/payroll/50tawi/pdf?clientCompanyId=1&amp;year=2025&amp;employeeIds=1&amp;employeeIds=2 — 50 ทวิ เงินเดือน (employeeIds ว่าง = ทุกคน)</summary>
     [HttpGet("50tawi/pdf")]
     public async Task<IActionResult> Get50TawiPdf([FromQuery] int clientCompanyId, [FromQuery] int year, [FromQuery] int[]? employeeIds, CancellationToken ct)
