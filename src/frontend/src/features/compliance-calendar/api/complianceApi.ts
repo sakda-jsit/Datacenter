@@ -1,5 +1,21 @@
 import apiClient from '../../../shared/services/apiClient'
-import type { ComplianceDashboardDto, ComplianceTaskDto, ComplianceTaskStatus } from '../types/compliance.types'
+import type { ComplianceDashboardDto, ComplianceTaskDto, ComplianceTaskStatus, ComplianceTaskTemplateDto, ComplianceTaskType } from '../types/compliance.types'
+
+// ── Template งานประจำ 2 ระดับ (global / เฉพาะบริษัท) ──
+export async function getTemplates(clientCompanyId?: number): Promise<ComplianceTaskTemplateDto[]> {
+  const { data } = await apiClient.get('/compliance-calendar/templates', { params: { clientCompanyId } })
+  return data
+}
+
+export async function upsertTemplate(input: {
+  clientCompanyId: number | null; taskType: ComplianceTaskType; enabled: boolean; dueDay: number | null
+}): Promise<void> {
+  await apiClient.put('/compliance-calendar/templates', input)
+}
+
+export async function resetTemplate(clientCompanyId: number, taskType: ComplianceTaskType): Promise<void> {
+  await apiClient.delete('/compliance-calendar/templates', { params: { clientCompanyId, taskType } })
+}
 
 export async function getDashboard(clientCompanyId: number, year: number): Promise<ComplianceDashboardDto> {
   const { data } = await apiClient.get('/compliance-calendar/dashboard', { params: { clientCompanyId, year } })

@@ -54,6 +54,28 @@ public class ComplianceCalendarController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    // ── Template งานประจำ 2 ระดับ (global / เฉพาะบริษัท) ──────────────────────────
+    /// <summary>GET /api/v1/compliance-calendar/templates?clientCompanyId= (เว้น/0 = global)</summary>
+    [HttpGet("templates")]
+    public async Task<IActionResult> GetTemplates([FromQuery] int? clientCompanyId, CancellationToken ct)
+        => Ok(await mediator.Send(new GetComplianceTaskTemplatesQuery(clientCompanyId), ct));
+
+    /// <summary>PUT /api/v1/compliance-calendar/templates — ตั้งค่า (clientCompanyId เว้น/0 = global)</summary>
+    [HttpPut("templates")]
+    public async Task<IActionResult> UpsertTemplate([FromBody] UpsertComplianceTaskTemplateCommand command, CancellationToken ct)
+    {
+        await mediator.Send(command, ct);
+        return NoContent();
+    }
+
+    /// <summary>DELETE /api/v1/compliance-calendar/templates?clientCompanyId=&amp;taskType= — ลบ override บริษัท</summary>
+    [HttpDelete("templates")]
+    public async Task<IActionResult> ResetTemplate([FromQuery] int clientCompanyId, [FromQuery] ComplianceTaskType taskType, CancellationToken ct)
+    {
+        await mediator.Send(new ResetComplianceTaskTemplateCommand(clientCompanyId, taskType), ct);
+        return NoContent();
+    }
+
     public record UpdateStatusRequest(ComplianceTaskStatus Status, string? Note);
     public record AssignRequest(int? UserId);
 }

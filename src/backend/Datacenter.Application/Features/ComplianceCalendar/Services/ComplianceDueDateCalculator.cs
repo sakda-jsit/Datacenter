@@ -8,24 +8,26 @@ namespace Datacenter.Application.Features.ComplianceCalendar.Services;
 /// </summary>
 public static class ComplianceDueDateCalculator
 {
-    public static DateTime Calculate(ComplianceTaskType taskType, int year, int month)
+    /// <summary>วันครบกำหนดเริ่มต้นต่อประเภทงาน (วันของเดือนถัดไป; 0 = วันสุดท้ายของเดือนถัดไป)</summary>
+    public static int DefaultDueDay(ComplianceTaskType taskType) => taskType switch
     {
-        return taskType switch
-        {
-            // PP30: 15th of the following month (e-filing)
-            ComplianceTaskType.PP30 => NextMonthDay(year, month, 15),
-            // PND1: 15th of the following month (e-filing)
-            ComplianceTaskType.PND1 => NextMonthDay(year, month, 15),
-            // PND3: 7th of the following month
-            ComplianceTaskType.PND3 => NextMonthDay(year, month, 7),
-            // PND53: 7th of the following month
-            ComplianceTaskType.PND53 => NextMonthDay(year, month, 7),
-            // SSO: 15th of the following month
-            ComplianceTaskType.SSO => NextMonthDay(year, month, 15),
-            // Monthly Closing: last day of following month
-            ComplianceTaskType.MonthlyClosing => LastDayOfNextMonth(year, month),
-            _ => throw new ArgumentOutOfRangeException(nameof(taskType)),
-        };
+        ComplianceTaskType.PP30 => 15,
+        ComplianceTaskType.PND1 => 15,
+        ComplianceTaskType.PND3 => 7,
+        ComplianceTaskType.PND53 => 7,
+        ComplianceTaskType.SSO => 15,
+        ComplianceTaskType.MonthlyClosing => 0, // 0 = วันสุดท้ายของเดือนถัดไป
+        _ => 15,
+    };
+
+    /// <summary>
+    /// คำนวณวันครบกำหนด. overrideDay = วันของเดือนถัดไปที่ต้องการ (null = ใช้ค่า default;
+    /// ค่า ≤ 0 = วันสุดท้ายของเดือนถัดไป).
+    /// </summary>
+    public static DateTime Calculate(ComplianceTaskType taskType, int year, int month, int? overrideDay = null)
+    {
+        int day = overrideDay ?? DefaultDueDay(taskType);
+        return day <= 0 ? LastDayOfNextMonth(year, month) : NextMonthDay(year, month, day);
     }
 
     private static DateTime NextMonthDay(int year, int month, int day)

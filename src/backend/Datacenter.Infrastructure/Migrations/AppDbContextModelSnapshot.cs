@@ -1282,6 +1282,52 @@ namespace Datacenter.Infrastructure.Migrations
                     b.ToTable("ComplianceTasks");
                 });
 
+            modelBuilder.Entity("Datacenter.Domain.Entities.ComplianceTaskTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ClientCompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("DueDay")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TaskType")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TaskType")
+                        .IsUnique()
+                        .HasFilter("[ClientCompanyId] IS NULL");
+
+                    b.HasIndex("ClientCompanyId", "TaskType")
+                        .IsUnique()
+                        .HasFilter("[ClientCompanyId] IS NOT NULL");
+
+                    b.ToTable("ComplianceTaskTemplates", (string)null);
+                });
+
             modelBuilder.Entity("Datacenter.Domain.Entities.Customer", b =>
                 {
                     b.Property<int>("Id")
@@ -3912,6 +3958,16 @@ namespace Datacenter.Infrastructure.Migrations
                     b.Navigation("ClientCompany");
 
                     b.Navigation("CompletedByUser");
+                });
+
+            modelBuilder.Entity("Datacenter.Domain.Entities.ComplianceTaskTemplate", b =>
+                {
+                    b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
+                        .WithMany()
+                        .HasForeignKey("ClientCompanyId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("ClientCompany");
                 });
 
             modelBuilder.Entity("Datacenter.Domain.Entities.Customer", b =>

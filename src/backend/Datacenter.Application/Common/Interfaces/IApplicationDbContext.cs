@@ -20,6 +20,7 @@ public interface IApplicationDbContext
     DbSet<StagingAccount> StagingAccounts { get; }
     DbSet<FsExternalInput> FsExternalInputs { get; }
     DbSet<ComplianceTask> ComplianceTasks { get; }
+    DbSet<ComplianceTaskTemplate> ComplianceTaskTemplates { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<AccountingPeriod> AccountingPeriods { get; }
     DbSet<AdjustmentEntry> AdjustmentEntries { get; }

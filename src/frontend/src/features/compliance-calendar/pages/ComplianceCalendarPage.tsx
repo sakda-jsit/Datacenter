@@ -5,6 +5,7 @@ import Card from '../../../shared/components/ui/Card'
 import StateMessage from '../../../shared/components/ui/StateMessage'
 import ExportMenu from '../../../shared/components/ui/ExportMenu'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
+import TaskTemplateSettings from '../components/TaskTemplateSettings'
 import type { ClientListDto } from '../../clients/types/client.types'
 import type { ExportSection } from '../../../shared/utils/exportTable'
 import {
@@ -29,6 +30,7 @@ export default function ComplianceCalendarPage({ clients }: Props) {
   const { companyId } = useCurrentCompany()
   const [year, setYear] = useState(new Date().getFullYear())
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
+  const [view, setView] = useState<'calendar' | 'templates'>('calendar')
   const selectedClient = clients.find((client) => client.id === companyId)
 
   const { data: dashboard } = useComplianceDashboard(companyId, year)
@@ -111,6 +113,22 @@ export default function ComplianceCalendarPage({ clients }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* แท็บ: ปฏิทินงาน / ตั้งค่างานประจำ */}
+      <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm">
+        <button type="button" onClick={() => setView('calendar')}
+          className={`rounded-md px-4 py-1.5 font-medium ${view === 'calendar' ? 'bg-slate-700 text-white' : 'text-slate-600'}`}>
+          ปฏิทินงาน
+        </button>
+        <button type="button" onClick={() => setView('templates')}
+          className={`rounded-md px-4 py-1.5 font-medium ${view === 'templates' ? 'bg-slate-700 text-white' : 'text-slate-600'}`}>
+          ตั้งค่างานประจำ
+        </button>
+      </div>
+
+      {view === 'templates' ? (
+        <TaskTemplateSettings companyId={companyId} companyName={selectedClient?.name} />
+      ) : (
+      <>
       {/* Header controls */}
       <Card className="flex flex-wrap items-center gap-4 p-4">
         <div>
@@ -224,6 +242,8 @@ export default function ComplianceCalendarPage({ clients }: Props) {
             )}
           </Card>
         </>
+      )}
+      </>
       )}
     </div>
   )

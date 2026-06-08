@@ -45,6 +45,15 @@ export interface ComplianceTaskDto {
   isOverdue: boolean
 }
 
+export interface ComplianceTaskTemplateDto {
+  taskType: ComplianceTaskType
+  taskTypeName: string
+  enabled: boolean
+  dueDay: number | null
+  defaultDueDay: number
+  source: 'default' | 'global' | 'company'
+}
+
 export interface MonthSummaryDto {
   month: number
   total: number

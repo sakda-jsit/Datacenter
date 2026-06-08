@@ -10,8 +10,6 @@ namespace Datacenter.Application.Features.ComplianceCalendar.Commands;
 public class GenerateMonthlyTasksCommandHandler(IApplicationDbContext db, IAuditService audit)
     : IRequestHandler<GenerateMonthlyTasksCommand, int>
 {
-    private static readonly ComplianceTaskType[] AllTypes = Enum.GetValues<ComplianceTaskType>();
-
     public async Task<int> Handle(GenerateMonthlyTasksCommand request, CancellationToken ct)
     {
         var existing = await db.ComplianceTasks
@@ -22,15 +20,22 @@ public class GenerateMonthlyTasksCommandHandler(IApplicationDbContext db, IAudit
             .ToListAsync(ct);
         var existingSet = existing.ToHashSet();
 
-        var toCreate = AllTypes
-            .Where(type => !existingSet.Contains(type))
+        // resolve template 2 ระดับ (เฉพาะบริษัท > global > ค่าเริ่มต้น) → สร้างเฉพาะประเภทที่ "เปิด"
+        var globalRules = await db.ComplianceTaskTemplates
+            .Where(t => t.ClientCompanyId == null).ToListAsync(ct);
+        var companyRules = await db.ComplianceTaskTemplates
+            .Where(t => t.ClientCompanyId == request.ClientCompanyId).ToListAsync(ct);
+        var effective = ComplianceTemplateResolver.Resolve(globalRules, companyRules);
+
+        var toCreate = ComplianceTemplateResolver.AllTypes
+            .Where(type => !existingSet.Contains(type) && effective[type].Enabled)
             .Select(type => new ComplianceTask
             {
                 ClientCompanyId = request.ClientCompanyId,
                 TaskType = type,
                 Year = request.Year,
                 Month = request.Month,
-                DueDate = ComplianceDueDateCalculator.Calculate(type, request.Year, request.Month),
+                DueDate = ComplianceDueDateCalculator.Calculate(type, request.Year, request.Month, effective[type].DueDay),
                 Status = ComplianceTaskStatus.Pending,
             })
             .ToList();
