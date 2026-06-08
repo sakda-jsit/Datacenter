@@ -38,6 +38,8 @@ public interface IApplicationDbContext
     DbSet<StockItem> StockItems { get; }
     DbSet<BankAccount> BankAccounts { get; }
     DbSet<BankTransaction> BankTransactions { get; }
+    DbSet<BankStatementImport> BankStatementImports { get; }
+    DbSet<BankStatementLine> BankStatementLines { get; }
     DbSet<ReportPackage> ReportPackages { get; }
     DbSet<NoteTemplateSection> NoteTemplateSections { get; }
     DbSet<Employee> Employees { get; }

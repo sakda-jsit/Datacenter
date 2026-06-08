@@ -24,5 +24,7 @@ public enum AdjustmentSourceType
     /// <summary>มาจากกระดาษทำการตรวจนับเงินสด (เงินสดขาด/เกิน)</summary>
     CashCount = 7,
     /// <summary>มาจากกระดาษทำการดอกเบี้ยรับเงินให้กู้ (รับรู้ดอกเบี้ยค้างรับ)</summary>
-    InterestIncome = 8
+    InterestIncome = 8,
+    /// <summary>มาจากการกระทบยอดธนาคาร (รายการในธนาคารที่สมุดยังไม่ลง เช่น ค่าธรรมเนียม/ดอกเบี้ย)</summary>
+    BankReconciliation = 9
 }

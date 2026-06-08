@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IImportStorageService, ImportStorageService>();
         services.AddScoped<IExpressDbfAdapter, ExpressDbfAdapter>();
         services.AddScoped<IImportSnapshotService, ImportSnapshotService>();
+        services.AddScoped<IBankStatementParser, Services.Bank.BankStatementParser>();
         services.AddHttpContextAccessor();
 
         // อีเมล (SMTP) — เจ้าหน้าที่กรอก credential ใน config "EmailSettings" ตอน deploy

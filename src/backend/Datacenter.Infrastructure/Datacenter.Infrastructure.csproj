@@ -16,6 +16,7 @@
     </PackageReference>
     <PackageReference Include="QuestPDF" Version="2026.5.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="2.1.3" />
+    <PackageReference Include="UglyToad.PdfPig" Version="0.1.9-custom-5" />
   </ItemGroup>
 
   <PropertyGroup>

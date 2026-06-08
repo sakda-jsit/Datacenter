@@ -6,12 +6,14 @@ import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import { useBankYears } from '../hooks/useBank'
 import BankBookTab from './tabs/BankBookTab'
 import AccountsTab from './tabs/AccountsTab'
+import ReconciliationTab from './tabs/ReconciliationTab'
 
-type Tab = 'book' | 'accounts'
+type Tab = 'book' | 'accounts' | 'recon'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'book', label: 'สมุดเงินฝาก' },
   { key: 'accounts', label: 'บัญชีธนาคาร' },
+  { key: 'recon', label: 'กระทบยอด (Reconciliation)' },
 ]
 
 export default function BankReconciliationPage() {
@@ -49,7 +51,7 @@ export default function BankReconciliationPage() {
               )}
             </div>
             <p className="pb-2 text-xs text-gray-400">
-              ยอดยกมาต้นปี = ยอดยกมาบัญชี (Express) + เคลื่อนไหวสุทธิก่อนปีที่เลือก · กระทบยอดกับ statement จริงรอไฟล์ธนาคาร
+              ยอดยกมาต้นปี = ยอดยกมาบัญชี (Express) + เคลื่อนไหวสุทธิก่อนปีที่เลือก · กระทบยอด statement จริงที่แท็บ "กระทบยอด"
             </p>
           </div>
         </Card>
@@ -57,6 +59,7 @@ export default function BankReconciliationPage() {
 
       {tab === 'book' && <BankBookTab companyId={companyId} year={year} />}
       {tab === 'accounts' && <AccountsTab companyId={companyId} />}
+      {tab === 'recon' && <ReconciliationTab companyId={companyId} />}
     </div>
   )
 }

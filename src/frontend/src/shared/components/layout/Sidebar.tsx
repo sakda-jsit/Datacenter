@@ -67,7 +67,7 @@ const navGroups: NavGroup[] = [
       { to: '/ar', icon: 'receipt', label: 'ลูกหนี้', desc: 'ใบแจ้งหนี้และรับชำระ' },
       { to: '/ap', icon: 'bill', label: 'เจ้าหนี้', desc: 'บิลและการจ่ายเงิน' },
       { to: '/stock', icon: 'database', label: 'สินค้าคงคลัง', desc: 'มูลค่าคงเหลือ + เทียบ GL' },
-      { to: '/bank-reconciliation', icon: 'bank', label: 'ธนาคาร / สมุดเงินฝาก', desc: 'สมุดเงินฝาก + เดินบัญชี' },
+      { to: '/bank-reconciliation', icon: 'bank', label: 'ธนาคาร / สมุดเงินฝาก', desc: 'สมุดเงินฝาก + กระทบยอด statement' },
     ],
   },
   {
