@@ -8,13 +8,15 @@ public record BankStatementParsePreviewDto(
     string BankCode, string? AccountNo, DateTime? PeriodStart, DateTime? PeriodEnd,
     decimal OpeningBalance, decimal ClosingBalance, decimal ComputedClosing,
     bool BalanceCheckPasses, string? Warning,
+    string? ExpectedAccountNo, bool? AccountMatches,
     IReadOnlyList<BankStatementParsePreviewLineDto> Lines);
 
 // ── import list ───────────────────────────────────────────────────────────────
 public record BankStatementImportListDto(
     int Id, int BankAccountId, string BankCode, string? StatementAccountNo,
     DateTime PeriodStart, DateTime PeriodEnd, decimal OpeningBalance, decimal ClosingBalance,
-    bool ParsedOk, int Status, int LineCount, int MatchedCount, DateTime CreatedAt, string CreatedBy);
+    bool ParsedOk, int Status, int LineCount, int MatchedCount, DateTime CreatedAt, string CreatedBy,
+    string? ExpectedAccountNo = null, bool? AccountMatches = null);
 
 // ── reconciliation report ───────────────────────────────────────────────────────
 public record ReconMatchedPairDto(

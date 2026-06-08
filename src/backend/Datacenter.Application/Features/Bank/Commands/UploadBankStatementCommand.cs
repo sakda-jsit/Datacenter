@@ -13,22 +13,33 @@ using Microsoft.EntityFrameworkCore;
 namespace Datacenter.Application.Features.Bank.Commands;
 
 // ── preview (parse อย่างเดียว ไม่บันทึก) ─────────────────────────────────────────
-public record ParseBankStatementPreviewCommand(int ClientCompanyId, string FileName, byte[] Content)
+public record ParseBankStatementPreviewCommand(int ClientCompanyId, int BankAccountId, string FileName, byte[] Content)
     : IRequest<BankStatementParsePreviewDto>, IRequireCompanyAccess;
 
-public class ParseBankStatementPreviewCommandHandler(IBankStatementParser parser)
+public class ParseBankStatementPreviewCommandHandler(IApplicationDbContext db, IBankStatementParser parser)
     : IRequestHandler<ParseBankStatementPreviewCommand, BankStatementParsePreviewDto>
 {
-    public Task<BankStatementParsePreviewDto> Handle(ParseBankStatementPreviewCommand request, CancellationToken ct)
+    public async Task<BankStatementParsePreviewDto> Handle(ParseBankStatementPreviewCommand request, CancellationToken ct)
     {
         if (request.Content is not { Length: > 0 }) throw new DomainException("ไฟล์ว่าง");
         var r = parser.Parse(request.Content, request.FileName);
+
+        // เทียบเลขบัญชีใน statement กับบัญชีบริษัทที่เลือก (Express)
+        string? expected = null;
+        if (request.BankAccountId > 0)
+            expected = await db.BankAccounts.AsNoTracking()
+                .Where(b => b.Id == request.BankAccountId && b.ClientCompanyId == request.ClientCompanyId)
+                .Select(b => b.AccountNumber)
+                .FirstOrDefaultAsync(ct);
+        var matches = BankAccountNumberComparer.Matches(r.AccountNo, expected);
+
         var dto = new BankStatementParsePreviewDto(
             r.BankCode, r.AccountNo, r.PeriodStart, r.PeriodEnd,
             r.OpeningBalance, r.ClosingBalance, r.ComputedClosing, r.BalanceCheckPasses, r.Warning,
+            expected, matches,
             r.Lines.Select(l => new BankStatementParsePreviewLineDto(
                 l.Date, l.Description, l.Withdrawal, l.Deposit, l.Balance)).ToList());
-        return Task.FromResult(dto);
+        return dto;
     }
 }
 
@@ -54,6 +65,11 @@ public class UploadBankStatementCommandHandler(
         var parsed = parser.Parse(request.Content, request.FileName);
         if (parsed.Lines.Count == 0)
             throw new DomainException(parsed.Warning ?? "ไม่พบรายการใน statement");
+
+        // เลขบัญชีใน statement ต้องตรงกับบัญชีบริษัทที่เลือก (ถ้าระบุได้) — กันอัปโหลดผิดบัญชี
+        if (BankAccountNumberComparer.Matches(parsed.AccountNo, account.AccountNumber) == false)
+            throw new DomainException(
+                $"เลขบัญชีใน statement ({parsed.AccountNo}) ไม่ตรงกับบัญชีบริษัทที่เลือก ({account.AccountNumber}) — โปรดเลือกบัญชีให้ถูกต้อง");
 
         var ps = parsed.PeriodStart ?? parsed.Lines.Min(l => l.Date);
         var pe = parsed.PeriodEnd ?? parsed.Lines.Max(l => l.Date);

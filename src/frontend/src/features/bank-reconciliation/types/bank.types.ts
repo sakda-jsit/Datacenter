@@ -56,6 +56,8 @@ export interface StatementParsePreview {
   computedClosing: number
   balanceCheckPasses: boolean
   warning?: string | null
+  expectedAccountNo?: string | null
+  accountMatches?: boolean | null
   lines: StatementParsePreviewLine[]
 }
 
@@ -74,6 +76,8 @@ export interface BankStatementImportListItem {
   matchedCount: number
   createdAt: string
   createdBy: string
+  expectedAccountNo?: string | null
+  accountMatches?: boolean | null
 }
 
 export interface ReconMatchedPair {

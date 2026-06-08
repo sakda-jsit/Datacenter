@@ -38,7 +38,7 @@ public class BankReconciliationController(IMediator mediator) : ControllerBase
         var bytes = ms.ToArray();
 
         if (previewOnly)
-            return Ok(await mediator.Send(new ParseBankStatementPreviewCommand(clientCompanyId, file.FileName, bytes), ct));
+            return Ok(await mediator.Send(new ParseBankStatementPreviewCommand(clientCompanyId, bankAccountId, file.FileName, bytes), ct));
 
         var id = await mediator.Send(new UploadBankStatementCommand(
             clientCompanyId, bankAccountId, file.FileName, bytes, openingBalance, closingBalance, note), ct);

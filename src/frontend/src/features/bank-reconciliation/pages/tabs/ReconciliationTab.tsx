@@ -59,6 +59,10 @@ export default function ReconciliationTab({ companyId }: Props) {
 
   async function doUpload() {
     if (!file || !accountId) return
+    if (preview?.accountMatches === false) {
+      setErr(`เลขบัญชีใน statement (${preview.accountNo ?? '-'}) ไม่ตรงกับบัญชีบริษัทที่เลือก (${preview.expectedAccountNo ?? '-'}) — โปรดเลือกบัญชีให้ถูกต้องก่อนบันทึก`)
+      return
+    }
     setErr(''); setBusy(true)
     try {
       const res = await bankApi.upload(companyId, accountId, file,
@@ -130,6 +134,17 @@ export default function ReconciliationTab({ companyId }: Props) {
               ? `✓ ตรวจยอดผ่าน: ยอดต้น ${fmt(preview.openingBalance)} + ฝาก − ถอน = ยอดปลาย ${fmt(preview.closingBalance)} (ตรงกับ statement)`
               : `⚠ ${preview.warning ?? 'ตรวจยอดไม่ผ่าน — โปรดตรวจ/แก้ยอดต้น-ปลาย'} (คำนวณได้ ${fmt(preview.computedClosing)})`}
           </div>
+          {preview.accountMatches === false && (
+            <div className="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+              ⚠ เลขบัญชีไม่ตรงกัน: statement = <span className="font-mono">{preview.accountNo ?? '-'}</span> แต่บัญชีบริษัทที่เลือก = <span className="font-mono">{preview.expectedAccountNo ?? '-'}</span>
+              <span className="block text-xs text-red-500">บันทึกไม่ได้จนกว่าจะเลือกบัญชีบริษัทให้ตรงกับ statement</span>
+            </div>
+          )}
+          {preview.accountMatches === true && (
+            <div className="mb-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+              ✓ เลขบัญชีตรงกับบัญชีบริษัท (<span className="font-mono">{preview.accountNo}</span>)
+            </div>
+          )}
           <div className="mb-3 flex flex-wrap gap-3">
             <label className="text-xs text-gray-600">ยอดต้นงวด
               <input value={opening} onChange={(e) => setOpening(e.target.value)} className="ml-2 w-36 rounded border border-gray-300 px-2 py-1 text-right font-mono text-sm" />
@@ -137,7 +152,7 @@ export default function ReconciliationTab({ companyId }: Props) {
             <label className="text-xs text-gray-600">ยอดปลายงวด
               <input value={closing} onChange={(e) => setClosing(e.target.value)} className="ml-2 w-36 rounded border border-gray-300 px-2 py-1 text-right font-mono text-sm" />
             </label>
-            <Button type="button" onClick={doUpload} disabled={busy}>{busy ? 'กำลังบันทึก...' : 'ยืนยันบันทึก + จับคู่อัตโนมัติ'}</Button>
+            <Button type="button" onClick={doUpload} disabled={busy || preview.accountMatches === false}>{busy ? 'กำลังบันทึก...' : 'ยืนยันบันทึก + จับคู่อัตโนมัติ'}</Button>
           </div>
           <div className="max-h-60 overflow-auto rounded border border-gray-100">
             <table className="w-full text-xs">
@@ -177,7 +192,12 @@ export default function ReconciliationTab({ companyId }: Props) {
               <tbody>
                 {(imports ?? []).map((im) => (
                   <tr key={im.id} className={`border-t border-gray-100 ${openImportId === im.id ? 'bg-sky-50' : ''}`}>
-                    <td className="px-3 py-1.5 font-mono">{im.bankCode}</td>
+                    <td className="px-3 py-1.5 font-mono">
+                      {im.bankCode}
+                      {im.accountMatches === false && (
+                        <span className="ml-1 text-red-500" title={`เลขบัญชีไม่ตรง: statement ${im.statementAccountNo ?? '-'} ≠ บริษัท ${im.expectedAccountNo ?? '-'}`}>⚠</span>
+                      )}
+                    </td>
                     <td className="px-3 py-1.5">{d(im.periodStart)}–{d(im.periodEnd)}</td>
                     <td className="px-3 py-1.5 text-right">{im.lineCount}</td>
                     <td className="px-3 py-1.5 text-right">{im.matchedCount}/{im.lineCount}</td>

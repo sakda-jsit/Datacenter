@@ -220,9 +220,18 @@ public class BankStatementParser : IBankStatementParser
     private static (string? AccountNo, DateTime? Start, DateTime? End) ParseHeader(string text)
     {
         string? acc = null;
-        var am = Regex.Match(text, @"\d{3}-\d-\d{5}-\d");
-        if (am.Success) acc = am.Value;
-        else { var am2 = Regex.Match(text, @"\d{3}\s\d\s\d{5}\s\d"); if (am2.Success) acc = am2.Value; }
+        // รูปแบบเลขบัญชีตามธนาคาร (ลองทีละแบบ): KBANK ddd-d-ddddd-d, SCB ddd-dddddd-d, TTB ddd d ddddd d (เว้นวรรค)
+        foreach (var pat in new[]
+        {
+            @"\d{3}-\d-\d{5}-\d",        // KBANK 040-8-58386-1
+            @"\d{3}-\d{6}-\d",           // SCB   409-160519-2
+            @"\d{3}\s\d\s\d{5}\s\d",     // TTB   694 2 14261 0
+            @"\d{3}-\d{4}-\d{4}-\d",     // (สำรอง) ddd-dddd-dddd-d
+        })
+        {
+            var m = Regex.Match(text, pat);
+            if (m.Success) { acc = m.Value; break; }
+        }
 
         DateTime? ps = null, pe = null;
         var pm = Regex.Match(text, @"(\d{2}[/.]\d{2}[/.]\d{4})\s*-\s*(\d{2}[/.]\d{2}[/.]\d{4})");
