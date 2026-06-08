@@ -28,6 +28,8 @@
 > **บล็อก DBF**: รอโครงสร้างตารางลูกหนี้/เจ้าหนี้/รับ-จ่ายชำระจริงของ Express + รูปแบบ bank statement
 
 ## Subsequent Payment Check (GL1/JV1)
+> ✅ **เสร็จ (2026-06-08)** — เมนู "ตรวจจ่ายหลังปิดงบ" `/subsequent-payment`. อ่าน `GLJNLIT` ปีถัดไป**สด**จาก Express (read-only report). ดู docs/12 หัวข้อ "Subsequent Payment Check (RPT-019)"
+
 ตรวจรายการค้างจ่ายปีปิดงบว่าจ่ายชำระแล้วหรือยังในปีถัดไป
 ```
 Accrued/Payable ณ สิ้นปี → ค้นหา payment/journal ในปีถัดไป (GL1/JV1/PV)

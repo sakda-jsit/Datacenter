@@ -643,4 +643,38 @@ public class ExpressDbfAdapter : IExpressDbfAdapter
 
         return Task.FromResult<IReadOnlyList<ExpressEmployeeDto>>(seen.Values.ToList());
     }
+
+    public Task<IReadOnlyList<ExpressGlJournalLineDto>> ReadGlJournalLinesAsync(
+        string companyFolderPath, ISet<string> accountCodes,
+        DateTime dateFromInclusive, DateTime dateToExclusive, CancellationToken ct = default)
+    {
+        if (accountCodes is null || accountCodes.Count == 0)
+            return Task.FromResult<IReadOnlyList<ExpressGlJournalLineDto>>([]);
+
+        List<DbfRow> gl;
+        try { gl = ReadDbf(companyFolderPath, "GLJNLIT"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressGlJournalLineDto>>([]); }
+
+        var result = new List<ExpressGlJournalLineDto>();
+        foreach (var r in gl)
+        {
+            var acc = Str(r, "ACCNUM");
+            if (!accountCodes.Contains(acc)) continue;
+
+            var date = Date(r, "VOUDAT");
+            if (date is null || date < dateFromInclusive || date >= dateToExclusive) continue;
+
+            var amount = Math.Round(Dec(r, "AMOUNT"), 2);
+            var isCredit = Str(r, "TRNTYP") == "1"; // ''/'0' = เดบิต, '1' = เครดิต
+            result.Add(new ExpressGlJournalLineDto(
+                AccountCode:  acc,
+                Voucher:      Str(r, "VOUCHER"),
+                Date:         date,
+                Description:  Str(r, "DESCRP"),
+                Debit:        isCredit ? 0m : amount,
+                Credit:       isCredit ? amount : 0m));
+        }
+
+        return Task.FromResult<IReadOnlyList<ExpressGlJournalLineDto>>(result);
+    }
 }

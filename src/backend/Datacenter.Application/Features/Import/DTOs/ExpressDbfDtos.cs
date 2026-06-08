@@ -29,6 +29,19 @@ public record ExpressAccountRowDto(
     int AccountType);
 
 /// <summary>
+/// หนึ่งบรรทัดรายการบัญชีจาก GLJNLIT (สมุดรายวันระดับรายการ ของ Express)
+/// — ใช้ตรวจการจ่ายชำระจริงในปีถัดไป (Subsequent Payment Check, docs/17)
+/// TRNTYP: ''/'0' = เดบิต, '1' = เครดิต (ยืนยันจากข้อมูลจริง: เดบิตรวม = เครดิตรวม)
+/// </summary>
+public record ExpressGlJournalLineDto(
+    string AccountCode,
+    string Voucher,
+    DateTime? Date,
+    string Description,
+    decimal Debit,
+    decimal Credit);
+
+/// <summary>
 /// One row per (AccountCode, PeriodSet) combination.
 /// PeriodSet: "LY" | "CUR" | "NY"
 /// BeginBalance, TotalDebit, TotalCredit are already aggregated from monthly columns.

@@ -102,6 +102,7 @@ const navGroups: NavGroup[] = [
       { to: '/prepaid', icon: 'calendar', label: 'ค่าใช้จ่ายจ่ายล่วงหน้า', desc: 'ตัดจ่ายตามงวด + ปรับปรุง' },
       { to: '/cash-count', icon: 'calculator', label: 'ตรวจนับเงินสด', desc: 'นับเงินสด + เทียบ GL' },
       { to: '/interest-income', icon: 'percent', label: 'ดอกเบี้ยรับเงินให้กู้', desc: 'คำนวณดอกเบี้ย + ปรับปรุง' },
+      { to: '/subsequent-payment', icon: 'bill', label: 'ตรวจจ่ายหลังปิดงบ', desc: 'ค้างจ่ายปีปิดงบ จ่ายจริงปีถัดไป' },
       { to: '/financial-statement', icon: 'chart', label: 'งบการเงิน', desc: 'กำไรขาดทุนและฐานะการเงิน' },
       { to: '/closing-period', icon: 'lock', label: 'ปิดรอบบัญชี', desc: 'ตรวจสอบและ lock period' },
       { to: '/report-packages', icon: 'fileText', label: 'ชุดรายงานงบ', desc: 'เวอร์ชัน + ล็อกงบที่ยื่น' },

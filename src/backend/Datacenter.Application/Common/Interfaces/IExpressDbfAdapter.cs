@@ -81,4 +81,14 @@ public interface IExpressDbfAdapter
     /// </summary>
     Task<IReadOnlyList<ExpressEmployeeDto>> ReadPayrollEmployeesAsync(
         string companyFolderPath, IReadOnlyDictionary<string, string> salaryAccountToDept, CancellationToken ct = default);
+
+    /// <summary>
+    /// อ่านบรรทัดรายการบัญชีจาก GLJNLIT (สมุดรายวันระดับรายการ) เฉพาะบัญชีใน accountCodes
+    /// และวันที่ในช่วง [dateFromInclusive, dateToExclusive). ใช้ตรวจการจ่ายชำระจริงในปีถัดไป
+    /// (Subsequent Payment Check) — Express เก็บ detail ปีปัจจุบัน+ปีถัดไปไว้ก่อน post รอบ.
+    /// คืนรายการว่างถ้าไม่มีไฟล์ GLJNLIT.
+    /// </summary>
+    Task<IReadOnlyList<ExpressGlJournalLineDto>> ReadGlJournalLinesAsync(
+        string companyFolderPath, ISet<string> accountCodes,
+        DateTime dateFromInclusive, DateTime dateToExclusive, CancellationToken ct = default);
 }
