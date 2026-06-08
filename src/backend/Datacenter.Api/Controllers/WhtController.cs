@@ -26,6 +26,15 @@ public class WhtController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetEntries([FromQuery] GetWhtEntriesQuery query, CancellationToken ct)
         => Ok(await mediator.Send(query, ct));
 
+    /// <summary>GET /api/v1/wht/pnd-txt?clientCompanyId=1&amp;year=2025&amp;formType=53&amp;month=0 — ไฟล์ใบแนบ e-Filing (TIS-620)</summary>
+    [HttpGet("pnd-txt")]
+    public async Task<IActionResult> GetPndTxt([FromQuery] int clientCompanyId, [FromQuery] int year, [FromQuery] int formType, [FromQuery] int month, CancellationToken ct)
+    {
+        var bytes = await mediator.Send(new GetWhtPndTxtQuery(clientCompanyId, year, formType, month), ct);
+        var name = month > 0 ? $"pnd{formType}-{year + 543}-{month:D2}.txt" : $"pnd{formType}-{year + 543}.txt";
+        return File(bytes, "text/plain", name);
+    }
+
     /// <summary>GET /api/v1/wht/certificate?clientCompanyId=1&amp;entryIds=1&amp;entryIds=2 — PDF หนังสือรับรอง (preview)</summary>
     [HttpGet("certificate")]
     public async Task<IActionResult> GetCertificate([FromQuery] int clientCompanyId, [FromQuery] int[] entryIds, CancellationToken ct)

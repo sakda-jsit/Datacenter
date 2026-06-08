@@ -1,10 +1,22 @@
 import Card from '../../../../shared/components/ui/Card'
+import Button from '../../../../shared/components/ui/Button'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
 import ExportMenu from '../../../../shared/components/ui/ExportMenu'
 import DataAsOfBanner from '../../../../shared/components/ui/DataAsOfBanner'
 import { useWhtReport } from '../../hooks/useWht'
+import { whtApi } from '../../services/whtApi'
 import { MONTH_LABEL } from '../../types/wht.types'
 import type { ExportSection } from '../../../../shared/utils/exportTable'
+
+async function dlPnd(companyId: number, year: number, formType: number) {
+  const blob = await whtApi.pndTxt(companyId, year, formType)
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `pnd${formType}-${year + 543}.txt`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 30000)
+}
 
 function fmt(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -42,6 +54,13 @@ export default function WhtReportTab({ companyId, year }: Props) {
               <p className="text-sm font-semibold text-slate-800">รายงานภาษีหัก ณ ที่จ่าย (ภ.ง.ด.3 / ภ.ง.ด.53) รายเดือน · ปี {year}</p>
               <p className="text-xs text-gray-500">{data.clientName} · ภ.ง.ด.3 = บุคคลธรรมดา, ภ.ง.ด.53 = นิติบุคคล</p>
             </div>
+            <div className="flex items-center gap-2">
+            {data.totalPnd3Count > 0 && (
+              <Button type="button" variant="secondary" onClick={() => dlPnd(companyId, year, 3)}>⬇ ภ.ง.ด.3 (TXT)</Button>
+            )}
+            {data.totalPnd53Count > 0 && (
+              <Button type="button" variant="secondary" onClick={() => dlPnd(companyId, year, 53)}>⬇ ภ.ง.ด.53 (TXT)</Button>
+            )}
             <ExportMenu
               meta={{
                 title: `รายงานภาษีหัก ณ ที่จ่าย (ภ.ง.ด.3/53) ปี ${year}`,
@@ -63,6 +82,7 @@ export default function WhtReportTab({ companyId, year }: Props) {
                 },
               ]}
             />
+            </div>
           </div>
           <table className="w-full text-xs">
             <thead className="bg-slate-50 text-gray-600">

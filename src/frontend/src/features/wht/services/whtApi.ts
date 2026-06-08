@@ -16,6 +16,12 @@ export const whtApi = {
       .then((r) => r.data),
 
   // PDF หนังสือรับรอง (ดาวน์โหลด) — ดึงเป็น blob (ต้องแนบ JWT ผ่าน axios)
+  // ไฟล์ใบแนบ e-Filing (TIS-620 TXT) — formType 3=ภ.ง.ด.3, 53=ภ.ง.ด.53; month 0=ทั้งปี
+  pndTxt: (clientCompanyId: number, year: number, formType: number, month = 0) =>
+    apiClient
+      .get('/wht/pnd-txt', { params: { clientCompanyId, year, formType, month }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
+
   certificate: (clientCompanyId: number, entryIds: number[]) =>
     apiClient
       .get('/wht/certificate', {
