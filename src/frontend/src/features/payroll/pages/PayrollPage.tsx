@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import PageHeader from '../../../shared/components/ui/PageHeader'
 import Tabs from '../../../shared/components/ui/Tabs'
 import Card from '../../../shared/components/ui/Card'
@@ -19,9 +20,19 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'mapping', label: 'แมพบัญชีเงินเดือน' },
 ]
 
+// deep-link จากเมนูข้าง: ?section=pnd1 → แท็บรายได้ทั้งปี (ภ.ง.ด.1), ?section=sso → แท็บงวดเงินเดือน (สปส.1-10)
+const SECTION_TAB: Record<string, Tab> = { pnd1: 'year', sso: 'runs' }
+
 export default function PayrollPage() {
   const { companyId } = useCurrentCompany()
-  const [tab, setTab] = useState<Tab>('dashboard')
+  const [searchParams] = useSearchParams()
+  const section = searchParams.get('section') ?? ''
+  const [tab, setTab] = useState<Tab>(SECTION_TAB[section] ?? 'dashboard')
+
+  // เปลี่ยนแท็บเมื่อคลิกเมนูข้าง (section เปลี่ยน) ขณะอยู่หน้า payroll อยู่แล้ว (component ไม่ remount)
+  useEffect(() => {
+    if (section && SECTION_TAB[section]) setTab(SECTION_TAB[section])
+  }, [section])
 
   return (
     <div>
