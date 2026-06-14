@@ -39,6 +39,9 @@ public class ClientCompany : BaseEntity
     public string? AddrProvince { get; set; }       // จังหวัด
     // หมายเหตุ: รหัสไปรษณีย์ใช้ฟิลด์ PostalCode เดิมด้านล่าง
 
+    /// <summary>ประเภทกิจการที่ประกอบ (สำหรับช่อง "ประกอบกิจการ" ในแบบ ภ.ง.ด.50) — ป้อนเอง (Express ไม่มี)</summary>
+    public string? BusinessActivity { get; set; }
+
     public int FiscalYearStartMonth { get; set; } = 1;
     public bool IsActive { get; set; } = true;
 

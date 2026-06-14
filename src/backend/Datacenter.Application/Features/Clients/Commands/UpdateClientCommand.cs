@@ -15,7 +15,8 @@ public record UpdateClientCommand(
     string? SsoBranchCode = null,
     string? Phone = null,
     string? PostalCode = null,
-    ClientAddressDto? AddressDetail = null)
+    ClientAddressDto? AddressDetail = null,
+    string? BusinessActivity = null)
     : IRequest, IRequireCompanyAccess
 {
     public int ClientCompanyId => Id;

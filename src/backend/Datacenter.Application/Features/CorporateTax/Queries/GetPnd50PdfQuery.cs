@@ -42,6 +42,7 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             CompanyName: string.IsNullOrWhiteSpace(company.LegalName) ? company.Name : company.LegalName,
             TaxId: company.TaxId,
             IsHeadOffice: isHeadOffice,
+            BusinessActivity: company.BusinessActivity,
             HouseNo: company.AddrHouseNo ?? p?.HouseNo,
             Moo: company.AddrMoo ?? p?.Moo,
             Soi: company.AddrSoi ?? p?.Soi,

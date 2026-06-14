@@ -30,6 +30,7 @@ export interface ClientDetailDto extends ClientListDto {
   phone?: string | null
   postalCode?: string | null
   addressDetail?: ClientAddress | null
+  businessActivity?: string | null
 }
 
 export interface CreateClientRequest {
@@ -57,4 +58,5 @@ export interface UpdateClientRequest {
   phone?: string
   postalCode?: string
   addressDetail?: ClientAddress
+  businessActivity?: string
 }

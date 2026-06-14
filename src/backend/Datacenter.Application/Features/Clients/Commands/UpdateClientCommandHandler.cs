@@ -41,6 +41,7 @@ public class UpdateClientCommandHandler(IApplicationDbContext db, ICurrentUserSe
             client.AddrDistrict = a.District?.Trim();
             client.AddrProvince = a.Province?.Trim();
         }
+        client.BusinessActivity = request.BusinessActivity?.Trim();
 
         client.ModifiedAt = DateTime.UtcNow;
         client.ModifiedBy = currentUser.Username;

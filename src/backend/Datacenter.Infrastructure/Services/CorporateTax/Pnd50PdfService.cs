@@ -52,6 +52,9 @@ public class Pnd50PdfService : IPnd50PdfService
         DrawComb(p1, font, Digits(d.PostalCode), 82.7, 197.0, 59.2, 13.2, 5);                     // f14 รหัสไปรษณีย์ (comb 5)
         DrawText(p1, font, d.Phone, 180.1, 196.0, 153.8, 12.8, XStringFormats.CenterLeft);        // f15 โทรศัพท์
 
+        // ประกอบกิจการ (field 23) — ประเภทกิจการที่ประกอบ
+        DrawText(p1, font, d.BusinessActivity, 360.0, 356.0, 208.9, 14.0, XStringFormats.CenterLeft);
+
         // ประเภทการยื่น: (1) ยื่นปกติ (Group1)
         DrawCheck(p1, font, 357.0, 166.0, 13.1, 13.7);
         // สถานะ: (1) บริษัท/ห้างฯ ตั้งตามกฎหมายไทย (Group2) — ค่าปกติ; ข้ามถ้าเป็นบริษัทมหาชน (สถานะอื่น)

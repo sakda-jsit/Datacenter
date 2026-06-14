@@ -14,6 +14,7 @@ const MONTHS = [
 
 // ช่องที่อยู่แยก (ใช้ตอนแก้ไข — สำหรับฟอร์มราชการ เช่น ภ.ง.ด.50)
 type FormState = CreateClientRequest & {
+  businessActivity: string
   addrBuilding: string; addrRoomNo: string; addrFloor: string; addrVillage: string
   addrHouseNo: string; addrMoo: string; addrSoi: string; addrRoad: string
   addrSubDistrict: string; addrDistrict: string; addrProvince: string
@@ -30,6 +31,7 @@ const emptyForm: FormState = {
   ssoBranchCode: '000000',
   phone: '',
   postalCode: '',
+  businessActivity: '',
   addrBuilding: '', addrRoomNo: '', addrFloor: '', addrVillage: '',
   addrHouseNo: '', addrMoo: '', addrSoi: '', addrRoad: '',
   addrSubDistrict: '', addrDistrict: '', addrProvince: '',
@@ -60,6 +62,7 @@ export default function ClientFormPage() {
         ssoBranchCode: existing.ssoBranchCode ?? '000000',
         phone: existing.phone ?? '',
         postalCode: existing.postalCode ?? '',
+        businessActivity: existing.businessActivity ?? '',
         addrBuilding: existing.addressDetail?.building ?? '',
         addrRoomNo: existing.addressDetail?.roomNo ?? '',
         addrFloor: existing.addressDetail?.floor ?? '',
@@ -93,6 +96,7 @@ export default function ClientFormPage() {
             ssoBranchCode: values.ssoBranchCode || undefined,
             phone: values.phone || undefined,
             postalCode: values.postalCode || undefined,
+            businessActivity: values.businessActivity || undefined,
             addressDetail: {
               building: values.addrBuilding || undefined,
               roomNo: values.addrRoomNo || undefined,
@@ -187,6 +191,18 @@ export default function ClientFormPage() {
             className={inputCls(!!errors.address)}
           />
         </Field>
+
+        {isEdit && (
+          <Field label="ประกอบกิจการ (ประเภทกิจการ — สำหรับ ภ.ง.ด.50)" error={errors.businessactivity}>
+            <input
+              name="businessActivity"
+              value={values.businessActivity}
+              onChange={handleChange}
+              placeholder="เช่น รับเหมาก่อสร้าง, ขายส่งวัสดุก่อสร้าง"
+              className={inputCls(false)}
+            />
+          </Field>
+        )}
 
         <Field label="เดือนเริ่มต้นปีบัญชี *" error={errors.fiscalyearstartmonth}>
           <select

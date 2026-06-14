@@ -32,7 +32,8 @@ public class ClientsController(IMediator mediator) : ControllerBase
     {
         await mediator.Send(new UpdateClientCommand(
             id, body.LegalName, body.TaxId, body.BranchCode, body.Address, body.FiscalYearStartMonth,
-            body.SsoAccountNo, body.SsoBranchCode, body.Phone, body.PostalCode, body.AddressDetail), ct);
+            body.SsoAccountNo, body.SsoBranchCode, body.Phone, body.PostalCode, body.AddressDetail,
+            body.BusinessActivity), ct);
         return NoContent();
     }
 

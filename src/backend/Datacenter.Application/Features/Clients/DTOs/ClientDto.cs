@@ -13,9 +13,9 @@ public record ClientDetailDto(
     int Id, string Code, string Name, string LegalName, string TaxId,
     string BranchCode, string? Address, int FiscalYearStartMonth, bool IsActive,
     string? SsoAccountNo, string? SsoBranchCode, string? Phone, string? PostalCode,
-    ClientAddressDto? AddressDetail = null);
+    ClientAddressDto? AddressDetail = null, string? BusinessActivity = null);
 
 public record UpdateClientRequest(
     string LegalName, string TaxId, string BranchCode, string? Address, int FiscalYearStartMonth,
     string? SsoAccountNo, string? SsoBranchCode, string? Phone, string? PostalCode,
-    ClientAddressDto? AddressDetail = null);
+    ClientAddressDto? AddressDetail = null, string? BusinessActivity = null);
