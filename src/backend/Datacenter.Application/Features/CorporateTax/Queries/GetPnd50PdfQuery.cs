@@ -29,6 +29,30 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
         var tax = await sender.Send(new GetTaxComputationQuery(req.ClientCompanyId, req.FiscalYear), ct);
         var r = tax.Result;
 
+        // หน้า 3 (รายการที่ 3): ดึง breakdown จากงบกำไรขาดทุน (ถ้ามี) ให้ reconcile กับ r
+        Pnd50Page3Data? page3 = null;
+        if (tax.HasProfitLoss)
+        {
+            try
+            {
+                var pl = await sender.Send(
+                    new FinancialStatement.Queries.GetProfitLossQuery(req.ClientCompanyId, req.FiscalYear), ct);
+                var sga = pl.TotalExpenses - pl.CostOfGoods.Amount + Math.Abs(pl.FinanceCost.Amount);
+                page3 = new Pnd50Page3Data(
+                    Revenue: pl.TotalIncome,
+                    Cogs: pl.CostOfGoods.Amount,
+                    GrossProfit: pl.GrossProfit,
+                    Sga: sga,
+                    NetAccountingProfit: r.NetProfitBeforeTax,
+                    AddBack: r.AddBackTotal,
+                    Deduction: r.DeductionTotal,
+                    AdjustedProfit: r.AdjustedProfit,
+                    LossUsed: r.LossUsed,
+                    NetTaxableIncome: r.NetTaxableIncome);
+            }
+            catch { /* ไม่มีงบ → ไม่เติมหน้า 3 */ }
+        }
+
         // ผู้ลงนามของรอบปีนี้: override รายปี (CompanyAuditor) ?? ค่าเริ่มต้นบริษัท (ทะเบียน master)
         var year = await db.CompanyAuditors.AsNoTracking()
             .FirstOrDefaultAsync(x => x.ClientCompanyId == req.ClientCompanyId
@@ -84,7 +108,8 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             TotalCredit: r.WhtCredit,
             NetPayable: r.NetPayable,
             RateScheme: tax.RateScheme,
-            IsNetProfit: r.AdjustedProfit >= 0);
+            IsNetProfit: r.AdjustedProfit >= 0,
+            Page3: page3);
 
         return svc.Build(data);
     }

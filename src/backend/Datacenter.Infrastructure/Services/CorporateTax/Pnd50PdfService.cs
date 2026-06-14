@@ -133,6 +133,40 @@ public class Pnd50PdfService : IPnd50PdfService
             DrawCheck(p2, font, 171.6, 484.3, 13.7, 13.7);  // รวม — ชำระไว้เกิน
         }
 
+        // ── หน้า 3: รายการที่ 3 — reconciliation กำไรบัญชี → เงินได้สุทธิเพื่อเสียภาษี ──
+        if (d.Page3 is { } p3d && doc.Pages.Count > 2)
+        {
+            var p3 = XGraphics.FromPdfPage(doc.Pages[2], XGraphicsPdfPageOptions.Append);
+            // เติมคอลัมน์ 2 (กิจการที่ต้องเสียภาษี) + คอลัมน์ 3 (รวม) เท่ากัน; คอลัมน์ 1 (ยกเว้น) เว้น
+            void Row(double y, decimal v)
+            {
+                DrawMoney(p3, font, v, 359.0, y, 101.2, 13.0);   // col2 เสียภาษี
+                DrawMoney(p3, font, v, 466.9, y, 101.2, 13.0);   // col3 รวม
+            }
+            Row(97.6, p3d.Revenue);              // 1. รายได้โดยตรง
+            Row(123.0, p3d.Cogs);                // 2. หัก ต้นทุนขาย
+            Row(139.8, p3d.GrossProfit);         // 3. กำไร(ขาดทุน)ขั้นต้น
+            Row(174.2, p3d.GrossProfit);         // 5. รวม (3+4)
+            Row(209.3, p3d.GrossProfit);         // 7. รวม (5-6)
+            Row(226.2, p3d.Sga);                 // 8. หัก รายจ่ายขายและบริหาร
+            Row(243.7, p3d.NetAccountingProfit); // 9. กำไร(ขาดทุน)สุทธิตามบัญชี
+            Row(288.2, p3d.AddBack);             // 11. บวก รายจ่ายต้องห้าม
+            Row(305.6, p3d.NetAccountingProfit + p3d.AddBack); // 12. รวม (9+10+11)
+            Row(330.9, p3d.Deduction);           // 13. หัก รายได้ยกเว้น/หักเพิ่ม
+            Row(348.3, p3d.AdjustedProfit);      // 14. รวม (12-13)
+            Row(364.9, p3d.LossUsed);            // 15. หัก ขาดทุนยกมา
+            Row(382.3, p3d.NetTaxableIncome);    // 16. รวม (14-15)
+            DrawMoney(p3, font, p3d.NetTaxableIncome, 466.1, 632.3, 101.1, 13.0); // 21. เงินได้สุทธิเพื่อเสียภาษี (col3)
+
+            // checkbox กำไร/ขาดทุน
+            if (p3d.GrossProfit >= 0) DrawCheck(p3, font, 38.3, 143.8, 12.0, 13.1);   // 3. กำไรขั้นต้น
+            else DrawCheck(p3, font, 108.8, 143.8, 13.1, 13.1);                        // 3. ขาดทุนขั้นต้น
+            if (p3d.NetAccountingProfit >= 0) DrawCheck(p3, font, 37.7, 247.1, 13.1, 12.6); // 9. กำไรสุทธิ
+            else DrawCheck(p3, font, 108.8, 247.1, 13.1, 12.6);                        // 9. ขาดทุนสุทธิ
+            if (p3d.NetTaxableIncome > 0) DrawCheck(p3, font, 38.3, 635.7, 12.6, 13.1); // 21. กำไรสุทธิที่ต้องเสียภาษี
+            else DrawCheck(p3, font, 157.4, 635.2, 12.6, 14.2);                        // 21. ขาดทุนสุทธิ
+        }
+
         using var output = new MemoryStream();
         doc.Save(output);
         return output.ToArray();

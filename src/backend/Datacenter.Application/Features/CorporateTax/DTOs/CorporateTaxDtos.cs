@@ -133,4 +133,19 @@ public record Pnd50FormData(
     decimal NetPayable,         // คงเหลือชำระเพิ่ม (>0) / ชำระเกิน (&lt;0)
     // สำหรับติ๊ก checkbox หน้า 2
     TaxRateScheme RateScheme,   // อัตราภาษี (SME → ติ๊กกรณีลดอัตรา 1.2)
-    bool IsNetProfit);          // กำไรสุทธิ (true) / ขาดทุนสุทธิ (false)
+    bool IsNetProfit,           // กำไรสุทธิ (true) / ขาดทุนสุทธิ (false)
+    // หน้า 3: รายการที่ 3 reconciliation (null = ไม่มีงบ/ไม่เติม)
+    Pnd50Page3Data? Page3 = null);
+
+/// <summary>ข้อมูลหน้า 3 (รายการที่ 3) — reconciliation กำไรบัญชี → เงินได้สุทธิเพื่อเสียภาษี.</summary>
+public record Pnd50Page3Data(
+    decimal Revenue,             // 1. รายได้โดยตรง
+    decimal Cogs,                // 2. ต้นทุนขาย
+    decimal GrossProfit,         // 3. กำไร(ขาดทุน)ขั้นต้น
+    decimal Sga,                 // 8. รายจ่ายขายและบริหาร (รวมต้นทุนการเงิน)
+    decimal NetAccountingProfit, // 9. กำไร(ขาดทุน)สุทธิตามบัญชี (= ก่อนภาษี)
+    decimal AddBack,             // 11. บวก รายจ่ายต้องห้าม
+    decimal Deduction,           // 13. หัก รายได้ยกเว้น/หักเพิ่ม
+    decimal AdjustedProfit,      // 14. รวม
+    decimal LossUsed,            // 15. หัก ขาดทุนยกมา
+    decimal NetTaxableIncome);   // 16./21. เงินได้สุทธิเพื่อเสียภาษี
