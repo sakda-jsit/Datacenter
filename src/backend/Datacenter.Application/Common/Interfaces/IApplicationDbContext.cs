@@ -61,6 +61,8 @@ public interface IApplicationDbContext
     DbSet<InterestBearingLoan> InterestBearingLoans { get; }
     DbSet<LoanPrincipalMovement> LoanPrincipalMovements { get; }
     DbSet<Attachment> Attachments { get; }
+    DbSet<TaxComputation> TaxComputations { get; }
+    DbSet<TaxAdjustmentLine> TaxAdjustmentLines { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
