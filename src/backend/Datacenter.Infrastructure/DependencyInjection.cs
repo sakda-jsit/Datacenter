@@ -56,6 +56,7 @@ public static class DependencyInjection
         services.AddSingleton<IVatTaxReportExportService, Services.Vat.VatTaxReportExportService>();
         services.AddSingleton<IVatPp30TransferExportService, Services.Vat.VatPp30TransferExportService>();
         services.AddSingleton<IKt20ExportService>(_ => new Services.Payroll.Kt20ExportService(certFont));
+        services.AddSingleton<IPnd50PdfService>(_ => new Services.CorporateTax.Pnd50PdfService(certFont));
 
         // หมายเหตุประกอบงบ (NOTE2) export Excel รูปแบบงบ — ClosedXML
         services.AddScoped<INote2ExcelExporter, Note2ExcelExporter>();

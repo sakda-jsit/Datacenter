@@ -63,3 +63,15 @@ public record TaxAdjustmentLineInput(
     string Description,
     decimal Amount,
     int SortOrder);
+
+/// <summary>ข้อมูลสำหรับเติมแบบ ภ.ง.ด.50 (PDF) เฟส A — หน้า 1 (หัว) + หน้า 2 (การคำนวณภาษี).</summary>
+public record Pnd50FormData(
+    string CompanyName,
+    string TaxId,
+    DateTime PeriodStart,
+    DateTime PeriodEnd,
+    decimal NetTaxableIncome,   // ฐานภาษี (กำไรสุทธิที่ต้องเสียภาษี)
+    decimal TaxAmount,          // ภาษีที่คำนวณได้
+    decimal WhtCredit,          // ภาษีหัก ณ ที่จ่าย
+    decimal TotalCredit,        // รวมรายการหัก
+    decimal NetPayable);        // คงเหลือชำระเพิ่ม (>0) / ชำระเกิน (&lt;0)

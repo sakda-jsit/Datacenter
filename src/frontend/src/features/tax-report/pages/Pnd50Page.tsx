@@ -7,11 +7,22 @@ import ExportMenu from '../../../shared/components/ui/ExportMenu'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import type { ExportSection } from '../../../shared/utils/exportTable'
 import { useSaveTaxComputation, useTaxComputation } from '../hooks/useCorporateTax'
+import { corporateTaxApi } from '../services/corporateTaxApi'
 import {
   TAX_RATE_SCHEME_LABEL,
   TaxAdjustmentKind,
   TaxRateScheme,
 } from '../types/corporateTax.types'
+
+async function dlPnd50Pdf(companyId: number, year: number) {
+  const blob = await corporateTaxApi.pnd50Pdf(companyId, year)
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `pnd50-${year + 543}.pdf`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 30000)
+}
 
 interface AdjRow {
   description: string
@@ -180,7 +191,10 @@ export default function Pnd50Page() {
         </div>
         <Button onClick={() => companyId && setQueried(true)} disabled={!companyId}>แสดงข้อมูล</Button>
         {queried && data && (
-          <div className="ml-auto"><ExportMenu meta={{ title: `ภ.ง.ด.50 ปี ${year}`, subtitle: data.clientName, fileName: `pnd50-${companyId}-${year}` }} getSections={exportSections} /></div>
+          <div className="ml-auto flex items-center gap-2">
+            <Button type="button" variant="secondary" onClick={() => dlPnd50Pdf(companyId, year)}>⬇ ภ.ง.ด.50 (PDF)</Button>
+            <ExportMenu meta={{ title: `ภ.ง.ด.50 ปี ${year}`, subtitle: data.clientName, fileName: `pnd50-${companyId}-${year}` }} getSections={exportSections} />
+          </div>
         )}
         {!companyId && <span className="text-sm text-amber-600">กรุณาเลือกบริษัทก่อน</span>}
       </Card>
