@@ -33,6 +33,8 @@ internal static class AuditableEntityRegistry
         typeof(ExpressPostingLink),
         typeof(SsoEnrollment),
         typeof(NoteTemplateSection),
+        typeof(TaxComputation),    // กระดาษทำการ ภ.ง.ด.50 (อัตรา/ขาดทุนยกมา/WHT)
+        typeof(VatBranchMapping),  // แมพเลขสาขา ภ.พ.30 (DEPCOD→RD)
     ];
 
     /// <summary>property ที่ไม่ต้องลง audit (metadata ของ BaseEntity)</summary>
