@@ -167,6 +167,36 @@ public class Pnd50PdfService : IPnd50PdfService
             else DrawCheck(p3, font, 157.4, 635.2, 12.6, 14.2);                        // 21. ขาดทุนสุทธิ
         }
 
+        // ── หน้า 7: รายการที่ 12 — งบดุล (crosswalk จากผังงบ) ──
+        if (d.Page7 is { } p7 && doc.Pages.Count > 6)
+        {
+            var p7g = XGraphics.FromPdfPage(doc.Pages[6], XGraphicsPdfPageOptions.Append);
+            void Bs(double y, decimal v) => DrawMoney(p7g, font, v, 459.1, y, 100.6, 14.0);
+            Bs(80.4, p7.Cash);                 // 140 เงินสด
+            Bs(98.2, p7.Ar);                   // 141 ลูกหนี้การค้า
+            Bs(116.3, p7.Inventory);           // 142 สินค้าคงเหลือ
+            Bs(134.2, p7.OtherCurrentAsset);   // 143 สินทรัพย์หมุนเวียนอื่น
+            Bs(169.6, p7.LoansToRelated);      // 144 เงินให้กู้ยืมบุคคลที่เกี่ยวข้อง
+            Bs(187.5, p7.Ppe);                 // 145 ที่ดิน อาคาร อุปกรณ์-สุทธิ
+            Bs(205.5, p7.OtherAssetNet);       // 146 ทรัพย์สินอื่น-สุทธิ
+            Bs(242.2, p7.OtherNonCurrentAsset);// 148 สินทรัพย์ไม่หมุนเวียนอื่น
+            Bs(260.1, p7.TotalAssets);         // รวมสินทรัพย์
+            Bs(312.8, p7.BankOdShortLoan);     // 149 เบิกเกินบัญชี+กู้ระยะสั้น
+            Bs(330.7, p7.Ap);                  // 150 เจ้าหนี้การค้า
+            Bs(348.8, p7.CurrentLoan);         // 151 เงินกู้ยืม
+            Bs(366.7, p7.OtherCurrentLiab);    // 152 หนี้สินหมุนเวียนอื่น
+            Bs(401.3, p7.LongTermLoan);        // 153 เงินกู้ยืมระยะยาว
+            Bs(419.2, p7.OtherNonCurrentLiab); // 154 หนี้สินไม่หมุนเวียนอื่น
+            Bs(437.9, p7.TotalLiabilities);    // รวมหนี้สิน
+            Bs(472.8, p7.PaidUpCapital);       // 156 ทุนที่ออกและชำระแล้ว
+            Bs(509.5, p7.RetainedEarnings);    // 158-159 กำไร/ขาดทุนสะสม
+            Bs(529.0, p7.TotalEquity);         // 160 รวมส่วนของผู้ถือหุ้น
+            Bs(546.2, p7.TotalLiabAndEquity);  // 161 รวมหนี้สิน+ทุน
+            // checkbox กำไรสะสม (Group12)
+            if (p7.IsRetainedProfit) DrawCheck(p7g, font, 44.3, 514.4, 13.1, 13.7);  // กำไรสะสม
+            else DrawCheck(p7g, font, 128.5, 514.9, 13.7, 13.7);                      // ขาดทุนสะสม
+        }
+
         using var output = new MemoryStream();
         doc.Save(output);
         return output.ToArray();

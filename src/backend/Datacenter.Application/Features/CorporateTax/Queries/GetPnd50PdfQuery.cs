@@ -53,6 +53,28 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             catch { /* ไม่มีงบ → ไม่เติมหน้า 3 */ }
         }
 
+        // หน้า 7 (รายการที่ 12 งบดุล): crosswalk บรรทัด CIT50 ← RefCode ผังงบ (ใช้ยอด presentation จาก BS)
+        Pnd50Page7Data? page7 = null;
+        try
+        {
+            var bs = await sender.Send(
+                new FinancialStatement.Queries.GetBalanceSheetQuery(req.ClientCompanyId, req.FiscalYear), ct);
+            var amt = bs.Assets.Concat(bs.Liabilities).Concat(bs.Equity)
+                .GroupBy(l => l.RefCode).ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
+            decimal R(params string[] codes) => codes.Sum(c => amt.TryGetValue(c, out var v) ? v : 0m);
+            var re = R("RE");
+            page7 = new Pnd50Page7Data(
+                Cash: R("A1"), Ar: R("A7"), Inventory: R("A3"), OtherCurrentAsset: R("A2", "A4", "TXR"),
+                LoansToRelated: R("A8"), Ppe: R("A5"), OtherAssetNet: R("A9", "A10"), OtherNonCurrentAsset: R("A6"),
+                TotalAssets: bs.TotalAssets,
+                BankOdShortLoan: R("L3"), Ap: R("L1"), CurrentLoan: R("L5"), OtherCurrentLiab: R("L2", "TXP"),
+                LongTermLoan: R("L6"), OtherNonCurrentLiab: R("L4"),
+                TotalLiabilities: bs.TotalLiabilities,
+                PaidUpCapital: R("C1"), RetainedEarnings: Math.Abs(re), IsRetainedProfit: re >= 0,
+                TotalEquity: bs.TotalEquity, TotalLiabAndEquity: bs.TotalLiabilitiesAndEquity);
+        }
+        catch { /* ไม่มีงบดุล → ไม่เติมหน้า 7 */ }
+
         // ผู้ลงนามของรอบปีนี้: override รายปี (CompanyAuditor) ?? ค่าเริ่มต้นบริษัท (ทะเบียน master)
         var year = await db.CompanyAuditors.AsNoTracking()
             .FirstOrDefaultAsync(x => x.ClientCompanyId == req.ClientCompanyId
@@ -109,7 +131,8 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             NetPayable: r.NetPayable,
             RateScheme: tax.RateScheme,
             IsNetProfit: r.AdjustedProfit >= 0,
-            Page3: page3);
+            Page3: page3,
+            Page7: page7);
 
         return svc.Build(data);
     }

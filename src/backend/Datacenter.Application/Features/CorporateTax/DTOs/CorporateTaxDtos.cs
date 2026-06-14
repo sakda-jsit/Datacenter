@@ -135,7 +135,9 @@ public record Pnd50FormData(
     TaxRateScheme RateScheme,   // อัตราภาษี (SME → ติ๊กกรณีลดอัตรา 1.2)
     bool IsNetProfit,           // กำไรสุทธิ (true) / ขาดทุนสุทธิ (false)
     // หน้า 3: รายการที่ 3 reconciliation (null = ไม่มีงบ/ไม่เติม)
-    Pnd50Page3Data? Page3 = null);
+    Pnd50Page3Data? Page3 = null,
+    // หน้า 7: รายการที่ 12 งบดุล (null = ไม่มีงบดุล)
+    Pnd50Page7Data? Page7 = null);
 
 /// <summary>ข้อมูลหน้า 3 (รายการที่ 3) — reconciliation กำไรบัญชี → เงินได้สุทธิเพื่อเสียภาษี.</summary>
 public record Pnd50Page3Data(
@@ -149,3 +151,14 @@ public record Pnd50Page3Data(
     decimal AdjustedProfit,      // 14. รวม
     decimal LossUsed,            // 15. หัก ขาดทุนยกมา
     decimal NetTaxableIncome);   // 16./21. เงินได้สุทธิเพื่อเสียภาษี
+
+/// <summary>ข้อมูลหน้า 7 (รายการที่ 12) — งบดุล (crosswalk จาก RefCode ผังงบ).</summary>
+public record Pnd50Page7Data(
+    decimal Cash, decimal Ar, decimal Inventory, decimal OtherCurrentAsset,           // 140-143
+    decimal LoansToRelated, decimal Ppe, decimal OtherAssetNet, decimal OtherNonCurrentAsset, // 144,145,146,148
+    decimal TotalAssets,
+    decimal BankOdShortLoan, decimal Ap, decimal CurrentLoan, decimal OtherCurrentLiab, // 149-152
+    decimal LongTermLoan, decimal OtherNonCurrentLiab,                                  // 153-154
+    decimal TotalLiabilities,
+    decimal PaidUpCapital, decimal RetainedEarnings, bool IsRetainedProfit,             // 156, 158-159
+    decimal TotalEquity, decimal TotalLiabAndEquity);                                   // 160-161
