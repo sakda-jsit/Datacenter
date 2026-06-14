@@ -10,7 +10,6 @@ import {
   useCompanySigners,
   useSaveTaxComputation,
   useSaveYearSigners,
-  useSetDefaultSigners,
   useTaxComputation,
 } from '../hooks/useCorporateTax'
 import { useAuditors, useBookkeepers } from '../../settings/hooks/useAuditRegistry'
@@ -350,48 +349,34 @@ function SignersCard({ companyId, year }: { companyId: number; year: number }) {
   const { data } = useCompanySigners(companyId, year)
   const { data: auditors } = useAuditors()
   const { data: bookkeepers } = useBookkeepers()
-  const saveDefault = useSetDefaultSigners()
   const saveYear = useSaveYearSigners()
 
-  const [defAuditor, setDefAuditor] = useState<number | ''>('')
-  const [defBookkeeper, setDefBookkeeper] = useState<number | ''>('')
+  const [auditor, setAuditor] = useState<number | ''>('')
+  const [bookkeeper, setBookkeeper] = useState<number | ''>('')
   const [signDate, setSignDate] = useState('')
-  const [override, setOverride] = useState(false)
-  const [yrAuditor, setYrAuditor] = useState<number | ''>('')
-  const [yrBookkeeper, setYrBookkeeper] = useState<number | ''>('')
 
   useEffect(() => {
     if (!data) return
-    setDefAuditor(data.defaultAuditorId ?? '')
-    setDefBookkeeper(data.defaultBookkeeperId ?? '')
+    // แสดงค่าที่ใช้จริง (override ปีนี้ ?? ค่าเริ่มต้นบริษัท)
+    setAuditor(data.resolvedAuditorId ?? '')
+    setBookkeeper(data.resolvedBookkeeperId ?? '')
     setSignDate(data.signDate ? data.signDate.slice(0, 10) : '')
-    setOverride(data.hasYearOverride)
-    setYrAuditor(data.yearAuditorId ?? '')
-    setYrBookkeeper(data.yearBookkeeperId ?? '')
   }, [data])
 
   const auditorOpts = auditors ?? []
   const bkOpts = bookkeepers ?? []
   const noMasters = auditorOpts.length === 0 && bkOpts.length === 0
 
-  const resolvedAuditorId = (override ? (yrAuditor || null) : null) ?? (defAuditor || null)
-  const resolvedBookkeeperId = (override ? (yrBookkeeper || null) : null) ?? (defBookkeeper || null)
-  const ra = auditorOpts.find((a) => a.id === resolvedAuditorId)
-  const rb = bkOpts.find((b) => b.id === resolvedBookkeeperId)
+  const ra = auditorOpts.find((a) => a.id === auditor)
+  const rb = bkOpts.find((b) => b.id === bookkeeper)
   const sameTaxId = !!ra?.taxId && !!rb?.taxId && ra.taxId === rb.taxId
   const taIsAuditor = ra?.type === 2 // TA
 
-  async function onSaveDefault() {
-    await saveDefault.mutateAsync({ companyId, data: { auditorId: defAuditor || null, bookkeeperId: defBookkeeper || null } })
-  }
-  async function onSaveYear() {
+  // เลือกใหม่ = overwrite (บันทึกปีนี้ + เลื่อนเป็นค่าเริ่มต้นของปีถัดไปด้วย)
+  async function onSave() {
     await saveYear.mutateAsync({
       companyId, year,
-      data: {
-        auditorId: override ? (yrAuditor || null) : null,
-        bookkeeperId: override ? (yrBookkeeper || null) : null,
-        signDate: signDate || null,
-      },
+      data: { auditorId: auditor || null, bookkeeperId: bookkeeper || null, signDate: signDate || null },
     })
   }
 
@@ -404,6 +389,7 @@ function SignersCard({ companyId, year }: { companyId: number; year: number }) {
         <a href="/settings/bookkeepers" className="font-medium text-blue-600 hover:underline">ผู้ทำบัญชี</a>
         {' '}· "สำนักงานทำบัญชี" ดึงจาก{' '}
         <a href="/settings/office-profile" className="font-medium text-blue-600 hover:underline">โปรไฟล์สำนักงาน</a>
+        {' '}· เลือกใหม่แล้วบันทึก = ใช้ปีนี้และปีถัดไป (ปีเก่าที่บันทึกแล้วคงเดิม)
       </p>
 
       {noMasters && (
@@ -412,23 +398,19 @@ function SignersCard({ companyId, year }: { companyId: number; year: number }) {
         </p>
       )}
 
-      {/* ค่าเริ่มต้นประจำบริษัท */}
-      <p className="mb-2 text-sm font-medium text-slate-600">ผู้ลงนามประจำบริษัท (ใช้ทุกปีโดยอัตโนมัติ)</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="ผู้ตรวจสอบและรับรองบัญชี">
-          <SignerSelect value={defAuditor} onChange={setDefAuditor}
+          <SignerSelect value={auditor} onChange={setAuditor}
             options={auditorOpts.map((a) => ({ id: a.id, label: `${a.name}${a.type === 2 ? ' (TA)' : ''}`, active: a.isActive }))} />
         </Field>
         <Field label="ผู้ทำบัญชี">
-          <SignerSelect value={defBookkeeper} onChange={setDefBookkeeper}
+          <SignerSelect value={bookkeeper} onChange={setBookkeeper}
             options={bkOpts.map((b) => ({ id: b.id, label: b.name, active: b.isActive }))} />
         </Field>
-      </div>
-      <div className="mt-3 flex items-center gap-3">
-        <Button type="button" onClick={onSaveDefault} disabled={saveDefault.isPending}>
-          {saveDefault.isPending ? 'กำลังบันทึก...' : 'บันทึกค่าเริ่มต้นบริษัท'}
-        </Button>
-        {saveDefault.isSuccess && !saveDefault.isPending && <span className="text-sm text-green-600">บันทึกแล้ว ✓</span>}
+        <Field label="วันที่ในรายงานของผู้สอบบัญชี">
+          <input type="date" value={signDate} onChange={(e) => setSignDate(e.target.value)}
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </Field>
       </div>
 
       {sameTaxId && (
@@ -442,43 +424,13 @@ function SignersCard({ companyId, year }: { companyId: number; year: number }) {
         </p>
       )}
 
-      {/* เฉพาะรอบปี */}
-      <div className="mt-6 border-t border-gray-100 pt-4">
-        <p className="mb-2 text-sm font-medium text-slate-600">เฉพาะรอบปี {year + 543}</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="วันที่ในรายงานของผู้สอบบัญชี">
-            <input type="date" value={signDate} onChange={(e) => setSignDate(e.target.value)}
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-          </Field>
-        </div>
-        <label className="mt-3 flex items-center gap-2 text-sm text-gray-600">
-          <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} />
-          ปีนี้เปลี่ยนผู้ลงนามต่างจากค่าเริ่มต้น
-        </label>
-        {override && (
-          <p className="mt-1 text-xs text-amber-600">
-            เปลี่ยนปีนี้แล้วจะตั้งเป็นค่าเริ่มต้นของปีถัดไปด้วยอัตโนมัติ (ปีเก่าที่บันทึกไว้ยังคงเดิม)
-          </p>
-        )}
-        {override && (
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <Field label="ผู้สอบบัญชี (เฉพาะปีนี้)">
-              <SignerSelect value={yrAuditor} onChange={setYrAuditor}
-                options={auditorOpts.map((a) => ({ id: a.id, label: `${a.name}${a.type === 2 ? ' (TA)' : ''}`, active: a.isActive }))} />
-            </Field>
-            <Field label="ผู้ทำบัญชี (เฉพาะปีนี้)">
-              <SignerSelect value={yrBookkeeper} onChange={setYrBookkeeper}
-                options={bkOpts.map((b) => ({ id: b.id, label: b.name, active: b.isActive }))} />
-            </Field>
-          </div>
-        )}
-        <div className="mt-4 flex items-center gap-3">
-          <Button type="button" onClick={onSaveYear} disabled={saveYear.isPending}
-            className="bg-blue-600 text-white hover:bg-blue-700">
-            {saveYear.isPending ? 'กำลังบันทึก...' : 'บันทึกข้อมูลปีนี้'}
-          </Button>
-          {saveYear.isSuccess && !saveYear.isPending && <span className="text-sm text-green-600">บันทึกแล้ว ✓</span>}
-        </div>
+      <div className="mt-5 flex items-center gap-3">
+        <Button type="button" onClick={onSave} disabled={saveYear.isPending}
+          className="bg-blue-600 text-white hover:bg-blue-700">
+          {saveYear.isPending ? 'กำลังบันทึก...' : 'บันทึกผู้ลงนาม'}
+        </Button>
+        {saveYear.isSuccess && !saveYear.isPending && <span className="text-sm text-green-600">บันทึกแล้ว ✓</span>}
+        {saveYear.isError && <span className="text-sm text-red-600">บันทึกไม่สำเร็จ</span>}
       </div>
     </Card>
   )
