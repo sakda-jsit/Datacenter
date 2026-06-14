@@ -34,4 +34,15 @@ public class VatController(IMediator mediator) : ControllerBase
         var name = month > 0 ? $"vat-{kind}-{year + 543}-{month:D2}.xlsx" : $"vat-{kind}-{year + 543}.xlsx";
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
+
+    /// <summary>GET /api/v1/vat/pp30-transfer?clientCompanyId=1&amp;year=2025&amp;month=1 — ไฟล์โอนย้าย ภ.พ.30 (.txt) สำหรับอัปโหลด e-Filing</summary>
+    [HttpGet("pp30-transfer")]
+    public async Task<IActionResult> GetPp30Transfer(
+        [FromQuery] int clientCompanyId, [FromQuery] int year, [FromQuery] int month,
+        [FromQuery] string delimiter = "|", [FromQuery] bool includeHeader = true, CancellationToken ct = default)
+    {
+        var bytes = await mediator.Send(
+            new GetVatPp30TransferQuery(clientCompanyId, year, month, delimiter, includeHeader), ct);
+        return File(bytes, "text/plain", $"pp30-transfer-{year + 543}-{month:D2}.txt");
+    }
 }

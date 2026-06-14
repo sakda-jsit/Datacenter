@@ -20,4 +20,16 @@ export const vatApi = {
     apiClient
       .get('/vat/tax-report/excel', { params: { clientCompanyId, year, vatType, month }, responseType: 'blob' })
       .then((r) => r.data as Blob),
+
+  // ไฟล์โอนย้ายข้อมูล ภ.พ.30 (.txt, TIS-620) สำหรับอัปโหลดหน้า e-Filing
+  pp30Transfer: (
+    clientCompanyId: number, year: number, month: number,
+    delimiter = '|', includeHeader = true,
+  ) =>
+    apiClient
+      .get('/vat/pp30-transfer', {
+        params: { clientCompanyId, year, month, delimiter, includeHeader },
+        responseType: 'blob',
+      })
+      .then((r) => r.data as Blob),
 }

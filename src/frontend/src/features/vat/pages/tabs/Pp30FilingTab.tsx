@@ -1,11 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import Card from '../../../../shared/components/ui/Card'
+import Button from '../../../../shared/components/ui/Button'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
 import ExportMenu from '../../../../shared/components/ui/ExportMenu'
 import DataAsOfBanner from '../../../../shared/components/ui/DataAsOfBanner'
 import { useVatReport } from '../../hooks/useVat'
+import { vatApi } from '../../services/vatApi'
 import { MONTH_LABEL } from '../../types/vat.types'
 import type { ExportSection } from '../../../../shared/utils/exportTable'
+
+async function dlTransfer(companyId: number, year: number, month: number) {
+  const blob = await vatApi.pp30Transfer(companyId, year, month)
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `pp30-transfer-${year + 543}-${String(month).padStart(2, '0')}.txt`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 30000)
+}
 
 function fmt(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -104,10 +116,15 @@ export default function Pp30FilingTab({ companyId, year }: Props) {
             })}
           </select>
         </div>
-        <ExportMenu
-          meta={{ title: `ใบกรอก ภ.พ.30 — ${periodTh}`, subtitle: data.clientName, fileName: `pp30-filing-${companyId}-${yearBe}-${String(month).padStart(2, '0')}` }}
-          getSections={exportSections}
-        />
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="secondary" onClick={() => dlTransfer(companyId, year, month)}>
+            ⬇ ไฟล์โอนย้าย (.txt)
+          </Button>
+          <ExportMenu
+            meta={{ title: `ใบกรอก ภ.พ.30 — ${periodTh}`, subtitle: data.clientName, fileName: `pp30-filing-${companyId}-${yearBe}-${String(month).padStart(2, '0')}` }}
+            getSections={exportSections}
+          />
+        </div>
       </Card>
 
       <Card className="p-6">
@@ -151,6 +168,10 @@ export default function Pp30FilingTab({ companyId, year }: Props) {
         <p className="mt-4 rounded bg-slate-50 px-3 py-2 text-xs text-gray-500">
           หมายเหตุ: "ยอดขายในเดือนนี้" = ยอดขายที่ต้องเสียภาษี + ยอดขายอัตรา 0 (ดึงจาก Express ISVAT) ·
           ยอดขายยกเว้นที่ไม่ผ่าน VAT ไม่อยู่ใน ISVAT ให้ตรวจ/บวกเอง · ค่าทุกช่องตรงกับ ภ.พ.30 รายเดือนในแท็บแรก
+          <br />
+          <span className="font-medium">ไฟล์โอนย้าย (.txt):</span> สำหรับอัปโหลดหน้า "โอนย้ายข้อมูล ภ.พ.30" ของกรมสรรพากร
+          (1 สาขา = 1 แถว, คั่นด้วย | + มีหัวคอลัมน์) — ที่หน้าเว็บเลือก "แบ่งด้วยสัญลักษณ์ = |", เปิด "บรรทัดแรกคือชื่อคอลัมน์"
+          แล้วแมพคอลัมน์ตามชื่อหัวในไฟล์ (เดือน/สาขา/ประเภทยื่น กรอกบนฟอร์มเว็บ)
         </p>
       </Card>
     </div>

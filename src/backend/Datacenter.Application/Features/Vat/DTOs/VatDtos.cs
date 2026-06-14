@@ -15,6 +15,23 @@ public record VatMonthlyDto(
     public decimal NetVat => Math.Round(OutputVat - InputVat, 2);
 }
 
+/// <summary>
+/// ข้อมูลหนึ่งงวด ภ.พ.30 สำหรับสร้างไฟล์โอนย้าย (อัปโหลดหน้า e-Filing "โอนย้ายข้อมูล ภ.พ.30").
+/// หนึ่งสาขา = หนึ่งแถว (เคสปัจจุบัน 1 dataset = 1 สาขา).
+/// </summary>
+public record Pp30TransferDto(
+    string CompanyName,
+    string TaxId,
+    string BranchCode,
+    int Year,
+    int Month,
+    decimal TotalSales,         // ยอดขายในเดือนนี้ (= ที่ต้องเสียภาษี + อัตรา 0)
+    decimal ZeroRatedSales,     // ยอดขายอัตรา 0
+    decimal ExemptSales,        // ยอดขายยกเว้น (ISVAT ไม่เก็บ = 0)
+    decimal EligiblePurchase,   // ยอดซื้อที่มีสิทธิ์
+    decimal OutputVat,          // ภาษีขาย
+    decimal InputVat);          // ภาษีซื้อ
+
 /// <summary>รายงาน ภ.พ.30 รายเดือนตลอดปีปฏิทิน + ยอดรวมทั้งปี</summary>
 public record VatReportDto(
     int ClientCompanyId,
