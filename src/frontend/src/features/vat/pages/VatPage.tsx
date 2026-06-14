@@ -6,11 +6,13 @@ import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import { useVatYears } from '../hooks/useVat'
 import VatReportTab from './tabs/VatReportTab'
 import VatEntriesTab from './tabs/VatEntriesTab'
+import Pp30FilingTab from './tabs/Pp30FilingTab'
 
-type Tab = 'report' | 'entries'
+type Tab = 'report' | 'entries' | 'filing'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'report', label: 'ภ.พ.30 รายเดือน' },
+  { key: 'filing', label: 'ใบกรอก ภ.พ.30 (e-Filing)' },
   { key: 'entries', label: 'รายละเอียดภาษีซื้อ/ขาย' },
 ]
 
@@ -67,6 +69,7 @@ export default function VatPage() {
       </Card>
 
       {tab === 'report' && <VatReportTab companyId={companyId} year={year} />}
+      {tab === 'filing' && <Pp30FilingTab companyId={companyId} year={year} />}
       {tab === 'entries' && <VatEntriesTab companyId={companyId} year={year} />}
     </div>
   )
