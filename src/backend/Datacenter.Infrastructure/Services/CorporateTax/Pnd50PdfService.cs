@@ -65,6 +65,14 @@ public class Pnd50PdfService : IPnd50PdfService
         DrawText(p1, font, d.AuditorName, 214.8, 733.3, 254.4, 12.8, XStringFormats.CenterLeft);
         DrawComb(p1, font, Digits(d.AuditorLicenseNo), 472.2, 732.1, 94.3, 12.1, 8);
 
+        // วันที่ในรายงานของผู้สอบบัญชี (field 46 วัน / 47 เดือน / 48 พ.ศ. — comb 2/2/4)
+        if (d.AuditorSignDate is { } sd)
+        {
+            DrawComb(p1, font, sd.Day.ToString("00"), 232.3, 757.5, 23.6, 14.0, 2);
+            DrawComb(p1, font, sd.Month.ToString("00"), 282.4, 757.5, 23.5, 14.0, 2);
+            DrawComb(p1, font, (sd.Year + 543).ToString(), 329.0, 757.5, 47.3, 14.0, 4);
+        }
+
         // ผู้ทำบัญชี: เลขผู้เสียภาษี (field 50, comb 13 — กริดเดียวกับ field 43) + ชื่อ (field 51)
         DrawDigitsAtCenters(p1, font, Digits(d.BookkeeperTaxId), AuditorTaxIdCellCenters, 800.0, 16.9);
         DrawText(p1, font, d.BookkeeperName, 217.7, 801.5, 175.7, 12.8, XStringFormats.CenterLeft);

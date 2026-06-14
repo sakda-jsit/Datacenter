@@ -54,6 +54,7 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             AuditorTaxId: auditor?.AuditorTaxId,
             BookkeeperName: auditor?.BookkeeperName,
             BookkeeperTaxId: auditor?.BookkeeperTaxId,
+            AuditorSignDate: auditor?.SignDate,
             HouseNo: company.AddrHouseNo ?? p?.HouseNo,
             Moo: company.AddrMoo ?? p?.Moo,
             Soi: company.AddrSoi ?? p?.Soi,

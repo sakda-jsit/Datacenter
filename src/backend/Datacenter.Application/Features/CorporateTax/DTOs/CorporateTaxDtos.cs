@@ -100,6 +100,7 @@ public record Pnd50FormData(
     string? AuditorTaxId,
     string? BookkeeperName,
     string? BookkeeperTaxId,
+    DateTime? AuditorSignDate,   // วันที่ในรายงานของผู้ตรวจสอบและรับรองบัญชี (field 46-48)
     // ที่อยู่ (แยกช่อง — แยกจาก Address flat ด้วย ThaiAddressParser)
     string? HouseNo,
     string? Moo,
