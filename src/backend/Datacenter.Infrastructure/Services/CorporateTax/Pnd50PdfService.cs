@@ -94,11 +94,11 @@ public class Pnd50PdfService : IPnd50PdfService
 
         // ── หน้า 2: การคำนวณภาษี (ขวา = จำนวนเงิน) ──
         // ── หน้า 2: รายการที่ 1 การคำนวณภาษี (ฟอร์มใหม่ 2568) ── ฐานภาษีไปอยู่หน้า 3 (บรรทัด 21)
-        DrawMoney(p2, font, d.TaxAmount, 461.7, 458.3, 105.8, 16.5);        // f50 ภาษีที่คำนวณได้
-        DrawMoney(p2, font, d.WhtCredit, 327.6, 524.3, 105.5, 16.5);       // f54 ภาษีหัก ณ ที่จ่าย
-        DrawMoney(p2, font, d.TotalCredit, 461.3, 590.5, 106.5, 16.5);     // f57รวม รวมรายการหัก
-        DrawMoney(p2, font, Math.Abs(d.NetPayable), 461.3, 612.6, 106.5, 16.5); // f58 คงเหลือ
-        DrawMoney(p2, font, Math.Abs(d.NetPayable), 461.7, 656.0, 106.5, 16.5); // f61 รวม
+        DrawMoneyComb(p2, font, d.TaxAmount, 567.2, 458.3, 16.9);        // f50 ภาษีที่คำนวณได้
+        DrawMoneyComb(p2, font, d.WhtCredit, 433.4, 524.3, 16.9);        // f54 ภาษีหัก ณ ที่จ่าย
+        DrawMoneyComb(p2, font, d.TotalCredit, 567.2, 590.5, 16.9);      // f57 รวมรายการหัก
+        DrawMoneyComb(p2, font, Math.Abs(d.NetPayable), 567.2, 612.6, 16.9); // f58 คงเหลือ
+        DrawMoneyComb(p2, font, Math.Abs(d.NetPayable), 567.2, 656.0, 16.9); // f61 รวม
 
         // checkbox: กำไร/ขาดทุนสุทธิ (Group5)
         if (d.IsNetProfit) DrawCheck(p2, font, 34.0, 330.2, 12.0, 11.0);
@@ -129,8 +129,8 @@ public class Pnd50PdfService : IPnd50PdfService
             // เติมคอลัมน์ 2 (กิจการที่ต้องเสียภาษี) + คอลัมน์ 3 (รวม) เท่ากัน; คอลัมน์ 1 (ยกเว้น) เว้น
             void Row(double y, decimal v)
             {
-                DrawMoney(p3, font, v, 357.0, y, 109.0, 13.0);   // col2 เสียภาษี
-                DrawMoney(p3, font, v, 466.9, y, 101.2, 13.0);   // col3 รวม
+                DrawMoneyComb(p3, font, v, 465.5, y, 17.5);   // col2 เสียภาษี (wall 465.5)
+                DrawMoneyComb(p3, font, v, 571.5, y, 17.5);   // col3 รวม (wall 571.5)
             }
             Row(124.0, p3d.Revenue);             // 1. รายได้โดยตรง
             Row(155.7, p3d.Cogs);                // 2. หัก ต้นทุนขาย
@@ -146,7 +146,7 @@ public class Pnd50PdfService : IPnd50PdfService
             Row(419.0, p3d.AdjustedProfit);      // 14. รวม
             Row(449.5, p3d.LossUsed);            // 15. หัก ขาดทุนยกมา
             Row(477.7, p3d.NetTaxableIncome);    // 16. รวม
-            DrawMoney(p3, font, p3d.NetTaxableIncome, 466.9, 594.8, 101.2, 13.0); // 21. เงินได้สุทธิเพื่อเสียภาษี (col3)
+            DrawMoneyComb(p3, font, p3d.NetTaxableIncome, 571.5, 594.8, 17.5); // 21. เงินได้สุทธิเพื่อเสียภาษี (col3)
 
             // checkbox กำไร/ขาดทุน (Group100 L3 / Group101 L9 / Group9 L21)
             if (p3d.GrossProfit >= 0) DrawCheck(p3, font, 36.5, 180.7, 12.6, 13.0);
@@ -161,7 +161,7 @@ public class Pnd50PdfService : IPnd50PdfService
         if (d.Page7 is { } p7 && doc.Pages.Count > 5)
         {
             var p7g = XGraphics.FromPdfPage(doc.Pages[5], XGraphicsPdfPageOptions.Append);
-            void Bs(double y, decimal v) => DrawMoney(p7g, font, v, 456.6, y, 100.6, 14.0);
+            void Bs(double y, decimal v) => DrawMoneyComb(p7g, font, v, 563.0, y, 16.9); // wall 563.0
             Bs(74.7, p7.Cash);                 // เงินสด
             Bs(91.7, p7.Ar);                   // ลูกหนี้การค้า
             Bs(111.0, p7.Inventory);           // สินค้าคงเหลือ
@@ -196,7 +196,7 @@ public class Pnd50PdfService : IPnd50PdfService
                 if (c.Page < 0 || c.Page >= doc.Pages.Count) continue;
                 if (!gByPage.TryGetValue(c.Page, out var g))
                     gByPage[c.Page] = g = XGraphics.FromPdfPage(doc.Pages[c.Page], XGraphicsPdfPageOptions.Append);
-                if (c.Amount != 0) DrawMoney(g, font, c.Amount, c.X, c.Y, c.W, 13.0);
+                if (c.Amount != 0) DrawMoneyComb(g, font, c.Amount, c.X + c.W, c.Y, 16.9); // wall = ขอบขวาช่อง
             }
         }
 
@@ -229,6 +229,30 @@ public class Pnd50PdfService : IPnd50PdfService
 
     private static void DrawMoney(XGraphics g, XFont f, decimal v, double x, double y, double w, double h)
         => DrawText(g, f, v.ToString("#,##0.00", CultureInfo.InvariantCulture), x, y, w - 3, h, XStringFormats.CenterRight);
+
+    /// <summary>ระยะห่างหนึ่งช่องของกริดจำนวนเงินที่พิมพ์บนฟอร์ม CIT50 (point)</summary>
+    private const double MoneyCombPitch = 7.9;
+
+    /// <summary>
+    /// วาดจำนวนเงินทีละหลักลง "ช่อง" (comb) ที่พิมพ์ไว้บนฟอร์ม — หลักจำนวนเต็มชิดขวา + 2 ช่องสตางค์แยกขวาสุด.
+    /// <paramref name="wall"/> = พิกัด x ของผนังขวาสุดของกล่องสตางค์ (ขอบกริดจริง วัดจาก template).
+    /// เรขาคณิตเดียวทั้งฟอร์ม: pitch 7.9 / สตางค์ 2 ช่อง / ช่องว่างระหว่างจำนวนเต็มกับสตางค์ 3.2.
+    /// </summary>
+    private static void DrawMoneyComb(XGraphics g, XFont f, decimal value, double wall, double y, double h)
+    {
+        var s = Math.Abs(value).ToString("0.00", CultureInfo.InvariantCulture); // ไม่มีตัวคั่นพัน (กริดแบ่งหลักด้วยเส้นพิมพ์)
+        int dot = s.IndexOf('.');
+        string ip = s[..dot], dp = s[(dot + 1)..];
+
+        void Cell(string ch, double cx)
+            => g.DrawString(ch, f, XBrushes.Black, new XRect(cx - MoneyCombPitch / 2, y, MoneyCombPitch, h), XStringFormats.Center);
+
+        Cell(dp[1].ToString(), wall - 3.95);   // สตางค์ หลัก 1/100 (ช่องขวาสุด)
+        Cell(dp[0].ToString(), wall - 11.85);  // สตางค์ หลัก 1/10
+        double x = wall - 22.95;               // หลักหน่วยของจำนวนเต็ม (ข้ามช่องว่าง 3.2 + กล่องสตางค์)
+        for (int i = ip.Length - 1; i >= 0; i--, x -= MoneyCombPitch) Cell(ip[i].ToString(), x);
+        if (value < 0) Cell("-", x);           // เครื่องหมายลบหน้าหลักซ้ายสุด
+    }
 
     /// <summary>วาดตัวเลขลงช่อง comb ที่กว้างเท่ากัน — กึ่งกลางแต่ละช่อง</summary>
     private static void DrawComb(XGraphics g, XFont f, string text, double x, double y, double w, double h, int cells)
