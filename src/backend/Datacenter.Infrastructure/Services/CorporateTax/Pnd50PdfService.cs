@@ -51,6 +51,12 @@ public class Pnd50PdfService : IPnd50PdfService
         DrawText(p1, font, d.Province, 214.7, 180.5, 119.9, 12.8, XStringFormats.CenterLeft);     // f13 จังหวัด
         DrawComb(p1, font, Digits(d.PostalCode), 82.7, 197.0, 59.2, 13.2, 5);                     // f14 รหัสไปรษณีย์ (comb 5)
         DrawText(p1, font, d.Phone, 180.1, 196.0, 153.8, 12.8, XStringFormats.CenterLeft);        // f15 โทรศัพท์
+
+        // ประเภทการยื่น: (1) ยื่นปกติ (Group1)
+        DrawCheck(p1, font, 357.0, 166.0, 13.1, 13.7);
+        // สถานะ: (1) บริษัท/ห้างฯ ตั้งตามกฎหมายไทย (Group2) — ค่าปกติ; ข้ามถ้าเป็นบริษัทมหาชน (สถานะอื่น)
+        if (!(d.CompanyName?.Contains("มหาชน") ?? false))
+            DrawCheck(p1, font, 47.0, 245.0, 13.7, 13.7);
         // รอบบัญชี ตั้งแต่ / ถึง (วัน/เดือน/ปี พ.ศ.)
         DrawText(p1, font, d.PeriodStart.Day.ToString("00"), 400.4, 100.7, 22.6, 12.5, XStringFormats.Center);
         DrawText(p1, font, d.PeriodStart.Month.ToString("00"), 454.3, 100.7, 22.6, 12.5, XStringFormats.Center);
@@ -80,6 +86,10 @@ public class Pnd50PdfService : IPnd50PdfService
         if (string.IsNullOrEmpty(text)) return;
         g.DrawString(text, f, XBrushes.Black, new XRect(x, y, w, h), fmt);
     }
+
+    /// <summary>ติ๊กช่อง (วาด X กึ่งกลางช่อง radio/checkbox)</summary>
+    private static void DrawCheck(XGraphics g, XFont f, double x, double y, double w, double h)
+        => g.DrawString("X", f, XBrushes.Black, new XRect(x, y, w, h), XStringFormats.Center);
 
     private static void DrawMoney(XGraphics g, XFont f, decimal v, double x, double y, double w, double h)
         => DrawText(g, f, v.ToString("#,##0.00", CultureInfo.InvariantCulture), x, y, w - 3, h, XStringFormats.CenterRight);
