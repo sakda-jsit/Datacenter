@@ -16,6 +16,10 @@ public class Pnd50PdfService : IPnd50PdfService
 {
     private readonly string _templatePath;
 
+    /// <summary>พิกัดกึ่งกลาง (x, point) ของ 13 ช่องเลขประจำตัวผู้เสียภาษีบนฟอร์ม CIT50 (วัดจาก raster grid)</summary>
+    private static readonly double[] TaxIdCellCenters =
+        [156.7, 173.3, 184.8, 201.3, 218.4, 230.3, 242.1, 260.9, 272.6, 284.4, 296.2, 307.9, 326.0];
+
     public Pnd50PdfService(string fontPath)
     {
         // ตั้ง global font resolver ครั้งเดียว (กันตั้งซ้ำ)
@@ -33,8 +37,8 @@ public class Pnd50PdfService : IPnd50PdfService
         var p2 = XGraphics.FromPdfPage(doc.Pages[1], XGraphicsPdfPageOptions.Append);
 
         // ── หน้า 1: หัวแบบ ──
-        // เลขประจำตัวผู้เสียภาษี (comb 13 ช่องเท่ากัน)
-        DrawComb(p1, font, Digits(d.TaxId), 148.6, 88.6, 180.4, 16.9, 13);
+        // เลขประจำตัวผู้เสียภาษี — วางแต่ละหลักกึ่งกลางช่องจริง (ช่องไม่เท่ากัน มีช่องคั่นกลุ่ม X-XXXX-XXXXX-XX-X)
+        DrawDigitsAtCenters(p1, font, Digits(d.TaxId), TaxIdCellCenters, 88.6, 16.9);
         // ชื่อบริษัท
         DrawText(p1, font, d.CompanyName, 42, 115.9, 291, 12.6, XStringFormats.CenterLeft);
         // รอบบัญชี ตั้งแต่ / ถึง (วัน/เดือน/ปี พ.ศ.)
@@ -70,14 +74,13 @@ public class Pnd50PdfService : IPnd50PdfService
     private static void DrawMoney(XGraphics g, XFont f, decimal v, double x, double y, double w, double h)
         => DrawText(g, f, v.ToString("#,##0.00", CultureInfo.InvariantCulture), x, y, w - 3, h, XStringFormats.CenterRight);
 
-    /// <summary>วาดตัวเลขลงช่อง comb (ช่องกว้างเท่ากัน) — กึ่งกลางแต่ละช่อง</summary>
-    private static void DrawComb(XGraphics g, XFont f, string text, double x, double y, double w, double h, int cells)
+    /// <summary>วาดแต่ละหลักกึ่งกลางช่องตามพิกัด x ที่กำหนด (ช่องไม่เท่ากัน)</summary>
+    private static void DrawDigitsAtCenters(XGraphics g, XFont f, string text, double[] centers, double y, double h)
     {
         if (string.IsNullOrEmpty(text)) return;
-        var cellW = w / cells;
-        for (int i = 0; i < text.Length && i < cells; i++)
+        for (int i = 0; i < text.Length && i < centers.Length; i++)
             g.DrawString(text[i].ToString(), f, XBrushes.Black,
-                new XRect(x + i * cellW, y, cellW, h), XStringFormats.Center);
+                new XRect(centers[i] - 5, y, 10, h), XStringFormats.Center);
     }
 }
 
