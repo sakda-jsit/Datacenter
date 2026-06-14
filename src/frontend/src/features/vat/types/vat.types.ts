@@ -56,6 +56,27 @@ export interface VatEntryItem {
   isLate: boolean
 }
 
+export interface Pp30BranchRow {
+  departmentCode: string
+  branchNo: string
+  isHeadOffice: boolean
+  totalSales: number
+  zeroRatedSales: number
+  exemptSales: number
+  eligiblePurchase: number
+  outputVat: number
+  inputVat: number
+}
+
+export interface Pp30Branches {
+  companyName: string
+  taxId: string
+  year: number
+  month: number
+  isMultiBranch: boolean
+  branches: Pp30BranchRow[]
+}
+
 export const MONTH_LABEL: Record<number, string> = {
   1: 'มกราคม',
   2: 'กุมภาพันธ์',

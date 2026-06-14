@@ -24,27 +24,28 @@ public class VatPp30TransferExportService : IVatPp30TransferExportService
 
     private static string Amt(decimal v) => v.ToString("0.00", CultureInfo.InvariantCulture);
 
-    public byte[] BuildTransferFile(Pp30TransferDto dto, string delimiter, bool includeHeader)
+    public byte[] BuildTransferFile(IReadOnlyList<Pp30BranchRow> branches, string delimiter, bool includeHeader)
     {
         var sep = string.IsNullOrEmpty(delimiter) ? "|" : delimiter;
-        // กันไม่ให้ delimiter ปนกับข้อมูล (สาขาเป็นตัวเลขล้วน, จำนวนเงินไม่มี separator)
-        string Clean(string s) => s.Replace(sep, " ").Replace("\r", " ").Replace("\n", " ").Trim();
 
         var sb = new StringBuilder();
         if (includeHeader)
             sb.Append(string.Join(sep, Headers)).Append("\r\n");
 
-        var cols = new[]
+        foreach (var b in branches)
         {
-            Clean(string.IsNullOrWhiteSpace(dto.BranchCode) ? "0" : dto.BranchCode),
-            Amt(dto.TotalSales),
-            Amt(dto.ZeroRatedSales),
-            Amt(dto.ExemptSales),
-            Amt(dto.EligiblePurchase),
-            Amt(dto.OutputVat),
-            Amt(dto.InputVat),
-        };
-        sb.Append(string.Join(sep, cols)).Append("\r\n");
+            var cols = new[]
+            {
+                b.BranchNo,
+                Amt(b.TotalSales),
+                Amt(b.ZeroRatedSales),
+                Amt(b.ExemptSales),
+                Amt(b.EligiblePurchase),
+                Amt(b.OutputVat),
+                Amt(b.InputVat),
+            };
+            sb.Append(string.Join(sep, cols)).Append("\r\n");
+        }
 
         return Encoding.GetEncoding(874).GetBytes(sb.ToString());
     }

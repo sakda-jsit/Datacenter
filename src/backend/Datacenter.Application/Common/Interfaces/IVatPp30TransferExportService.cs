@@ -9,5 +9,6 @@ namespace Datacenter.Application.Common.Interfaces;
 /// </summary>
 public interface IVatPp30TransferExportService
 {
-    byte[] BuildTransferFile(Pp30TransferDto dto, string delimiter, bool includeHeader);
+    /// <summary>หนึ่งสาขา = หนึ่งแถว (ยื่นรวมกันหลายสาขาในไฟล์เดียว).</summary>
+    byte[] BuildTransferFile(IReadOnlyList<Pp30BranchRow> branches, string delimiter, bool includeHeader);
 }

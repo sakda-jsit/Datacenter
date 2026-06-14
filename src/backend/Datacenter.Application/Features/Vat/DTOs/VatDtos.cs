@@ -16,21 +16,30 @@ public record VatMonthlyDto(
 }
 
 /// <summary>
-/// ข้อมูลหนึ่งงวด ภ.พ.30 สำหรับสร้างไฟล์โอนย้าย (อัปโหลดหน้า e-Filing "โอนย้ายข้อมูล ภ.พ.30").
-/// หนึ่งสาขา = หนึ่งแถว (เคสปัจจุบัน 1 dataset = 1 สาขา).
+/// ยอด ภ.พ.30 ของหนึ่งสาขา (group ตาม DEPCOD ใน ISVAT) — ใช้ทั้งแสดงผลและสร้างไฟล์โอนย้าย.
+/// blank DEPCOD ถูกรวมเข้าสำนักงานใหญ่ (HO00 → สาขา 00000) ตามมติผู้ใช้.
 /// </summary>
-public record Pp30TransferDto(
-    string CompanyName,
-    string TaxId,
-    string BranchCode,
-    int Year,
-    int Month,
+public record Pp30BranchRow(
+    /// <summary>รหัสแผนก/สาขาใน Express ที่ group มา (เช่น HO00, BR01); "(รวม)" สำหรับ blank+HO</summary>
+    string DepartmentCode,
+    /// <summary>เลขสาขาตามแบบ RD (สำนักงานใหญ่ = 00000, สาขา = 00001…) จากกฎ DEPCOD</summary>
+    string BranchNo,
+    bool IsHeadOffice,
     decimal TotalSales,         // ยอดขายในเดือนนี้ (= ที่ต้องเสียภาษี + อัตรา 0)
     decimal ZeroRatedSales,     // ยอดขายอัตรา 0
     decimal ExemptSales,        // ยอดขายยกเว้น (ISVAT ไม่เก็บ = 0)
     decimal EligiblePurchase,   // ยอดซื้อที่มีสิทธิ์
     decimal OutputVat,          // ภาษีขาย
     decimal InputVat);          // ภาษีซื้อ
+
+/// <summary>ยอด ภ.พ.30 แยกตามสาขา ของหนึ่งงวดเดือน (สำหรับยื่นรวมกัน/ไฟล์โอนย้าย).</summary>
+public record Pp30BranchesDto(
+    string CompanyName,
+    string TaxId,
+    int Year,
+    int Month,
+    bool IsMultiBranch,
+    IReadOnlyList<Pp30BranchRow> Branches);
 
 /// <summary>รายงาน ภ.พ.30 รายเดือนตลอดปีปฏิทิน + ยอดรวมทั้งปี</summary>
 public record VatReportDto(

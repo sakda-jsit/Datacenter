@@ -1,5 +1,5 @@
 import apiClient from '../../../shared/services/apiClient'
-import type { VatEntryItem, VatReport } from '../types/vat.types'
+import type { Pp30Branches, VatEntryItem, VatReport } from '../types/vat.types'
 
 export const vatApi = {
   report: (clientCompanyId: number, year: number) =>
@@ -20,6 +20,12 @@ export const vatApi = {
     apiClient
       .get('/vat/tax-report/excel', { params: { clientCompanyId, year, vatType, month }, responseType: 'blob' })
       .then((r) => r.data as Blob),
+
+  // ยอด ภ.พ.30 แยกตามสาขา (DEPCOD) ของงวดเดือน — สำหรับยื่นรวมกัน
+  pp30Branches: (clientCompanyId: number, year: number, month: number) =>
+    apiClient
+      .get<Pp30Branches>('/vat/pp30-branches', { params: { clientCompanyId, year, month } })
+      .then((r) => r.data),
 
   // ไฟล์โอนย้ายข้อมูล ภ.พ.30 (.txt, TIS-620) สำหรับอัปโหลดหน้า e-Filing
   pp30Transfer: (

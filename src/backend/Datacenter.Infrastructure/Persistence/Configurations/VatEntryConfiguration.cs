@@ -18,6 +18,7 @@ public class VatEntryConfiguration : IEntityTypeConfiguration<VatEntry>
         builder.Property(x => x.CounterpartyTaxId).HasMaxLength(20);
         builder.Property(x => x.CounterpartyPrefix).HasMaxLength(20);
         builder.Property(x => x.RecordType).HasMaxLength(4);
+        builder.Property(x => x.DepartmentCode).HasMaxLength(8);
 
         foreach (var p in new[]
                  {

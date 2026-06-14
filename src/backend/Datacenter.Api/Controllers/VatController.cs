@@ -35,6 +35,11 @@ public class VatController(IMediator mediator) : ControllerBase
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
 
+    /// <summary>GET /api/v1/vat/pp30-branches?clientCompanyId=1&amp;year=2025&amp;month=1 — ยอด ภ.พ.30 แยกตามสาขา (DEPCOD)</summary>
+    [HttpGet("pp30-branches")]
+    public async Task<IActionResult> GetPp30Branches([FromQuery] GetVatPp30BranchesQuery query, CancellationToken ct)
+        => Ok(await mediator.Send(query, ct));
+
     /// <summary>GET /api/v1/vat/pp30-transfer?clientCompanyId=1&amp;year=2025&amp;month=1 — ไฟล์โอนย้าย ภ.พ.30 (.txt) สำหรับอัปโหลด e-Filing</summary>
     [HttpGet("pp30-transfer")]
     public async Task<IActionResult> GetPp30Transfer(

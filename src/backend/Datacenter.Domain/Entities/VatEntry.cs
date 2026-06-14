@@ -54,6 +54,9 @@ public class VatEntry : BaseEntity
     /// <summary>ประเภทเอกสารดิบจาก Express (ISVAT.RECTYP) — เชิงอ้างอิง</summary>
     public string? RecordType { get; set; }
 
+    /// <summary>รหัสแผนก/สาขาใน Express (ISVAT.DEPCOD เช่น HO00, BR01) — ใช้แตกยอด ภ.พ.30 ตามสาขา</summary>
+    public string? DepartmentCode { get; set; }
+
     /// <summary>batch ที่นำเข้ารายการนี้</summary>
     public int? ImportBatchId { get; set; }
 

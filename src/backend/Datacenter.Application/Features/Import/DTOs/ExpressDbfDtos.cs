@@ -107,7 +107,9 @@ public record ExpressVatEntryDto(
     decimal VatAmount,
     decimal ZeroRatedAmount,
     bool IsLate,
-    string? RecordType);
+    string? RecordType,
+    /// <summary>รหัสแผนก/สาขาใน Express (ISVAT.DEPCOD เช่น HO00=สำนักงานใหญ่, BR01=สาขา 1)</summary>
+    string? DepartmentCode = null);
 
 /// <summary>
 /// หนึ่งรายการภาษีหัก ณ ที่จ่ายจาก Express ISTAX.DBF.

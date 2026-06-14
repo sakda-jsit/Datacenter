@@ -50,6 +50,7 @@ public static class VatEntryImporter
                 ZeroRatedAmount    = row.ZeroRatedAmount,
                 IsLate             = row.IsLate,
                 RecordType         = string.IsNullOrWhiteSpace(row.RecordType) ? null : row.RecordType,
+                DepartmentCode     = string.IsNullOrWhiteSpace(row.DepartmentCode) ? null : row.DepartmentCode!.Trim(),
                 ImportBatchId      = importBatchId,
                 CreatedBy          = username,
             });

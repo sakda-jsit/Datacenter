@@ -275,7 +275,8 @@ public class ExpressDbfAdapter : IExpressDbfAdapter
                 VatAmount:         Math.Round(vatAmt, 2),
                 ZeroRatedAmount:   Math.Round(zero, 2),
                 IsLate:            IsLocked(r, "LATE"),
-                RecordType:        Str(r, "RECTYP")));
+                RecordType:        Str(r, "RECTYP"),
+                DepartmentCode:    Str(r, "DEPCOD")));
         }
 
         return Task.FromResult<IReadOnlyList<ExpressVatEntryDto>>(result);

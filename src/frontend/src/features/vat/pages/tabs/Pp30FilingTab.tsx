@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import Card from '../../../../shared/components/ui/Card'
 import Button from '../../../../shared/components/ui/Button'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
@@ -37,6 +38,12 @@ export default function Pp30FilingTab({ companyId, year }: Props) {
   const { data, isLoading, isError } = useVatReport(companyId, year)
   const [month, setMonth] = useState(1)
   const [creditCarried, setCreditCarried] = useState('')
+
+  const branchesQuery = useQuery({
+    queryKey: ['vat-pp30-branches', companyId, year, month],
+    queryFn: () => vatApi.pp30Branches(companyId, year, month),
+    enabled: companyId > 0,
+  })
 
   // เลือกเดือนแรกที่มีข้อมูลอัตโนมัติ
   const monthsWithData = useMemo(
@@ -174,6 +181,46 @@ export default function Pp30FilingTab({ companyId, year }: Props) {
           แล้วแมพคอลัมน์ตามชื่อหัวในไฟล์ (เดือน/สาขา/ประเภทยื่น กรอกบนฟอร์มเว็บ)
         </p>
       </Card>
+
+      {branchesQuery.data?.isMultiBranch && (
+        <Card className="mt-4 overflow-x-auto p-0">
+          <div className="border-b px-4 py-3">
+            <p className="text-sm font-semibold text-slate-800">แยกตามสาขา (สำหรับยื่นรวมกัน / ไฟล์โอนย้าย)</p>
+            <p className="text-xs text-gray-500">
+              บริษัทนี้มีหลายสาขาใน Express (DEPCOD) — ไฟล์โอนย้ายจะมี 1 แถว/สาขา · blank DEPCOD รวมเข้าสำนักงานใหญ่ (00000)
+            </p>
+          </div>
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50 text-gray-600">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium">สาขาที่</th>
+                <th className="px-3 py-2 text-right font-medium">ยอดขายในเดือนนี้</th>
+                <th className="px-3 py-2 text-right font-medium">อัตรา 0</th>
+                <th className="px-3 py-2 text-right font-medium">ยอดซื้อมีสิทธิ์</th>
+                <th className="px-3 py-2 text-right font-medium">ภาษีขาย</th>
+                <th className="px-3 py-2 text-right font-medium">ภาษีซื้อ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {branchesQuery.data.branches.map((b) => (
+                <tr key={b.branchNo} className="border-t border-gray-100 hover:bg-slate-50">
+                  <td className="px-3 py-1.5 font-mono">
+                    {b.branchNo}{b.isHeadOffice && <span className="ml-1 text-gray-400">(สนญ.)</span>}
+                  </td>
+                  <td className="px-3 py-1.5 text-right font-mono">{fmt(b.totalSales)}</td>
+                  <td className="px-3 py-1.5 text-right font-mono">{fmt(b.zeroRatedSales)}</td>
+                  <td className="px-3 py-1.5 text-right font-mono">{fmt(b.eligiblePurchase)}</td>
+                  <td className="px-3 py-1.5 text-right font-mono">{fmt(b.outputVat)}</td>
+                  <td className="px-3 py-1.5 text-right font-mono">{fmt(b.inputVat)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="px-4 py-2 text-xs text-gray-400">
+            เลขสาขาแปลงจากรหัส DEPCOD (HO/ว่าง → 00000, BR01 → 00001) — ถ้าเลขสาขา RD จริงต่างจากนี้ แจ้งปรับได้
+          </p>
+        </Card>
+      )}
     </div>
   )
 }
