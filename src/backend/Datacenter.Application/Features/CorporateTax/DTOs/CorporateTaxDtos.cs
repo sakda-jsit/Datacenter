@@ -64,10 +64,21 @@ public record TaxAdjustmentLineInput(
     decimal Amount,
     int SortOrder);
 
-/// <summary>ข้อมูลสำหรับเติมแบบ ภ.ง.ด.50 (PDF) เฟส A — หน้า 1 (หัว) + หน้า 2 (การคำนวณภาษี).</summary>
+/// <summary>ข้อมูลสำหรับเติมแบบ ภ.ง.ด.50 (PDF) เฟส A — หน้า 1 (หัว + ที่อยู่) + หน้า 2 (การคำนวณภาษี).</summary>
 public record Pnd50FormData(
     string CompanyName,
     string TaxId,
+    bool IsHeadOffice,
+    // ที่อยู่ (แยกช่อง — แยกจาก Address flat ด้วย ThaiAddressParser)
+    string? HouseNo,
+    string? Moo,
+    string? Soi,
+    string? Road,
+    string? SubDistrict,
+    string? District,
+    string? Province,
+    string? PostalCode,
+    string? Phone,
     DateTime PeriodStart,
     DateTime PeriodEnd,
     decimal NetTaxableIncome,   // ฐานภาษี (กำไรสุทธิที่ต้องเสียภาษี)

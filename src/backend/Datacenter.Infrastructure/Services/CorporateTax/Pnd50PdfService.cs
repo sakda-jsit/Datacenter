@@ -41,6 +41,16 @@ public class Pnd50PdfService : IPnd50PdfService
         DrawDigitsAtCenters(p1, font, Digits(d.TaxId), TaxIdCellCenters, 88.6, 16.9);
         // ชื่อบริษัท
         DrawText(p1, font, d.CompanyName, 42, 115.9, 291, 12.6, XStringFormats.CenterLeft);
+        // ที่ตั้งสำนักงาน (แยกช่อง)
+        DrawText(p1, font, d.HouseNo, 150.5, 152.4, 37.8, 10.6, XStringFormats.CenterLeft);       // f7 เลขที่
+        DrawText(p1, font, d.Moo, 206.6, 151.3, 12.1, 10.6, XStringFormats.Center);               // f8 หมู่ที่
+        DrawText(p1, font, d.Soi, 256.2, 149.2, 77.8, 12.8, XStringFormats.CenterLeft);           // f9 ตรอก/ซอย
+        DrawText(p1, font, d.Road, 45.4, 164.9, 124.8, 12.8, XStringFormats.CenterLeft);          // f10 ถนน
+        DrawText(p1, font, d.SubDistrict, 214.1, 164.9, 119.9, 12.8, XStringFormats.CenterLeft);  // f11 ตำบล/แขวง
+        DrawText(p1, font, d.District, 69.4, 180.5, 119.9, 12.8, XStringFormats.CenterLeft);       // f12 อำเภอ/เขต
+        DrawText(p1, font, d.Province, 214.7, 180.5, 119.9, 12.8, XStringFormats.CenterLeft);     // f13 จังหวัด
+        DrawComb(p1, font, Digits(d.PostalCode), 82.7, 197.0, 59.2, 13.2, 5);                     // f14 รหัสไปรษณีย์ (comb 5)
+        DrawText(p1, font, d.Phone, 180.1, 196.0, 153.8, 12.8, XStringFormats.CenterLeft);        // f15 โทรศัพท์
         // รอบบัญชี ตั้งแต่ / ถึง (วัน/เดือน/ปี พ.ศ.)
         DrawText(p1, font, d.PeriodStart.Day.ToString("00"), 400.4, 100.7, 22.6, 12.5, XStringFormats.Center);
         DrawText(p1, font, d.PeriodStart.Month.ToString("00"), 454.3, 100.7, 22.6, 12.5, XStringFormats.Center);
@@ -73,6 +83,16 @@ public class Pnd50PdfService : IPnd50PdfService
 
     private static void DrawMoney(XGraphics g, XFont f, decimal v, double x, double y, double w, double h)
         => DrawText(g, f, v.ToString("#,##0.00", CultureInfo.InvariantCulture), x, y, w - 3, h, XStringFormats.CenterRight);
+
+    /// <summary>วาดตัวเลขลงช่อง comb ที่กว้างเท่ากัน — กึ่งกลางแต่ละช่อง</summary>
+    private static void DrawComb(XGraphics g, XFont f, string text, double x, double y, double w, double h, int cells)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+        var cellW = w / cells;
+        for (int i = 0; i < text.Length && i < cells; i++)
+            g.DrawString(text[i].ToString(), f, XBrushes.Black,
+                new XRect(x + i * cellW, y, cellW, h), XStringFormats.Center);
+    }
 
     /// <summary>วาดแต่ละหลักกึ่งกลางช่องตามพิกัด x ที่กำหนด (ช่องไม่เท่ากัน)</summary>
     private static void DrawDigitsAtCenters(XGraphics g, XFont f, string text, double[] centers, double y, double h)
