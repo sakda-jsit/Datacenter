@@ -17,9 +17,7 @@ public record UpdateClientCommand(
     string? PostalCode = null,
     ClientAddressDto? AddressDetail = null,
     string? BusinessActivity = null,
-    string? IsicCode = null,
-    string? AuditorName = null,
-    string? AuditorLicenseNo = null)
+    string? IsicCode = null)
     : IRequest, IRequireCompanyAccess
 {
     public int ClientCompanyId => Id;

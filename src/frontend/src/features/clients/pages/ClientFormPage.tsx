@@ -14,7 +14,7 @@ const MONTHS = [
 
 // ช่องที่อยู่แยก (ใช้ตอนแก้ไข — สำหรับฟอร์มราชการ เช่น ภ.ง.ด.50)
 type FormState = CreateClientRequest & {
-  businessActivity: string; isicCode: string; auditorName: string; auditorLicenseNo: string
+  businessActivity: string; isicCode: string
   addrBuilding: string; addrRoomNo: string; addrFloor: string; addrVillage: string
   addrHouseNo: string; addrMoo: string; addrSoi: string; addrRoad: string
   addrSubDistrict: string; addrDistrict: string; addrProvince: string
@@ -31,7 +31,7 @@ const emptyForm: FormState = {
   ssoBranchCode: '000000',
   phone: '',
   postalCode: '',
-  businessActivity: '', isicCode: '', auditorName: '', auditorLicenseNo: '',
+  businessActivity: '', isicCode: '',
   addrBuilding: '', addrRoomNo: '', addrFloor: '', addrVillage: '',
   addrHouseNo: '', addrMoo: '', addrSoi: '', addrRoad: '',
   addrSubDistrict: '', addrDistrict: '', addrProvince: '',
@@ -64,8 +64,6 @@ export default function ClientFormPage() {
         postalCode: existing.postalCode ?? '',
         businessActivity: existing.businessActivity ?? '',
         isicCode: existing.isicCode ?? '',
-        auditorName: existing.auditorName ?? '',
-        auditorLicenseNo: existing.auditorLicenseNo ?? '',
         addrBuilding: existing.addressDetail?.building ?? '',
         addrRoomNo: existing.addressDetail?.roomNo ?? '',
         addrFloor: existing.addressDetail?.floor ?? '',
@@ -101,8 +99,6 @@ export default function ClientFormPage() {
             postalCode: values.postalCode || undefined,
             businessActivity: values.businessActivity || undefined,
             isicCode: values.isicCode || undefined,
-            auditorName: values.auditorName || undefined,
-            auditorLicenseNo: values.auditorLicenseNo || undefined,
             addressDetail: {
               building: values.addrBuilding || undefined,
               roomNo: values.addrRoomNo || undefined,
@@ -213,15 +209,10 @@ export default function ClientFormPage() {
         )}
 
         {isEdit && (
-          <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-100 bg-slate-50/50 p-4">
-            <p className="col-span-2 text-sm font-semibold text-slate-700">ผู้ตรวจสอบและรับรองบัญชี (สำหรับ ภ.ง.ด.50)</p>
-            <Field label="ชื่อผู้ตรวจสอบและรับรองบัญชี" error={errors.auditorname}>
-              <input name="auditorName" value={values.auditorName} onChange={handleChange} placeholder="เช่น นายชาติชาย เรืองคำ" className={inputCls(false)} />
-            </Field>
-            <Field label="ทะเบียนเลขที่ (CPA/TA)" error={errors.auditorlicenseno}>
-              <input name="auditorLicenseNo" value={values.auditorLicenseNo} onChange={handleChange} maxLength={8} placeholder="0010370" className={inputCls(false)} />
-            </Field>
-          </div>
+          <p className="rounded-lg border border-slate-100 bg-slate-50/50 p-3 text-xs text-gray-500">
+            ผู้ตรวจสอบและรับรองบัญชีเปลี่ยนได้รายปี จึงย้ายไปกรอกที่หน้า{' '}
+            <span className="font-medium text-slate-700">ภ.ง.ด.50</span> (แยกตามรอบปีบัญชี)
+          </p>
         )}
 
         <Field label="เดือนเริ่มต้นปีบัญชี *" error={errors.fiscalyearstartmonth}>

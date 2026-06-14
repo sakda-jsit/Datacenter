@@ -14,10 +14,10 @@ public record ClientDetailDto(
     string BranchCode, string? Address, int FiscalYearStartMonth, bool IsActive,
     string? SsoAccountNo, string? SsoBranchCode, string? Phone, string? PostalCode,
     ClientAddressDto? AddressDetail = null, string? BusinessActivity = null,
-    string? IsicCode = null, string? AuditorName = null, string? AuditorLicenseNo = null);
+    string? IsicCode = null);
 
 public record UpdateClientRequest(
     string LegalName, string TaxId, string BranchCode, string? Address, int FiscalYearStartMonth,
     string? SsoAccountNo, string? SsoBranchCode, string? Phone, string? PostalCode,
     ClientAddressDto? AddressDetail = null, string? BusinessActivity = null,
-    string? IsicCode = null, string? AuditorName = null, string? AuditorLicenseNo = null);
+    string? IsicCode = null);

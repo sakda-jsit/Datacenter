@@ -1101,12 +1101,6 @@ namespace Datacenter.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("AuditorLicenseNo")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("AuditorName")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("BranchCode")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -1239,6 +1233,61 @@ namespace Datacenter.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("ClosingPeriods", (string)null);
+                });
+
+            modelBuilder.Entity("Datacenter.Domain.Entities.CompanyAuditor", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AuditorLicenseNo")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("AuditorName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("AuditorTaxId")
+                        .HasMaxLength(13)
+                        .HasColumnType("nvarchar(13)");
+
+                    b.Property<int>("ClientCompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("FiscalYear")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("SignDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientCompanyId", "FiscalYear")
+                        .IsUnique();
+
+                    b.ToTable("CompanyAuditors", (string)null);
                 });
 
             modelBuilder.Entity("Datacenter.Domain.Entities.CompanyUserAccess", b =>
@@ -4100,6 +4149,17 @@ namespace Datacenter.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("Datacenter.Domain.Entities.ClosingPeriod", b =>
+                {
+                    b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
+                        .WithMany()
+                        .HasForeignKey("ClientCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClientCompany");
+                });
+
+            modelBuilder.Entity("Datacenter.Domain.Entities.CompanyAuditor", b =>
                 {
                     b.HasOne("Datacenter.Domain.Entities.ClientCompany", "ClientCompany")
                         .WithMany()

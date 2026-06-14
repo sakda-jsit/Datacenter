@@ -77,3 +77,23 @@ export interface TaxComputationInput {
   note?: string | null
   lines: TaxAdjustmentLineInput[]
 }
+
+// ── ผู้ตรวจสอบและรับรองบัญชี (ต่อรอบปี — เปลี่ยนได้รายปี) ──
+export interface CompanyAuditor {
+  clientCompanyId: number
+  fiscalYear: number
+  auditorName: string
+  auditorLicenseNo?: string | null
+  auditorTaxId?: string | null
+  signDate?: string | null
+  note?: string | null
+  exists: boolean
+}
+
+export interface CompanyAuditorInput {
+  auditorName: string
+  auditorLicenseNo?: string | null
+  auditorTaxId?: string | null
+  signDate?: string | null
+  note?: string | null
+}

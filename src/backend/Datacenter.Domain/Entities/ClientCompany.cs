@@ -43,10 +43,7 @@ public class ClientCompany : BaseEntity
     public string? BusinessActivity { get; set; }
     /// <summary>รหัส ISIC (ประเภทธุรกิจ) สำหรับแบบ ภ.ง.ด.50 — ป้อนเอง</summary>
     public string? IsicCode { get; set; }
-    /// <summary>ชื่อผู้ตรวจสอบและรับรองบัญชี (ผู้สอบบัญชี) — ป้อนเอง</summary>
-    public string? AuditorName { get; set; }
-    /// <summary>เลขทะเบียนผู้ตรวจสอบและรับรองบัญชี (CPA/TA) — ป้อนเอง</summary>
-    public string? AuditorLicenseNo { get; set; }
+    // หมายเหตุ: ผู้ตรวจสอบและรับรองบัญชีเปลี่ยนได้รายปี → ย้ายไปเก็บที่ CompanyAuditor (ต่อ บริษัท+ปีงบ)
 
     public int FiscalYearStartMonth { get; set; } = 1;
     public bool IsActive { get; set; } = true;

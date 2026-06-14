@@ -64,6 +64,26 @@ public record TaxAdjustmentLineInput(
     decimal Amount,
     int SortOrder);
 
+/// <summary>ผู้ตรวจสอบและรับรองบัญชีของ (บริษัท, ปีงบ) — ต่อรอบปี.</summary>
+public record CompanyAuditorDto(
+    int ClientCompanyId,
+    int FiscalYear,
+    string AuditorName,
+    string? AuditorLicenseNo,
+    string? AuditorTaxId,
+    DateTime? SignDate,
+    string? Note,
+    /// <summary>มีบันทึกผู้สอบของปีนี้แล้วหรือไม่ (false = ค่าว่างเริ่มต้น)</summary>
+    bool Exists);
+
+/// <summary>ข้อมูล input บันทึกผู้สอบบัญชีต่อรอบปี.</summary>
+public record CompanyAuditorInput(
+    string AuditorName,
+    string? AuditorLicenseNo,
+    string? AuditorTaxId,
+    DateTime? SignDate,
+    string? Note);
+
 /// <summary>ข้อมูลสำหรับเติมแบบ ภ.ง.ด.50 (PDF) เฟส A — หน้า 1 (หัว + ที่อยู่) + หน้า 2 (การคำนวณภาษี).</summary>
 public record Pnd50FormData(
     string CompanyName,
@@ -73,6 +93,7 @@ public record Pnd50FormData(
     string? IsicCode,
     string? AuditorName,
     string? AuditorLicenseNo,
+    string? AuditorTaxId,
     // ที่อยู่ (แยกช่อง — แยกจาก Address flat ด้วย ThaiAddressParser)
     string? HouseNo,
     string? Moo,

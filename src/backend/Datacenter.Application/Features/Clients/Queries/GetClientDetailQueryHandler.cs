@@ -20,6 +20,6 @@ public class GetClientDetailQueryHandler(IApplicationDbContext db)
             c.SsoAccountNo, c.SsoBranchCode, c.Phone, c.PostalCode,
             new ClientAddressDto(c.AddrBuilding, c.AddrRoomNo, c.AddrFloor, c.AddrVillage, c.AddrHouseNo,
                 c.AddrMoo, c.AddrSoi, c.AddrRoad, c.AddrSubDistrict, c.AddrDistrict, c.AddrProvince),
-            c.BusinessActivity, c.IsicCode, c.AuditorName, c.AuditorLicenseNo);
+            c.BusinessActivity, c.IsicCode);
     }
 }

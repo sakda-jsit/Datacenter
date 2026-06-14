@@ -6,7 +6,12 @@ import StateMessage from '../../../shared/components/ui/StateMessage'
 import ExportMenu from '../../../shared/components/ui/ExportMenu'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import type { ExportSection } from '../../../shared/utils/exportTable'
-import { useSaveTaxComputation, useTaxComputation } from '../hooks/useCorporateTax'
+import {
+  useCompanyAuditor,
+  useSaveCompanyAuditor,
+  useSaveTaxComputation,
+  useTaxComputation,
+} from '../hooks/useCorporateTax'
 import { corporateTaxApi } from '../services/corporateTaxApi'
 import {
   TAX_RATE_SCHEME_LABEL,
@@ -330,9 +335,89 @@ export default function Pnd50Page() {
               </dl>
             </Card>
           </div>
+
+          {/* ── ผู้ตรวจสอบและรับรองบัญชี (รอบปีนี้) ── */}
+          <AuditorCard companyId={companyId} year={year} />
         </>
       )}
     </div>
+  )
+}
+
+function AuditorCard({ companyId, year }: { companyId: number; year: number }) {
+  const { data } = useCompanyAuditor(companyId, year)
+  const save = useSaveCompanyAuditor()
+
+  const [name, setName] = useState('')
+  const [license, setLicense] = useState('')
+  const [taxId, setTaxId] = useState('')
+  const [signDate, setSignDate] = useState('')
+
+  useEffect(() => {
+    if (!data) return
+    setName(data.auditorName ?? '')
+    setLicense(data.auditorLicenseNo ?? '')
+    setTaxId(data.auditorTaxId ?? '')
+    setSignDate(data.signDate ? data.signDate.slice(0, 10) : '')
+  }, [data])
+
+  const taxIdDigits = taxId.replace(/\D/g, '')
+  const taxIdInvalid = taxIdDigits.length > 0 && taxIdDigits.length !== 13
+
+  async function onSave() {
+    if (!companyId || taxIdInvalid) return
+    await save.mutateAsync({
+      companyId,
+      year,
+      data: {
+        auditorName: name.trim(),
+        auditorLicenseNo: license.trim() || null,
+        auditorTaxId: taxIdDigits || null,
+        signDate: signDate || null,
+        note: null,
+      },
+    })
+  }
+
+  return (
+    <Card className="mt-5 p-6">
+      <div className="mb-1 flex items-center justify-between">
+        <h2 className="text-base font-semibold text-slate-800">ผู้ตรวจสอบและรับรองบัญชี (รอบปี {year + 543})</h2>
+        {data?.exists && <span className="text-xs text-gray-400">บันทึกไว้สำหรับปีนี้แล้ว</span>}
+      </div>
+      <p className="mb-4 text-xs text-gray-400">
+        ผูกกับรอบปีบัญชี — เปลี่ยนผู้สอบรายปีได้ (ปีอื่นไม่กระทบ). ใช้เติมส่วนผู้สอบในแบบ ภ.ง.ด.50.
+        ปล่อยชื่อว่างแล้วบันทึก = ล้างผู้สอบของปีนี้
+      </p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="ชื่อผู้ตรวจสอบและรับรองบัญชี">
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+            placeholder="เช่น นาย/นางสาว ... " className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </Field>
+        <Field label="ทะเบียนเลขที่ผู้สอบบัญชี (CPA/TA)">
+          <input type="text" value={license} maxLength={8} onChange={(e) => setLicense(e.target.value)}
+            placeholder="เช่น 0010370" className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </Field>
+        <Field label="เลขประจำตัวผู้เสียภาษีอากรของผู้สอบบัญชี (13 หลัก)">
+          <input type="text" value={taxId} maxLength={17} onChange={(e) => setTaxId(e.target.value)}
+            placeholder="0000000000000"
+            className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${taxIdInvalid ? 'border-red-400' : 'border-gray-300'}`} />
+          {taxIdInvalid && <p className="mt-1 text-xs text-red-500">ต้องมี 13 หลัก (ตอนนี้ {taxIdDigits.length})</p>}
+        </Field>
+        <Field label="วันที่ในรายงานของผู้สอบบัญชี">
+          <input type="date" value={signDate} onChange={(e) => setSignDate(e.target.value)}
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </Field>
+      </div>
+      <div className="mt-4 flex items-center gap-3">
+        <Button type="button" onClick={onSave} disabled={save.isPending || taxIdInvalid}
+          className="bg-blue-600 text-white hover:bg-blue-700">
+          {save.isPending ? 'กำลังบันทึก...' : 'บันทึกผู้สอบบัญชี'}
+        </Button>
+        {save.isSuccess && !save.isPending && <span className="text-sm text-green-600">บันทึกแล้ว ✓</span>}
+        {save.isError && <span className="text-sm text-red-600">บันทึกไม่สำเร็จ — ตรวจข้อมูล</span>}
+      </div>
+    </Card>
   )
 }
 

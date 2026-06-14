@@ -34,4 +34,16 @@ public class CorporateTaxController(IMediator mediator) : ControllerBase
         var bytes = await mediator.Send(new GetPnd50PdfQuery(clientCompanyId, fiscalYear), ct);
         return File(bytes, "application/pdf", $"pnd50-{clientCompanyId}-{fiscalYear + 543}.pdf");
     }
+
+    /// <summary>GET /api/v1/corporate-tax/auditor?clientCompanyId=1&amp;fiscalYear=2025 — ผู้สอบบัญชีของรอบปีนี้</summary>
+    [HttpGet("auditor")]
+    public async Task<IActionResult> GetAuditor([FromQuery] GetCompanyAuditorQuery query, CancellationToken ct)
+        => Ok(await mediator.Send(query, ct));
+
+    /// <summary>PUT /api/v1/corporate-tax/auditor?clientCompanyId=1&amp;fiscalYear=2025 — บันทึกผู้สอบบัญชีของรอบปีนี้</summary>
+    [HttpPut("auditor")]
+    public async Task<IActionResult> SaveAuditor(
+        [FromQuery] int clientCompanyId, [FromQuery] int fiscalYear,
+        [FromBody] CompanyAuditorInput data, CancellationToken ct)
+        => Ok(await mediator.Send(new SaveCompanyAuditorCommand(clientCompanyId, fiscalYear, data), ct));
 }

@@ -20,6 +20,10 @@ public class Pnd50PdfService : IPnd50PdfService
     private static readonly double[] TaxIdCellCenters =
         [156.7, 173.3, 184.8, 201.3, 218.4, 230.3, 242.1, 260.9, 272.6, 284.4, 296.2, 307.9, 326.0];
 
+    /// <summary>พิกัดกึ่งกลาง 13 ช่องเลขผู้เสียภาษีของผู้สอบบัญชี (field 43) — วัดจาก raster grid (กลุ่ม 1-4-5-2-1)</summary>
+    private static readonly double[] AuditorTaxIdCellCenters =
+        [44.9, 58.6, 71.7, 84.8, 97.9, 110.8, 123.6, 136.4, 149.1, 161.9, 175.6, 190.2, 204.7];
+
     public Pnd50PdfService(string fontPath)
     {
         // ตั้ง global font resolver ครั้งเดียว (กันตั้งซ้ำ)
@@ -56,7 +60,8 @@ public class Pnd50PdfService : IPnd50PdfService
         DrawText(p1, font, d.BusinessActivity, 360.0, 356.0, 208.9, 14.0, XStringFormats.CenterLeft);
         DrawComb(p1, font, Digits(d.IsicCode), 498.5, 373.1, 70.7, 14.6, 6);
 
-        // ผู้ตรวจสอบและรับรองบัญชี: ชื่อ (field 44) + เลขทะเบียน (field 45, comb 8)
+        // ผู้ตรวจสอบและรับรองบัญชี: เลขผู้เสียภาษี (field 43, comb 13) + ชื่อ (field 44) + เลขทะเบียน (field 45, comb 8)
+        DrawDigitsAtCenters(p1, font, Digits(d.AuditorTaxId), AuditorTaxIdCellCenters, 732.5, 16.9);
         DrawText(p1, font, d.AuditorName, 214.8, 733.3, 254.4, 12.8, XStringFormats.CenterLeft);
         DrawComb(p1, font, Digits(d.AuditorLicenseNo), 472.2, 732.1, 94.3, 12.1, 8);
 

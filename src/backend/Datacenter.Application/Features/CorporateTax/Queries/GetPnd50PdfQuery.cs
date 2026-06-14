@@ -29,6 +29,11 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
         var tax = await sender.Send(new GetTaxComputationQuery(req.ClientCompanyId, req.FiscalYear), ct);
         var r = tax.Result;
 
+        // ผู้สอบบัญชีของ "รอบปีนี้" (เปลี่ยนได้รายปี → เก็บแยกที่ CompanyAuditor)
+        var auditor = await db.CompanyAuditors.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ClientCompanyId == req.ClientCompanyId
+                                   && x.FiscalYear == req.FiscalYear, ct);
+
         var isHeadOffice = string.IsNullOrWhiteSpace(company.BranchCode)
             || company.BranchCode.All(c => c == '0');
 
@@ -44,8 +49,9 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             IsHeadOffice: isHeadOffice,
             BusinessActivity: company.BusinessActivity,
             IsicCode: company.IsicCode,
-            AuditorName: company.AuditorName,
-            AuditorLicenseNo: company.AuditorLicenseNo,
+            AuditorName: auditor?.AuditorName,
+            AuditorLicenseNo: auditor?.AuditorLicenseNo,
+            AuditorTaxId: auditor?.AuditorTaxId,
             HouseNo: company.AddrHouseNo ?? p?.HouseNo,
             Moo: company.AddrMoo ?? p?.Moo,
             Soi: company.AddrSoi ?? p?.Soi,

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { corporateTaxApi } from '../services/corporateTaxApi'
-import type { TaxComputationInput } from '../types/corporateTax.types'
+import type { CompanyAuditorInput, TaxComputationInput } from '../types/corporateTax.types'
 
 const KEY = 'corporate-tax'
 
@@ -21,6 +21,25 @@ export function useSaveTaxComputation() {
       qc.invalidateQueries({ queryKey: [KEY, 'computation', vars.companyId, vars.year] })
       // งบดุล/งบกำไรขาดทุนเปลี่ยนเพราะ X4 ถูก mirror ลง FsExternalInput
       qc.invalidateQueries({ queryKey: ['financial-statement'] })
+    },
+  })
+}
+
+export function useCompanyAuditor(companyId: number, year: number, enabled = true) {
+  return useQuery({
+    queryKey: [KEY, 'auditor', companyId, year],
+    queryFn: () => corporateTaxApi.getAuditor(companyId, year),
+    enabled: enabled && companyId > 0,
+  })
+}
+
+export function useSaveCompanyAuditor() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { companyId: number; year: number; data: CompanyAuditorInput }) =>
+      corporateTaxApi.saveAuditor(vars.companyId, vars.year, vars.data),
+    onSuccess: (_res, vars) => {
+      qc.invalidateQueries({ queryKey: [KEY, 'auditor', vars.companyId, vars.year] })
     },
   })
 }
