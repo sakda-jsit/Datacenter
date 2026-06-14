@@ -60,13 +60,13 @@ public class Pnd50PdfService : IPnd50PdfService
         // สถานะ: (1) บริษัท/ห้างฯ ตั้งตามกฎหมายไทย (Group2) — ค่าปกติ; ข้ามถ้าเป็นบริษัทมหาชน (สถานะอื่น)
         if (!(d.CompanyName?.Contains("มหาชน") ?? false))
             DrawCheck(p1, font, 47.0, 245.0, 13.7, 13.7);
-        // รอบบัญชี ตั้งแต่ / ถึง (วัน/เดือน/ปี พ.ศ.)
-        DrawText(p1, font, d.PeriodStart.Day.ToString("00"), 400.4, 100.7, 22.6, 12.5, XStringFormats.Center);
-        DrawText(p1, font, d.PeriodStart.Month.ToString("00"), 454.3, 100.7, 22.6, 12.5, XStringFormats.Center);
-        DrawText(p1, font, (d.PeriodStart.Year + 543).ToString(), 511.2, 100.7, 45.7, 12.5, XStringFormats.Center);
-        DrawText(p1, font, d.PeriodEnd.Day.ToString("00"), 400.4, 131.6, 22.6, 12.6, XStringFormats.Center);
-        DrawText(p1, font, d.PeriodEnd.Month.ToString("00"), 454.3, 131.6, 22.6, 12.6, XStringFormats.Center);
-        DrawText(p1, font, (d.PeriodEnd.Year + 543).ToString(), 511.2, 130.7, 45.7, 12.5, XStringFormats.Center);
+        // รอบบัญชี ตั้งแต่ / ถึง (วัน/เดือน/ปี พ.ศ.) — ฟิลด์เป็น comb (วัน 2 / เดือน 2 / ปี 4 ช่อง)
+        DrawComb(p1, font, d.PeriodStart.Day.ToString("00"), 400.4, 100.7, 22.6, 12.5, 2);
+        DrawComb(p1, font, d.PeriodStart.Month.ToString("00"), 454.3, 100.7, 22.6, 12.5, 2);
+        DrawComb(p1, font, (d.PeriodStart.Year + 543).ToString(), 511.2, 100.7, 45.7, 12.5, 4);
+        DrawComb(p1, font, d.PeriodEnd.Day.ToString("00"), 400.4, 131.6, 22.6, 12.6, 2);
+        DrawComb(p1, font, d.PeriodEnd.Month.ToString("00"), 454.3, 131.6, 22.6, 12.6, 2);
+        DrawComb(p1, font, (d.PeriodEnd.Year + 543).ToString(), 511.2, 130.7, 45.7, 12.5, 4);
 
         // ── หน้า 2: การคำนวณภาษี (ขวา = จำนวนเงิน) ──
         DrawMoney(p2, font, d.NetTaxableIncome, 461.2, 244.3, 101.1, 19.7); // Text6 ฐานภาษี
