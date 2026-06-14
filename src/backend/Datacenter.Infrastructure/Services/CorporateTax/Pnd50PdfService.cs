@@ -197,6 +197,19 @@ public class Pnd50PdfService : IPnd50PdfService
             else DrawCheck(p7g, font, 128.5, 514.9, 13.7, 13.7);                      // ขาดทุนสะสม
         }
 
+        // ── schedule cells (รายการ 8 ฯลฯ จาก mapping บัญชี→CIT50) — วาดตามพิกัด ──
+        if (d.ScheduleCells is { Count: > 0 } cells)
+        {
+            var gByPage = new Dictionary<int, XGraphics>();
+            foreach (var c in cells)
+            {
+                if (c.Page < 0 || c.Page >= doc.Pages.Count) continue;
+                if (!gByPage.TryGetValue(c.Page, out var g))
+                    gByPage[c.Page] = g = XGraphics.FromPdfPage(doc.Pages[c.Page], XGraphicsPdfPageOptions.Append);
+                if (c.Amount != 0) DrawMoney(g, font, c.Amount, c.X, c.Y, c.W, 13.0);
+            }
+        }
+
         using var output = new MemoryStream();
         doc.Save(output);
         return output.ToArray();

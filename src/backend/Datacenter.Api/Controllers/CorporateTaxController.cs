@@ -58,4 +58,18 @@ public class CorporateTaxController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetSignerAssignments(
         [FromQuery] string? search, [FromQuery] int? auditorId, [FromQuery] int? bookkeeperId, CancellationToken ct)
         => Ok(await mediator.Send(new GetSignerAssignmentsQuery(search, auditorId, bookkeeperId), ct));
+
+    /// <summary>GET /corporate-tax/cit50-mapping?clientCompanyId=1&amp;fiscalYear=2025 — แมพบัญชี→บรรทัด CIT50 (รายการ 8)</summary>
+    [HttpGet("cit50-mapping")]
+    public async Task<IActionResult> GetCit50Mapping([FromQuery] GetCit50MappingQuery query, CancellationToken ct)
+        => Ok(await mediator.Send(query, ct));
+
+    /// <summary>PUT /corporate-tax/cit50-mapping?clientCompanyId=1 — บันทึกแมพบัญชี→บรรทัด CIT50</summary>
+    [HttpPut("cit50-mapping")]
+    public async Task<IActionResult> SaveCit50Mapping(
+        [FromQuery] int clientCompanyId, [FromBody] IReadOnlyList<Cit50MappingItemInput> items, CancellationToken ct)
+    {
+        await mediator.Send(new SaveCit50MappingCommand(clientCompanyId, items), ct);
+        return NoContent();
+    }
 }

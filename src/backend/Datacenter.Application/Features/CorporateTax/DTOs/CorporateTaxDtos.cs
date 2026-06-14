@@ -137,7 +137,12 @@ public record Pnd50FormData(
     // หน้า 3: รายการที่ 3 reconciliation (null = ไม่มีงบ/ไม่เติม)
     Pnd50Page3Data? Page3 = null,
     // หน้า 7: รายการที่ 12 งบดุล (null = ไม่มีงบดุล)
-    Pnd50Page7Data? Page7 = null);
+    Pnd50Page7Data? Page7 = null,
+    // schedule cells (รายการ 8 ฯลฯ) จาก mapping บัญชี→CIT50 — วาดตามพิกัดที่ระบุ
+    IReadOnlyList<Pnd50ScheduleCell>? ScheduleCells = null);
+
+/// <summary>หนึ่ง cell ของ schedule (รายการ 4-11) ที่จะวาดบน PDF ตามพิกัด.</summary>
+public record Pnd50ScheduleCell(int Page, double X, double Y, double W, decimal Amount);
 
 /// <summary>ข้อมูลหน้า 3 (รายการที่ 3) — reconciliation กำไรบัญชี → เงินได้สุทธิเพื่อเสียภาษี.</summary>
 public record Pnd50Page3Data(

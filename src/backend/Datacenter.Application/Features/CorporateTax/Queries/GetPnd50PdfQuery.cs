@@ -29,28 +29,53 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
         var tax = await sender.Send(new GetTaxComputationQuery(req.ClientCompanyId, req.FiscalYear), ct);
         var r = tax.Result;
 
-        // หน้า 3 (รายการที่ 3): ดึง breakdown จากงบกำไรขาดทุน (ถ้ามี) ให้ reconcile กับ r
-        Pnd50Page3Data? page3 = null;
+        // งบกำไรขาดทุน (ใช้ทั้งหน้า 3 + schedule รายการ 8)
+        FinancialStatement.DTOs.ProfitLossDto? pl = null;
         if (tax.HasProfitLoss)
         {
-            try
+            try { pl = await sender.Send(new FinancialStatement.Queries.GetProfitLossQuery(req.ClientCompanyId, req.FiscalYear), ct); }
+            catch { /* ไม่มีงบ */ }
+        }
+
+        // หน้า 3 (รายการที่ 3): reconcile กับ r
+        Pnd50Page3Data? page3 = null;
+        if (pl is not null)
+        {
+            var sga = pl.TotalExpenses - pl.CostOfGoods.Amount + Math.Abs(pl.FinanceCost.Amount);
+            page3 = new Pnd50Page3Data(
+                Revenue: pl.TotalIncome, Cogs: pl.CostOfGoods.Amount, GrossProfit: pl.GrossProfit, Sga: sga,
+                NetAccountingProfit: r.NetProfitBeforeTax, AddBack: r.AddBackTotal, Deduction: r.DeductionTotal,
+                AdjustedProfit: r.AdjustedProfit, LossUsed: r.LossUsed, NetTaxableIncome: r.NetTaxableIncome);
+        }
+
+        // schedule รายการ 8 (รายจ่ายขายและบริหาร): aggregate ยอดบัญชีตาม mapping → บรรทัด CIT50
+        var scheduleCells = new List<Pnd50ScheduleCell>();
+        if (pl is not null)
+        {
+            var lines8 = await db.Cit50ScheduleLines.AsNoTracking()
+                .Where(l => l.ScheduleNo == 8).ToListAsync(ct);
+            if (lines8.Count > 0)
             {
-                var pl = await sender.Send(
-                    new FinancialStatement.Queries.GetProfitLossQuery(req.ClientCompanyId, req.FiscalYear), ct);
-                var sga = pl.TotalExpenses - pl.CostOfGoods.Amount + Math.Abs(pl.FinanceCost.Amount);
-                page3 = new Pnd50Page3Data(
-                    Revenue: pl.TotalIncome,
-                    Cogs: pl.CostOfGoods.Amount,
-                    GrossProfit: pl.GrossProfit,
-                    Sga: sga,
-                    NetAccountingProfit: r.NetProfitBeforeTax,
-                    AddBack: r.AddBackTotal,
-                    Deduction: r.DeductionTotal,
-                    AdjustedProfit: r.AdjustedProfit,
-                    LossUsed: r.LossUsed,
-                    NetTaxableIncome: r.NetTaxableIncome);
+                var maps = await db.AccountCit50Mappings.AsNoTracking()
+                    .Where(m => m.ClientCompanyId == req.ClientCompanyId)
+                    .ToDictionaryAsync(m => m.AccountCode, m => m.Cit50LineCode, ct);
+                var catchAll = lines8.FirstOrDefault(l => l.IsCatchAll)?.Code;
+                var sums = lines8.ToDictionary(l => l.Code, _ => 0m);
+                foreach (var line in pl.ExpenseLines.Append(pl.FinanceCost))
+                    foreach (var a in line.Accounts)
+                    {
+                        var code = maps.GetValueOrDefault(a.AccountCode) ?? catchAll;
+                        if (code is not null && sums.ContainsKey(code)) sums[code] += Math.Abs(a.NetBalance);
+                    }
+                var total = sums.Where(kv => lines8.First(l => l.Code == kv.Key) is { IsTotal: false }).Sum(kv => kv.Value);
+                const double col2Offset = 108.3; // ระยะจากคอลัมน์ "รวม" ไป "เสียภาษี" (รายการ 8)
+                foreach (var l in lines8)
+                {
+                    var v = l.IsTotal ? total : sums[l.Code];
+                    scheduleCells.Add(new Pnd50ScheduleCell(l.PdfPage, l.PdfX, l.PdfY, l.PdfW, v));            // รวม
+                    scheduleCells.Add(new Pnd50ScheduleCell(l.PdfPage, l.PdfX - col2Offset, l.PdfY, l.PdfW, v)); // เสียภาษี
+                }
             }
-            catch { /* ไม่มีงบ → ไม่เติมหน้า 3 */ }
         }
 
         // หน้า 7 (รายการที่ 12 งบดุล): crosswalk บรรทัด CIT50 ← RefCode ผังงบ (ใช้ยอด presentation จาก BS)
@@ -132,7 +157,8 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             RateScheme: tax.RateScheme,
             IsNetProfit: r.AdjustedProfit >= 0,
             Page3: page3,
-            Page7: page7);
+            Page7: page7,
+            ScheduleCells: scheduleCells);
 
         return svc.Build(data);
     }

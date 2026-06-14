@@ -31,6 +31,7 @@ import SignerAssignmentsPage from '../features/settings/pages/SignerAssignmentsP
 import BankReconciliationPage from '../features/bank-reconciliation/pages/BankReconciliationPage'
 import GeneralLedgerPage from '../features/general-ledger/pages/GeneralLedgerPage'
 import Pnd50Page from '../features/tax-report/pages/Pnd50Page'
+import Cit50MappingPage from '../features/tax-report/pages/Cit50MappingPage'
 import ComplianceCalendarRoute from '../features/compliance-calendar/pages/ComplianceCalendarRoute'
 import ClosingPeriodPage from '../features/closing-period/pages/ClosingPeriodPage'
 import AuditLogPage from '../features/audit-log/pages/AuditLogPage'
@@ -67,6 +68,7 @@ export default function AppRouter() {
           <Route path="bank-reconciliation" element={<BankReconciliationPage />} />
           <Route path="general-ledger" element={<GeneralLedgerPage />} />
           <Route path="pnd50" element={<Pnd50Page />} />
+          <Route path="pnd50/cit50-mapping" element={<Cit50MappingPage />} />
           <Route path="compliance" element={<ComplianceCalendarRoute />} />
           <Route path="closing-period" element={<ClosingPeriodPage />} />
           <Route path="report-packages" element={<ReportPackagesPage />} />

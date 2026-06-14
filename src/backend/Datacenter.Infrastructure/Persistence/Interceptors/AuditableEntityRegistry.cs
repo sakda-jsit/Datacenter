@@ -39,6 +39,7 @@ internal static class AuditableEntityRegistry
         typeof(OfficeProfile),     // โปรไฟล์สำนักงานบัญชี (ค่ากลาง singleton)
         typeof(Auditor),           // ทะเบียนผู้สอบบัญชี (master)
         typeof(Bookkeeper),        // ทะเบียนผู้ทำบัญชี (master)
+        typeof(AccountCit50Mapping), // แมพบัญชี→บรรทัด CIT50
     ];
 
     /// <summary>property ที่ไม่ต้องลง audit (metadata ของ BaseEntity)</summary>

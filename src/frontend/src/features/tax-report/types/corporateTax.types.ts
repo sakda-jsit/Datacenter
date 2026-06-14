@@ -97,6 +97,30 @@ export interface CompanyDefaultSignersInput {
   bookkeeperId?: number | null
 }
 
+// ── แมพบัญชี → บรรทัด CIT50 (รายการ 8) ──
+export interface Cit50Line {
+  code: string
+  scheduleNo: number
+  label: string
+  isCatchAll: boolean
+  isTotal: boolean
+}
+export interface Cit50AccountRow {
+  accountCode: string
+  accountName: string
+  amount: number
+  cit50LineCode?: string | null
+}
+export interface Cit50MappingView {
+  lines: Cit50Line[]
+  accounts: Cit50AccountRow[]
+}
+export interface Cit50MappingItem {
+  accountCode: string
+  accountName: string
+  cit50LineCode?: string | null
+}
+
 export interface SignerAssignment {
   companyId: number
   companyName: string

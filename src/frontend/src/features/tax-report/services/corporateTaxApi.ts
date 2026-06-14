@@ -1,5 +1,7 @@
 import apiClient from '../../../shared/services/apiClient'
 import type {
+  Cit50MappingItem,
+  Cit50MappingView,
   CompanyDefaultSignersInput,
   CompanySigners,
   CompanyYearSignersInput,
@@ -47,5 +49,16 @@ export const corporateTaxApi = {
   getSignerAssignments: (params: { search?: string; auditorId?: number; bookkeeperId?: number }) =>
     apiClient
       .get<SignerAssignment[]>(`${BASE}/signer-assignments`, { params })
+      .then((r) => r.data),
+
+  // แมพบัญชี → บรรทัด CIT50 (รายการ 8)
+  getCit50Mapping: (clientCompanyId: number, fiscalYear: number) =>
+    apiClient
+      .get<Cit50MappingView>(`${BASE}/cit50-mapping`, { params: { clientCompanyId, fiscalYear } })
+      .then((r) => r.data),
+
+  saveCit50Mapping: (clientCompanyId: number, items: Cit50MappingItem[]) =>
+    apiClient
+      .put(`${BASE}/cit50-mapping`, items, { params: { clientCompanyId } })
       .then((r) => r.data),
 }

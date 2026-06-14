@@ -68,6 +68,8 @@ public interface IApplicationDbContext
     DbSet<OfficeProfile> OfficeProfiles { get; }
     DbSet<Auditor> Auditors { get; }
     DbSet<Bookkeeper> Bookkeepers { get; }
+    DbSet<Cit50ScheduleLine> Cit50ScheduleLines { get; }
+    DbSet<AccountCit50Mapping> AccountCit50Mappings { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

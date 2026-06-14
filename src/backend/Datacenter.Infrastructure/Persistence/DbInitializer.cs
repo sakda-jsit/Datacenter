@@ -182,6 +182,36 @@ public static class DbInitializer
             logger.LogInformation("Backfilled {Count} legacy CompanyAuditor rows -> Auditor/Bookkeeper master.", legacy.Count);
         }
 
+        // ── Seed taxonomy บรรทัด CIT50 รายการที่ 8 (รายจ่ายขายและบริหาร) — idempotent ──
+        var cit50Seed = new (string Code, string Label, int Sort, double Y, bool Catch, bool Total)[]
+        {
+            ("R8_EMP", "รายจ่ายเกี่ยวกับพนักงาน", 1, 56.4, false, false),
+            ("R8_DIR", "ค่าตอบแทนกรรมการ", 2, 75.1, false, false),
+            ("R8_FREIGHT", "ค่าระวาง ค่าขนส่ง", 5, 131.8, false, false),
+            ("R8_RENT", "ค่าเช่า", 6, 150.8, false, false),
+            ("R8_ENT", "ค่ารับรอง", 8, 188.2, false, false),
+            ("R8_SBT", "ค่าภาษีธุรกิจเฉพาะ", 10, 226.2, false, false),
+            ("R8_TAXOTHER", "ค่าภาษีอากรอื่นๆ", 11, 245.6, false, false),
+            ("R8_FIN", "ต้นทุนทางการเงิน", 12, 264.2, false, false),
+            ("R8_BOOK", "ค่าทำบัญชี", 13, 282.9, false, false),
+            ("R8_AUDIT", "ค่าสอบบัญชี", 14, 302.4, false, false),
+            ("R8_CONSULT", "ค่าธรรมเนียมการให้คำปรึกษา", 25, 530.3, false, false),
+            ("R8_FEEOTHER", "ค่าธรรมเนียมอื่นๆ", 26, 550.0, false, false),
+            ("R8_BADDEBT", "หนี้สูญ", 27, 568.7, false, false),
+            ("R8_DEPREC", "ค่าสึกหรอและค่าเสื่อมราคา", 28, 587.2, false, false),
+            ("R8_OTHER", "รายจ่ายอื่น (1.-29.)", 29, 606.7, true, false),
+            ("R8_TOTAL", "รวม 1. ถึง 30.", 30, 625.0, false, true),
+        };
+        var existingCodes = await db.Cit50ScheduleLines.Select(x => x.Code).ToListAsync();
+        foreach (var s in cit50Seed.Where(s => !existingCodes.Contains(s.Code)))
+            db.Cit50ScheduleLines.Add(new Cit50ScheduleLine
+            {
+                Code = s.Code, ScheduleNo = 8, Label = s.Label, SortOrder = s.Sort,
+                PdfPage = 4, PdfX = 462.7, PdfY = s.Y, PdfW = 101.1,
+                IsCatchAll = s.Catch, IsTotal = s.Total, CreatedBy = "system",
+            });
+        if (db.ChangeTracker.HasChanges()) await db.SaveChangesAsync();
+
         // ── Seed admin user ───────────────────────────────────────────────────
         if (!await db.Users.AnyAsync(u => u.Username == "admin"))
         {

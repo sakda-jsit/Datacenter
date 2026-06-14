@@ -69,6 +69,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OfficeProfile> OfficeProfiles => Set<OfficeProfile>();
     public DbSet<Auditor> Auditors => Set<Auditor>();
     public DbSet<Bookkeeper> Bookkeepers => Set<Bookkeeper>();
+    public DbSet<Cit50ScheduleLine> Cit50ScheduleLines => Set<Cit50ScheduleLine>();
+    public DbSet<AccountCit50Mapping> AccountCit50Mappings => Set<AccountCit50Mapping>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
