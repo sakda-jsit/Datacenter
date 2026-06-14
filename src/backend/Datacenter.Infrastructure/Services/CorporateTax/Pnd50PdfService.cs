@@ -87,9 +87,18 @@ public class Pnd50PdfService : IPnd50PdfService
         g.DrawString(text, f, XBrushes.Black, new XRect(x, y, w, h), fmt);
     }
 
-    /// <summary>ติ๊กช่อง (วาด X กึ่งกลางช่อง radio/checkbox)</summary>
+    /// <summary>ติ๊กช่อง (วาดเครื่องหมายถูก ✓ แบบเส้น — ไม่พึ่ง glyph ฟอนต์)</summary>
     private static void DrawCheck(XGraphics g, XFont f, double x, double y, double w, double h)
-        => g.DrawString("X", f, XBrushes.Black, new XRect(x, y, w, h), XStringFormats.Center);
+    {
+        var pen = new XPen(XColors.Black, Math.Max(1.0, h * 0.12));
+        var pts = new[]
+        {
+            new XPoint(x + w * 0.20, y + h * 0.52),
+            new XPoint(x + w * 0.42, y + h * 0.74),
+            new XPoint(x + w * 0.82, y + h * 0.24),
+        };
+        g.DrawLines(pen, pts);
+    }
 
     private static void DrawMoney(XGraphics g, XFont f, decimal v, double x, double y, double w, double h)
         => DrawText(g, f, v.ToString("#,##0.00", CultureInfo.InvariantCulture), x, y, w - 3, h, XStringFormats.CenterRight);
