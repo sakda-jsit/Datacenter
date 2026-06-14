@@ -10,7 +10,8 @@ namespace Datacenter.Application.Features.Vat.Queries;
 
 /// <summary>
 /// ยอด ภ.พ.30 ของงวดเดือนที่เลือก แยกตามสาขา (group ตาม ISVAT.DEPCOD) สำหรับการยื่นรวมกัน.
-/// กฎแปลง DEPCOD → เลขสาขา RD: ว่าง/ขึ้นต้น HO → สำนักงานใหญ่ (00000); อื่น ๆ ใช้ตัวเลขท้ายรหัส (BR01 → 00001).
+/// เลขสาขา RD มาจาก VatBranchMapping ต่อบริษัท (ถ้ามี) → ไม่งั้นใช้กฎอัตโนมัติ
+/// (ว่าง/ขึ้นต้น HO → สำนักงานใหญ่ 00000; อื่น ๆ ใช้ตัวเลขท้ายรหัส BR01 → 00001).
 /// </summary>
 public record GetVatPp30BranchesQuery(int ClientCompanyId, int Year, int Month)
     : IRequest<Pp30BranchesDto>, IRequireCompanyAccess;
@@ -18,8 +19,8 @@ public record GetVatPp30BranchesQuery(int ClientCompanyId, int Year, int Month)
 public class GetVatPp30BranchesQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetVatPp30BranchesQuery, Pp30BranchesDto>
 {
-    /// <summary>แปลงรหัสแผนก/สาขา Express → (เลขสาขา RD, เป็นสำนักงานใหญ่?). ว่าง/HO* = สำนักงานใหญ่.</summary>
-    public static (string BranchNo, bool IsHeadOffice) ResolveBranch(string? depcod)
+    /// <summary>กฎแปลงอัตโนมัติ DEPCOD → (เลขสาขา RD, เป็นสำนักงานใหญ่?). ว่าง/HO* = สำนักงานใหญ่.</summary>
+    public static (string BranchNo, bool IsHeadOffice) ConventionBranch(string? depcod)
     {
         var d = (depcod ?? "").Trim().ToUpperInvariant();
         if (d.Length == 0 || d.StartsWith("HO")) return ("00000", true);
@@ -34,7 +35,18 @@ public class GetVatPp30BranchesQueryHandler(IApplicationDbContext db)
             .FirstOrDefaultAsync(c => c.Id == req.ClientCompanyId, ct)
             ?? throw new NotFoundException("ClientCompany", req.ClientCompanyId);
 
-        // ดึงรายการ VAT ของงวดเดือนนั้น แล้ว group ตามสาขาใน memory (VatType เก็บเป็น string — เลี่ยง cast)
+        // mapping DEPCOD → เลขสาขา RD ต่อบริษัท (override กฎอัตโนมัติ)
+        var maps = await db.VatBranchMappings.AsNoTracking()
+            .Where(m => m.ClientCompanyId == req.ClientCompanyId)
+            .ToDictionaryAsync(m => m.DepartmentCode ?? "", m => (m.RdBranchNo, m.IsHeadOffice), ct);
+
+        (string BranchNo, bool IsHeadOffice) Resolve(string? depcod)
+        {
+            var key = (depcod ?? "").Trim();
+            if (maps.TryGetValue(key, out var m)) return m;
+            return ConventionBranch(depcod);
+        }
+
         var entries = await db.VatEntries.AsNoTracking()
             .Where(v => v.ClientCompanyId == req.ClientCompanyId
                      && v.TaxPeriod.Year == req.Year
@@ -43,7 +55,7 @@ public class GetVatPp30BranchesQueryHandler(IApplicationDbContext db)
             .ToListAsync(ct);
 
         var branches = entries
-            .GroupBy(v => ResolveBranch(v.DepartmentCode))
+            .GroupBy(v => Resolve(v.DepartmentCode))
             .Select(g =>
             {
                 var output = g.Where(x => x.VatType == VatEntryType.Output);
@@ -61,7 +73,7 @@ public class GetVatPp30BranchesQueryHandler(IApplicationDbContext db)
                     OutputVat: Math.Round(output.Sum(x => x.VatAmount), 2),
                     InputVat: Math.Round(input.Sum(x => x.VatAmount), 2));
             })
-            .OrderByDescending(b => b.IsHeadOffice)   // สำนักงานใหญ่ก่อน
+            .OrderByDescending(b => b.IsHeadOffice)
             .ThenBy(b => b.BranchNo, StringComparer.Ordinal)
             .ToList();
 

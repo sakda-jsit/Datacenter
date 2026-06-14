@@ -1,3 +1,6 @@
+using Datacenter.Application.Features.Vat;
+using Datacenter.Application.Features.Vat.Commands;
+using Datacenter.Application.Features.Vat.DTOs;
 using Datacenter.Application.Features.Vat.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -50,4 +53,33 @@ public class VatController(IMediator mediator) : ControllerBase
             new GetVatPp30TransferQuery(clientCompanyId, year, month, delimiter, includeHeader), ct);
         return File(bytes, "text/plain", $"pp30-transfer-{year + 543}-{month:D2}.txt");
     }
+
+    // ── Branch mapping (DEPCOD → เลขสาขา RD) ───────────────────────────────────
+    /// <summary>GET /api/v1/vat/branch-mappings?clientCompanyId=1 — รายการ DEPCOD + การแมพเลขสาขา</summary>
+    [HttpGet("branch-mappings")]
+    public async Task<IActionResult> GetBranchMappings([FromQuery] GetVatBranchMappingsQuery query, CancellationToken ct)
+        => Ok(await mediator.Send(query, ct));
+
+    /// <summary>PUT /api/v1/vat/branch-mappings?clientCompanyId=1 — บันทึกการแมพเลขสาขา</summary>
+    [HttpPut("branch-mappings")]
+    public async Task<IActionResult> UpsertBranchMapping(
+        [FromQuery] int clientCompanyId, [FromBody] VatBranchMappingInput data, CancellationToken ct)
+    {
+        await mediator.Send(new UpsertVatBranchMappingCommand(clientCompanyId, data), ct);
+        return NoContent();
+    }
+
+    /// <summary>DELETE /api/v1/vat/branch-mappings?clientCompanyId=1&amp;departmentCode=BR01 — ลบ (กลับใช้กฎอัตโนมัติ)</summary>
+    [HttpDelete("branch-mappings")]
+    public async Task<IActionResult> DeleteBranchMapping(
+        [FromQuery] int clientCompanyId, [FromQuery] string departmentCode, CancellationToken ct)
+    {
+        await mediator.Send(new DeleteVatBranchMappingCommand(clientCompanyId, departmentCode ?? ""), ct);
+        return NoContent();
+    }
+
+    /// <summary>POST /api/v1/vat/resync-departments — ดึง DEPCOD จาก Express ใหม่ทุกบริษัท (VAT-only)</summary>
+    [HttpPost("resync-departments")]
+    public async Task<IActionResult> ResyncDepartments(CancellationToken ct)
+        => Ok(await mediator.Send(new ResyncVatDepartmentsCommand(), ct));
 }

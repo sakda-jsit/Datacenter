@@ -63,6 +63,7 @@ public interface IApplicationDbContext
     DbSet<Attachment> Attachments { get; }
     DbSet<TaxComputation> TaxComputations { get; }
     DbSet<TaxAdjustmentLine> TaxAdjustmentLines { get; }
+    DbSet<VatBranchMapping> VatBranchMappings { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

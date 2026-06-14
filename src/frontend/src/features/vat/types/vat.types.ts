@@ -77,6 +77,24 @@ export interface Pp30Branches {
   branches: Pp30BranchRow[]
 }
 
+export interface VatBranchMapping {
+  departmentCode: string
+  displayCode: string
+  rdBranchNo: string
+  isHeadOffice: boolean
+  branchName?: string | null
+  isMapped: boolean
+  entryCount: number
+}
+
+export interface ResyncDepartmentsResult {
+  companiesProcessed: number
+  companiesUpdated: number
+  totalEntries: number
+  companiesWithBranches: number
+  skipped: string[]
+}
+
 export const MONTH_LABEL: Record<number, string> = {
   1: 'มกราคม',
   2: 'กุมภาพันธ์',

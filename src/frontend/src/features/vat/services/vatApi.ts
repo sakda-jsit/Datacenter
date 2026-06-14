@@ -1,5 +1,11 @@
 import apiClient from '../../../shared/services/apiClient'
-import type { Pp30Branches, VatEntryItem, VatReport } from '../types/vat.types'
+import type {
+  Pp30Branches,
+  ResyncDepartmentsResult,
+  VatBranchMapping,
+  VatEntryItem,
+  VatReport,
+} from '../types/vat.types'
 
 export const vatApi = {
   report: (clientCompanyId: number, year: number) =>
@@ -38,4 +44,21 @@ export const vatApi = {
         responseType: 'blob',
       })
       .then((r) => r.data as Blob),
+
+  // แมพ DEPCOD → เลขสาขา RD ต่อบริษัท
+  branchMappings: (clientCompanyId: number) =>
+    apiClient
+      .get<VatBranchMapping[]>('/vat/branch-mappings', { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  upsertBranchMapping: (
+    clientCompanyId: number,
+    data: { departmentCode: string; rdBranchNo: string; isHeadOffice: boolean; branchName?: string | null },
+  ) => apiClient.put('/vat/branch-mappings', data, { params: { clientCompanyId } }),
+
+  deleteBranchMapping: (clientCompanyId: number, departmentCode: string) =>
+    apiClient.delete('/vat/branch-mappings', { params: { clientCompanyId, departmentCode } }),
+
+  resyncDepartments: () =>
+    apiClient.post<ResyncDepartmentsResult>('/vat/resync-departments').then((r) => r.data),
 }

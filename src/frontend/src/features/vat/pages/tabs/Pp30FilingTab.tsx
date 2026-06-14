@@ -9,6 +9,7 @@ import { useVatReport } from '../../hooks/useVat'
 import { vatApi } from '../../services/vatApi'
 import { MONTH_LABEL } from '../../types/vat.types'
 import type { ExportSection } from '../../../../shared/utils/exportTable'
+import Pp30BranchMappingModal from '../../components/Pp30BranchMappingModal'
 
 async function dlTransfer(companyId: number, year: number, month: number) {
   const blob = await vatApi.pp30Transfer(companyId, year, month)
@@ -38,6 +39,7 @@ export default function Pp30FilingTab({ companyId, year }: Props) {
   const { data, isLoading, isError } = useVatReport(companyId, year)
   const [month, setMonth] = useState(1)
   const [creditCarried, setCreditCarried] = useState('')
+  const [showMapping, setShowMapping] = useState(false)
 
   const branchesQuery = useQuery({
     queryKey: ['vat-pp30-branches', companyId, year, month],
@@ -124,6 +126,7 @@ export default function Pp30FilingTab({ companyId, year }: Props) {
           </select>
         </div>
         <div className="flex items-center gap-2">
+          <Button type="button" variant="secondary" onClick={() => setShowMapping(true)}>แมพเลขสาขา</Button>
           <Button type="button" variant="secondary" onClick={() => dlTransfer(companyId, year, month)}>
             ⬇ ไฟล์โอนย้าย (.txt)
           </Button>
@@ -187,7 +190,8 @@ export default function Pp30FilingTab({ companyId, year }: Props) {
           <div className="border-b px-4 py-3">
             <p className="text-sm font-semibold text-slate-800">แยกตามสาขา (สำหรับยื่นรวมกัน / ไฟล์โอนย้าย)</p>
             <p className="text-xs text-gray-500">
-              บริษัทนี้มีหลายสาขาใน Express (DEPCOD) — ไฟล์โอนย้ายจะมี 1 แถว/สาขา · blank DEPCOD รวมเข้าสำนักงานใหญ่ (00000)
+              บริษัทนี้มีหลายสาขาใน Express (DEPCOD) — ไฟล์โอนย้ายจะมี 1 แถว/สาขา · blank DEPCOD รวมเข้าสำนักงานใหญ่ (00000) ·
+              ปรับเลขสาขาได้ที่ปุ่ม "แมพเลขสาขา" ด้านบน
             </p>
           </div>
           <table className="w-full text-xs">
@@ -217,10 +221,12 @@ export default function Pp30FilingTab({ companyId, year }: Props) {
             </tbody>
           </table>
           <p className="px-4 py-2 text-xs text-gray-400">
-            เลขสาขาแปลงจากรหัส DEPCOD (HO/ว่าง → 00000, BR01 → 00001) — ถ้าเลขสาขา RD จริงต่างจากนี้ แจ้งปรับได้
+            เลขสาขาแปลงจากรหัส DEPCOD (HO/ว่าง → 00000, BR01 → 00001) — ถ้าเลขสาขา RD จริงต่างจากนี้ ปรับที่ "แมพเลขสาขา"
           </p>
         </Card>
       )}
+
+      {showMapping && <Pp30BranchMappingModal companyId={companyId} onClose={() => setShowMapping(false)} />}
     </div>
   )
 }

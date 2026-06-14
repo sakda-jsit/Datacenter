@@ -41,6 +41,22 @@ public record Pp30BranchesDto(
     bool IsMultiBranch,
     IReadOnlyList<Pp30BranchRow> Branches);
 
+/// <summary>หนึ่งรหัสแผนก/สาขา (DEPCOD) ที่พบในข้อมูล VAT + การแมพเลขสาขา RD (ถ้ามี).</summary>
+public record VatBranchMappingDto(
+    /// <summary>รหัส DEPCOD ดิบ ("" = ไม่ระบุ)</summary>
+    string DepartmentCode,
+    /// <summary>ป้ายแสดง (เช่น HO00, BR01, "(ไม่ระบุ)")</summary>
+    string DisplayCode,
+    /// <summary>เลขสาขา RD ที่ใช้ (จาก mapping ถ้ามี ไม่งั้นจากกฎอัตโนมัติ)</summary>
+    string RdBranchNo,
+    bool IsHeadOffice,
+    string? BranchName,
+    /// <summary>มี mapping บันทึกไว้หรือยัง (false = ใช้ค่าจากกฎอัตโนมัติ)</summary>
+    bool IsMapped,
+    int EntryCount);
+
+public record VatBranchMappingInput(string DepartmentCode, string RdBranchNo, bool IsHeadOffice, string? BranchName);
+
 /// <summary>รายงาน ภ.พ.30 รายเดือนตลอดปีปฏิทิน + ยอดรวมทั้งปี</summary>
 public record VatReportDto(
     int ClientCompanyId,
