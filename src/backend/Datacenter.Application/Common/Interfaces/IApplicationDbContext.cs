@@ -66,6 +66,8 @@ public interface IApplicationDbContext
     DbSet<VatBranchMapping> VatBranchMappings { get; }
     DbSet<CompanyAuditor> CompanyAuditors { get; }
     DbSet<OfficeProfile> OfficeProfiles { get; }
+    DbSet<Auditor> Auditors { get; }
+    DbSet<Bookkeeper> Bookkeepers { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

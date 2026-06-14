@@ -29,10 +29,17 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
         var tax = await sender.Send(new GetTaxComputationQuery(req.ClientCompanyId, req.FiscalYear), ct);
         var r = tax.Result;
 
-        // ผู้สอบบัญชีของ "รอบปีนี้" (เปลี่ยนได้รายปี → เก็บแยกที่ CompanyAuditor)
-        var auditor = await db.CompanyAuditors.AsNoTracking()
+        // ผู้ลงนามของรอบปีนี้: override รายปี (CompanyAuditor) ?? ค่าเริ่มต้นบริษัท (ทะเบียน master)
+        var year = await db.CompanyAuditors.AsNoTracking()
             .FirstOrDefaultAsync(x => x.ClientCompanyId == req.ClientCompanyId
                                    && x.FiscalYear == req.FiscalYear, ct);
+
+        var auditorId = year?.AuditorId ?? company.DefaultAuditorId;
+        var bookkeeperId = year?.BookkeeperId ?? company.DefaultBookkeeperId;
+        var auditorM = auditorId is { } aid
+            ? await db.Auditors.AsNoTracking().FirstOrDefaultAsync(a => a.Id == aid, ct) : null;
+        var bookkeeperM = bookkeeperId is { } bid
+            ? await db.Bookkeepers.AsNoTracking().FirstOrDefaultAsync(b => b.Id == bid, ct) : null;
 
         // สำนักงานทำบัญชี = โปรไฟล์สำนักงานบัญชีของผู้ใช้ (ค่ากลาง singleton) → ใช้ทุกบริษัท
         var office = await db.OfficeProfiles.AsNoTracking().OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
@@ -52,14 +59,14 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             IsHeadOffice: isHeadOffice,
             BusinessActivity: company.BusinessActivity,
             IsicCode: company.IsicCode,
-            AuditorName: auditor?.AuditorName,
-            AuditorLicenseNo: auditor?.AuditorLicenseNo,
-            AuditorTaxId: auditor?.AuditorTaxId,
-            BookkeeperName: auditor?.BookkeeperName,
-            BookkeeperTaxId: auditor?.BookkeeperTaxId,
-            AuditFirmTaxId: auditor?.AuditFirmTaxId,
+            AuditorName: auditorM?.Name,
+            AuditorLicenseNo: auditorM?.LicenseNo,
+            AuditorTaxId: auditorM?.TaxId,
+            BookkeeperName: bookkeeperM?.Name,
+            BookkeeperTaxId: bookkeeperM?.TaxId,
+            AuditFirmTaxId: auditorM?.AuditFirmTaxId,
             BookkeepingFirmTaxId: office?.TaxId,
-            AuditorSignDate: auditor?.SignDate,
+            AuditorSignDate: year?.SignDate,
             HouseNo: company.AddrHouseNo ?? p?.HouseNo,
             Moo: company.AddrMoo ?? p?.Moo,
             Soi: company.AddrSoi ?? p?.Soi,

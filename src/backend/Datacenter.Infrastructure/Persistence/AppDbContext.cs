@@ -67,6 +67,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<VatBranchMapping> VatBranchMappings => Set<VatBranchMapping>();
     public DbSet<CompanyAuditor> CompanyAuditors => Set<CompanyAuditor>();
     public DbSet<OfficeProfile> OfficeProfiles => Set<OfficeProfile>();
+    public DbSet<Auditor> Auditors => Set<Auditor>();
+    public DbSet<Bookkeeper> Bookkeepers => Set<Bookkeeper>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

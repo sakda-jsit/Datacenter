@@ -1,6 +1,8 @@
+using Datacenter.Application.Common.Exceptions;
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Common.Security;
 using Datacenter.Application.Features.CorporateTax.DTOs;
+using Datacenter.Application.Features.CorporateTax.Queries;
 using Datacenter.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -8,107 +10,101 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Datacenter.Application.Features.CorporateTax.Commands;
 
-/// <summary>
-/// บันทึก (upsert) ผู้ตรวจสอบและรับรองบัญชีของ (บริษัท, ปีงบ).
-/// ถ้าส่งชื่อว่าง → ลบบันทึกของปีนั้น (เคลียร์ผู้สอบ).
-/// </summary>
-public record SaveCompanyAuditorCommand(int ClientCompanyId, int FiscalYear, CompanyAuditorInput Data)
-    : IRequest<CompanyAuditorDto>, IRequireCompanyAccess;
+/// <summary>ตั้งผู้ลงนามประจำบริษัท (ค่าเริ่มต้น ใช้ทุกปีที่ไม่มี override).</summary>
+public record SetCompanyDefaultSignersCommand(int ClientCompanyId, CompanyDefaultSignersInput Data)
+    : IRequest<CompanySignersDto>, IRequireCompanyAccess;
 
-public class SaveCompanyAuditorCommandHandler(
-    IApplicationDbContext db, ICurrentUserService currentUser, IAuditService audit)
-    : IRequestHandler<SaveCompanyAuditorCommand, CompanyAuditorDto>
+public class SetCompanyDefaultSignersCommandHandler(
+    IApplicationDbContext db, ISender sender, ICurrentUserService user, IAuditService audit)
+    : IRequestHandler<SetCompanyDefaultSignersCommand, CompanySignersDto>
 {
-    public async Task<CompanyAuditorDto> Handle(SaveCompanyAuditorCommand req, CancellationToken ct)
+    public async Task<CompanySignersDto> Handle(SetCompanyDefaultSignersCommand req, CancellationToken ct)
+    {
+        var company = await db.ClientCompanies.FirstOrDefaultAsync(c => c.Id == req.ClientCompanyId, ct)
+            ?? throw new NotFoundException("ClientCompany", req.ClientCompanyId);
+
+        company.DefaultAuditorId = req.Data.AuditorId;
+        company.DefaultBookkeeperId = req.Data.BookkeeperId;
+        company.ModifiedBy = user.Username;
+        company.ModifiedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+
+        await audit.LogAsync("Update", "ClientCompany", company.Id.ToString(),
+            afterValue: $"ผู้ลงนามประจำ: ผู้สอบ#{req.Data.AuditorId} / ผู้ทำบัญชี#{req.Data.BookkeeperId}",
+            companyId: req.ClientCompanyId, cancellationToken: ct);
+
+        // ปีที่ใช้ส่งกลับ = ปีปัจจุบันของ company (ไม่สำคัญสำหรับ default) → คืน resolved ของปีนั้น ๆ ผ่าน query แยก
+        return await sender.Send(new GetCompanySignersQuery(req.ClientCompanyId, DateTime.UtcNow.Year), ct);
+    }
+}
+
+/// <summary>บันทึกผู้ลงนามเฉพาะรอบปี (override + วันที่ในรายงาน). ว่างทั้งหมด = ลบ override ของปีนั้น.</summary>
+public record SaveCompanyYearSignersCommand(int ClientCompanyId, int FiscalYear, CompanyYearSignersInput Data)
+    : IRequest<CompanySignersDto>, IRequireCompanyAccess;
+
+public class SaveCompanyYearSignersCommandHandler(
+    IApplicationDbContext db, ISender sender, ICurrentUserService user, IAuditService audit)
+    : IRequestHandler<SaveCompanyYearSignersCommand, CompanySignersDto>
+{
+    public async Task<CompanySignersDto> Handle(SaveCompanyYearSignersCommand req, CancellationToken ct)
     {
         var d = req.Data;
-        var entity = await db.CompanyAuditors
+        var row = await db.CompanyAuditors
             .FirstOrDefaultAsync(x => x.ClientCompanyId == req.ClientCompanyId
                                    && x.FiscalYear == req.FiscalYear, ct);
 
-        // ทั้งชื่อผู้สอบและผู้ทำบัญชีว่าง = เคลียร์บันทึกของปีนี้
-        if (string.IsNullOrWhiteSpace(d.AuditorName) && string.IsNullOrWhiteSpace(d.BookkeeperName))
+        bool empty = d.AuditorId is null && d.BookkeeperId is null && d.SignDate is null;
+        if (empty)
         {
-            if (entity is not null)
+            if (row is not null)
             {
-                db.CompanyAuditors.Remove(entity);
+                db.CompanyAuditors.Remove(row);
                 await db.SaveChangesAsync(ct);
                 await audit.LogAsync("Delete", "CompanyAuditor",
                     entityId: $"{req.ClientCompanyId}:{req.FiscalYear}",
                     companyId: req.ClientCompanyId, cancellationToken: ct);
             }
-            return new CompanyAuditorDto(req.ClientCompanyId, req.FiscalYear, "", null, null, null, null, null, null, null, null, Exists: false);
+            return await sender.Send(new GetCompanySignersQuery(req.ClientCompanyId, req.FiscalYear), ct);
         }
 
-        bool isNew = entity is null;
-        if (entity is null)
+        bool isNew = row is null;
+        if (row is null)
         {
-            entity = new CompanyAuditor
+            row = new CompanyAuditor
             {
                 ClientCompanyId = req.ClientCompanyId,
                 FiscalYear = req.FiscalYear,
-                CreatedBy = currentUser.Username,
+                CreatedBy = user.Username,
             };
-            db.CompanyAuditors.Add(entity);
+            db.CompanyAuditors.Add(row);
         }
-        else
-        {
-            entity.ModifiedBy = currentUser.Username;
-            entity.ModifiedAt = DateTime.UtcNow;
-        }
+        else { row.ModifiedBy = user.Username; row.ModifiedAt = DateTime.UtcNow; }
 
-        entity.AuditorName = (d.AuditorName ?? "").Trim();
-        entity.AuditorLicenseNo = string.IsNullOrWhiteSpace(d.AuditorLicenseNo) ? null : d.AuditorLicenseNo.Trim();
-        entity.AuditorTaxId = string.IsNullOrWhiteSpace(d.AuditorTaxId)
-            ? null : new string(d.AuditorTaxId.Where(char.IsDigit).ToArray());
-        entity.BookkeeperName = string.IsNullOrWhiteSpace(d.BookkeeperName) ? null : d.BookkeeperName.Trim();
-        entity.BookkeeperTaxId = string.IsNullOrWhiteSpace(d.BookkeeperTaxId)
-            ? null : new string(d.BookkeeperTaxId.Where(char.IsDigit).ToArray());
-        entity.AuditFirmName = string.IsNullOrWhiteSpace(d.AuditFirmName) ? null : d.AuditFirmName.Trim();
-        entity.AuditFirmTaxId = string.IsNullOrWhiteSpace(d.AuditFirmTaxId)
-            ? null : new string(d.AuditFirmTaxId.Where(char.IsDigit).ToArray());
-        entity.SignDate = d.SignDate;
-        entity.Note = string.IsNullOrWhiteSpace(d.Note) ? null : d.Note.Trim();
-
+        row.AuditorId = d.AuditorId;
+        row.BookkeeperId = d.BookkeeperId;
+        row.SignDate = d.SignDate;
         await db.SaveChangesAsync(ct);
 
         await audit.LogAsync(isNew ? "Create" : "Update", "CompanyAuditor",
             entityId: $"{req.ClientCompanyId}:{req.FiscalYear}",
-            afterValue: $"ผู้สอบ {entity.AuditorName} (ทะเบียน {entity.AuditorLicenseNo}) / ผู้ทำบัญชี {entity.BookkeeperName}",
+            afterValue: $"override ผู้สอบ#{d.AuditorId} / ผู้ทำบัญชี#{d.BookkeeperId} / ลงวันที่ {d.SignDate:yyyy-MM-dd}",
             companyId: req.ClientCompanyId, cancellationToken: ct);
 
-        return new CompanyAuditorDto(entity.ClientCompanyId, entity.FiscalYear, entity.AuditorName,
-            entity.AuditorLicenseNo, entity.AuditorTaxId, entity.BookkeeperName, entity.BookkeeperTaxId,
-            entity.AuditFirmName, entity.AuditFirmTaxId, entity.SignDate, entity.Note, Exists: true);
+        return await sender.Send(new GetCompanySignersQuery(req.ClientCompanyId, req.FiscalYear), ct);
     }
 }
 
-public class CompanyAuditorInputValidator : AbstractValidator<CompanyAuditorInput>
+public class SetCompanyDefaultSignersCommandValidator : AbstractValidator<SetCompanyDefaultSignersCommand>
 {
-    public CompanyAuditorInputValidator()
-    {
-        RuleFor(x => x.AuditorName).MaximumLength(200);
-        RuleFor(x => x.AuditorLicenseNo).MaximumLength(20);
-        RuleFor(x => x.AuditorTaxId)
-            .Must(v => string.IsNullOrWhiteSpace(v) || v.Count(char.IsDigit) == 13)
-            .WithMessage("เลขประจำตัวผู้เสียภาษีอากรของผู้สอบบัญชีต้องมี 13 หลัก");
-        RuleFor(x => x.BookkeeperName).MaximumLength(200);
-        RuleFor(x => x.BookkeeperTaxId)
-            .Must(v => string.IsNullOrWhiteSpace(v) || v.Count(char.IsDigit) == 13)
-            .WithMessage("เลขประจำตัวผู้เสียภาษีอากรของผู้ทำบัญชีต้องมี 13 หลัก");
-        RuleFor(x => x.AuditFirmName).MaximumLength(200);
-        RuleFor(x => x.AuditFirmTaxId)
-            .Must(v => string.IsNullOrWhiteSpace(v) || v.Count(char.IsDigit) == 13)
-            .WithMessage("เลขประจำตัวผู้เสียภาษีอากรของสำนักงานสอบบัญชีต้องมี 13 หลัก");
-    }
+    public SetCompanyDefaultSignersCommandValidator()
+        => RuleFor(x => x.ClientCompanyId).GreaterThan(0);
 }
 
-public class SaveCompanyAuditorCommandValidator : AbstractValidator<SaveCompanyAuditorCommand>
+public class SaveCompanyYearSignersCommandValidator : AbstractValidator<SaveCompanyYearSignersCommand>
 {
-    public SaveCompanyAuditorCommandValidator()
+    public SaveCompanyYearSignersCommandValidator()
     {
         RuleFor(x => x.ClientCompanyId).GreaterThan(0);
         RuleFor(x => x.FiscalYear).InclusiveBetween(2000, 2100);
-        RuleFor(x => x.Data).NotNull().SetValidator(new CompanyAuditorInputValidator());
     }
 }

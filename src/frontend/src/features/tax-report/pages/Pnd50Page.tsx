@@ -7,11 +7,13 @@ import ExportMenu from '../../../shared/components/ui/ExportMenu'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import type { ExportSection } from '../../../shared/utils/exportTable'
 import {
-  useCompanyAuditor,
-  useSaveCompanyAuditor,
+  useCompanySigners,
   useSaveTaxComputation,
+  useSaveYearSigners,
+  useSetDefaultSigners,
   useTaxComputation,
 } from '../hooks/useCorporateTax'
+import { useAuditors, useBookkeepers } from '../../settings/hooks/useAuditRegistry'
 import { corporateTaxApi } from '../services/corporateTaxApi'
 import {
   TAX_RATE_SCHEME_LABEL,
@@ -336,137 +338,162 @@ export default function Pnd50Page() {
             </Card>
           </div>
 
-          {/* ── ผู้ตรวจสอบและรับรองบัญชี (รอบปีนี้) ── */}
-          <AuditorCard companyId={companyId} year={year} />
+          {/* ── ผู้ลงนามรับผิดชอบงบ (master + ค่าเริ่มต้น + override รายปี) ── */}
+          <SignersCard companyId={companyId} year={year} />
         </>
       )}
     </div>
   )
 }
 
-function AuditorCard({ companyId, year }: { companyId: number; year: number }) {
-  const { data } = useCompanyAuditor(companyId, year)
-  const save = useSaveCompanyAuditor()
+function SignersCard({ companyId, year }: { companyId: number; year: number }) {
+  const { data } = useCompanySigners(companyId, year)
+  const { data: auditors } = useAuditors()
+  const { data: bookkeepers } = useBookkeepers()
+  const saveDefault = useSetDefaultSigners()
+  const saveYear = useSaveYearSigners()
 
-  const [name, setName] = useState('')
-  const [license, setLicense] = useState('')
-  const [taxId, setTaxId] = useState('')
-  const [firmName, setFirmName] = useState('')
-  const [firmTaxId, setFirmTaxId] = useState('')
-  const [bkName, setBkName] = useState('')
-  const [bkTaxId, setBkTaxId] = useState('')
+  const [defAuditor, setDefAuditor] = useState<number | ''>('')
+  const [defBookkeeper, setDefBookkeeper] = useState<number | ''>('')
   const [signDate, setSignDate] = useState('')
+  const [override, setOverride] = useState(false)
+  const [yrAuditor, setYrAuditor] = useState<number | ''>('')
+  const [yrBookkeeper, setYrBookkeeper] = useState<number | ''>('')
 
   useEffect(() => {
     if (!data) return
-    setName(data.auditorName ?? '')
-    setLicense(data.auditorLicenseNo ?? '')
-    setTaxId(data.auditorTaxId ?? '')
-    setFirmName(data.auditFirmName ?? '')
-    setFirmTaxId(data.auditFirmTaxId ?? '')
-    setBkName(data.bookkeeperName ?? '')
-    setBkTaxId(data.bookkeeperTaxId ?? '')
+    setDefAuditor(data.defaultAuditorId ?? '')
+    setDefBookkeeper(data.defaultBookkeeperId ?? '')
     setSignDate(data.signDate ? data.signDate.slice(0, 10) : '')
+    setOverride(data.hasYearOverride)
+    setYrAuditor(data.yearAuditorId ?? '')
+    setYrBookkeeper(data.yearBookkeeperId ?? '')
   }, [data])
 
-  const taxIdDigits = taxId.replace(/\D/g, '')
-  const taxIdInvalid = taxIdDigits.length > 0 && taxIdDigits.length !== 13
-  const firmTaxIdDigits = firmTaxId.replace(/\D/g, '')
-  const firmTaxIdInvalid = firmTaxIdDigits.length > 0 && firmTaxIdDigits.length !== 13
-  const bkTaxIdDigits = bkTaxId.replace(/\D/g, '')
-  const bkTaxIdInvalid = bkTaxIdDigits.length > 0 && bkTaxIdDigits.length !== 13
-  const anyInvalid = taxIdInvalid || firmTaxIdInvalid || bkTaxIdInvalid
+  const auditorOpts = auditors ?? []
+  const bkOpts = bookkeepers ?? []
+  const noMasters = auditorOpts.length === 0 && bkOpts.length === 0
 
-  async function onSave() {
-    if (!companyId || anyInvalid) return
-    await save.mutateAsync({
-      companyId,
-      year,
+  const resolvedAuditorId = (override ? (yrAuditor || null) : null) ?? (defAuditor || null)
+  const resolvedBookkeeperId = (override ? (yrBookkeeper || null) : null) ?? (defBookkeeper || null)
+  const ra = auditorOpts.find((a) => a.id === resolvedAuditorId)
+  const rb = bkOpts.find((b) => b.id === resolvedBookkeeperId)
+  const sameTaxId = !!ra?.taxId && !!rb?.taxId && ra.taxId === rb.taxId
+  const taIsAuditor = ra?.type === 2 // TA
+
+  async function onSaveDefault() {
+    await saveDefault.mutateAsync({ companyId, data: { auditorId: defAuditor || null, bookkeeperId: defBookkeeper || null } })
+  }
+  async function onSaveYear() {
+    await saveYear.mutateAsync({
+      companyId, year,
       data: {
-        auditorName: name.trim(),
-        auditorLicenseNo: license.trim() || null,
-        auditorTaxId: taxIdDigits || null,
-        auditFirmName: firmName.trim() || null,
-        auditFirmTaxId: firmTaxIdDigits || null,
-        bookkeeperName: bkName.trim() || null,
-        bookkeeperTaxId: bkTaxIdDigits || null,
+        auditorId: override ? (yrAuditor || null) : null,
+        bookkeeperId: override ? (yrBookkeeper || null) : null,
         signDate: signDate || null,
-        note: null,
       },
     })
   }
 
   return (
     <Card className="mt-5 p-6">
-      <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-slate-800">ผู้ลงนามรับผิดชอบงบ (รอบปี {year + 543})</h2>
-        {data?.exists && <span className="text-xs text-gray-400">บันทึกไว้สำหรับปีนี้แล้ว</span>}
-      </div>
+      <h2 className="mb-1 text-base font-semibold text-slate-800">ผู้ลงนามรับผิดชอบงบ (รอบปี {year + 543})</h2>
       <p className="mb-4 text-xs text-gray-400">
-        ผูกกับรอบปีบัญชี — ผู้สอบบัญชีและผู้ทำบัญชีเปลี่ยนรายปีได้ (ปีอื่นไม่กระทบ). ใช้เติมในแบบ ภ.ง.ด.50.
-        ปล่อยชื่อทั้งสองว่างแล้วบันทึก = ล้างข้อมูลของปีนี้
+        เลือกจากทะเบียน{' '}
+        <a href="/settings/auditors" className="font-medium text-blue-600 hover:underline">ผู้สอบบัญชี</a> /{' '}
+        <a href="/settings/bookkeepers" className="font-medium text-blue-600 hover:underline">ผู้ทำบัญชี</a>
+        {' '}· "สำนักงานทำบัญชี" ดึงจาก{' '}
+        <a href="/settings/office-profile" className="font-medium text-blue-600 hover:underline">โปรไฟล์สำนักงาน</a>
       </p>
 
-      <p className="mb-2 text-sm font-medium text-slate-600">ผู้ตรวจสอบและรับรองบัญชี (ผู้สอบบัญชี)</p>
+      {noMasters && (
+        <p className="mb-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+          ยังไม่มีรายชื่อในทะเบียน — เพิ่มผู้สอบบัญชี/ผู้ทำบัญชีที่เมนูตั้งค่ากลางก่อน แล้วกลับมาเลือก
+        </p>
+      )}
+
+      {/* ค่าเริ่มต้นประจำบริษัท */}
+      <p className="mb-2 text-sm font-medium text-slate-600">ผู้ลงนามประจำบริษัท (ใช้ทุกปีโดยอัตโนมัติ)</p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="ชื่อผู้ตรวจสอบและรับรองบัญชี">
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-            placeholder="เช่น นาย/นางสาว ... " className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        <Field label="ผู้ตรวจสอบและรับรองบัญชี">
+          <SignerSelect value={defAuditor} onChange={setDefAuditor}
+            options={auditorOpts.map((a) => ({ id: a.id, label: `${a.name}${a.type === 2 ? ' (TA)' : ''}`, active: a.isActive }))} />
         </Field>
-        <Field label="ทะเบียนเลขที่ผู้สอบบัญชี (CPA/TA)">
-          <input type="text" value={license} maxLength={8} onChange={(e) => setLicense(e.target.value)}
-            placeholder="เช่น 0010370" className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-        </Field>
-        <Field label="เลขประจำตัวผู้เสียภาษีอากรของผู้สอบบัญชี (13 หลัก)">
-          <input type="text" value={taxId} maxLength={17} onChange={(e) => setTaxId(e.target.value)}
-            placeholder="0000000000000"
-            className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${taxIdInvalid ? 'border-red-400' : 'border-gray-300'}`} />
-          {taxIdInvalid && <p className="mt-1 text-xs text-red-500">ต้องมี 13 หลัก (ตอนนี้ {taxIdDigits.length})</p>}
-        </Field>
-        <Field label="วันที่ในรายงานของผู้สอบบัญชี">
-          <input type="date" value={signDate} onChange={(e) => setSignDate(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-        </Field>
-        <Field label="ชื่อสำนักงานสอบบัญชี (สังกัดผู้สอบ)">
-          <input type="text" value={firmName} onChange={(e) => setFirmName(e.target.value)}
-            placeholder="เช่น บจก. ... สอบบัญชี" className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-        </Field>
-        <Field label="เลขประจำตัวผู้เสียภาษีอากรของสำนักงานสอบบัญชี (13 หลัก)">
-          <input type="text" value={firmTaxId} maxLength={17} onChange={(e) => setFirmTaxId(e.target.value)}
-            placeholder="0000000000000"
-            className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${firmTaxIdInvalid ? 'border-red-400' : 'border-gray-300'}`} />
-          {firmTaxIdInvalid && <p className="mt-1 text-xs text-red-500">ต้องมี 13 หลัก (ตอนนี้ {firmTaxIdDigits.length})</p>}
+        <Field label="ผู้ทำบัญชี">
+          <SignerSelect value={defBookkeeper} onChange={setDefBookkeeper}
+            options={bkOpts.map((b) => ({ id: b.id, label: b.name, active: b.isActive }))} />
         </Field>
       </div>
-
-      <p className="mb-1 mt-5 text-sm font-medium text-slate-600">ผู้ทำบัญชี</p>
-      <p className="mb-2 text-xs text-gray-400">
-        เลขผู้เสียภาษี "สำนักงานทำบัญชี" ดึงจาก{' '}
-        <a href="/settings/office-profile" className="font-medium text-blue-600 hover:underline">โปรไฟล์สำนักงานบัญชี</a>
-        {' '}(ตั้งครั้งเดียวใช้ทุกบริษัท)
-      </p>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="ชื่อผู้ทำบัญชี">
-          <input type="text" value={bkName} onChange={(e) => setBkName(e.target.value)}
-            placeholder="เช่น นาย/นางสาว ... " className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-        </Field>
-        <Field label="เลขประจำตัวผู้เสียภาษีอากรของผู้ทำบัญชี (13 หลัก)">
-          <input type="text" value={bkTaxId} maxLength={17} onChange={(e) => setBkTaxId(e.target.value)}
-            placeholder="0000000000000"
-            className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${bkTaxIdInvalid ? 'border-red-400' : 'border-gray-300'}`} />
-          {bkTaxIdInvalid && <p className="mt-1 text-xs text-red-500">ต้องมี 13 หลัก (ตอนนี้ {bkTaxIdDigits.length})</p>}
-        </Field>
-      </div>
-
-      <div className="mt-5 flex items-center gap-3">
-        <Button type="button" onClick={onSave} disabled={save.isPending || anyInvalid}
-          className="bg-blue-600 text-white hover:bg-blue-700">
-          {save.isPending ? 'กำลังบันทึก...' : 'บันทึกผู้ลงนาม'}
+      <div className="mt-3 flex items-center gap-3">
+        <Button type="button" onClick={onSaveDefault} disabled={saveDefault.isPending}>
+          {saveDefault.isPending ? 'กำลังบันทึก...' : 'บันทึกค่าเริ่มต้นบริษัท'}
         </Button>
-        {save.isSuccess && !save.isPending && <span className="text-sm text-green-600">บันทึกแล้ว ✓</span>}
-        {save.isError && <span className="text-sm text-red-600">บันทึกไม่สำเร็จ — ตรวจข้อมูล</span>}
+        {saveDefault.isSuccess && !saveDefault.isPending && <span className="text-sm text-green-600">บันทึกแล้ว ✓</span>}
+      </div>
+
+      {sameTaxId && (
+        <p className="mt-3 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-600">
+          ⚠ ผู้สอบบัญชีและผู้ทำบัญชีมีเลขผู้เสียภาษีเดียวกัน — ผู้สอบบัญชีต้องเป็นอิสระ (ห้ามเป็นผู้ทำบัญชีของกิจการเดียวกัน)
+        </p>
+      )}
+      {taIsAuditor && (
+        <p className="mt-2 text-xs text-amber-600">
+          หมายเหตุ: ผู้สอบเป็น TA — สอบได้เฉพาะห้างหุ้นส่วนจดทะเบียนขนาดเล็ก (บริษัทจำกัดต้องใช้ CPA)
+        </p>
+      )}
+
+      {/* เฉพาะรอบปี */}
+      <div className="mt-6 border-t border-gray-100 pt-4">
+        <p className="mb-2 text-sm font-medium text-slate-600">เฉพาะรอบปี {year + 543}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="วันที่ในรายงานของผู้สอบบัญชี">
+            <input type="date" value={signDate} onChange={(e) => setSignDate(e.target.value)}
+              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </Field>
+        </div>
+        <label className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+          <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} />
+          ปีนี้เปลี่ยนผู้ลงนามต่างจากค่าเริ่มต้น
+        </label>
+        {override && (
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <Field label="ผู้สอบบัญชี (เฉพาะปีนี้)">
+              <SignerSelect value={yrAuditor} onChange={setYrAuditor}
+                options={auditorOpts.map((a) => ({ id: a.id, label: `${a.name}${a.type === 2 ? ' (TA)' : ''}`, active: a.isActive }))} />
+            </Field>
+            <Field label="ผู้ทำบัญชี (เฉพาะปีนี้)">
+              <SignerSelect value={yrBookkeeper} onChange={setYrBookkeeper}
+                options={bkOpts.map((b) => ({ id: b.id, label: b.name, active: b.isActive }))} />
+            </Field>
+          </div>
+        )}
+        <div className="mt-4 flex items-center gap-3">
+          <Button type="button" onClick={onSaveYear} disabled={saveYear.isPending}
+            className="bg-blue-600 text-white hover:bg-blue-700">
+            {saveYear.isPending ? 'กำลังบันทึก...' : 'บันทึกข้อมูลปีนี้'}
+          </Button>
+          {saveYear.isSuccess && !saveYear.isPending && <span className="text-sm text-green-600">บันทึกแล้ว ✓</span>}
+        </div>
       </div>
     </Card>
+  )
+}
+
+function SignerSelect({
+  value, onChange, options,
+}: {
+  value: number | ''
+  onChange: (v: number | '') => void
+  options: { id: number; label: string; active: boolean }[]
+}) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : '')}
+      className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <option value="">— ไม่ระบุ —</option>
+      {options.filter((o) => o.active || o.id === value).map((o) => (
+        <option key={o.id} value={o.id}>{o.label}{o.active ? '' : ' (ปิดใช้งาน)'}</option>
+      ))}
+    </select>
   )
 }
 

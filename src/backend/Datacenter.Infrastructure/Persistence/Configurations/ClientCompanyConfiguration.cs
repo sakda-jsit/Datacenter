@@ -23,6 +23,12 @@ public class ClientCompanyConfiguration : IEntityTypeConfiguration<ClientCompany
         builder.Property(x => x.PostalCode).HasMaxLength(10);
         builder.HasIndex(x => x.Code).IsUnique();
 
+        // ผู้ลงนามประจำบริษัท (master, default ทุกปี)
+        builder.HasOne(x => x.DefaultAuditor)
+            .WithMany().HasForeignKey(x => x.DefaultAuditorId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne(x => x.DefaultBookkeeper)
+            .WithMany().HasForeignKey(x => x.DefaultBookkeeperId).OnDelete(DeleteBehavior.SetNull);
+
         // business key สำหรับ match ตอน import (filtered: เฉพาะ active ที่มี TaxId — เว้น onboard ที่ยังไม่กรอก/สำเนาที่ปิดใช้งาน)
         builder.HasIndex(x => new { x.TaxId, x.BranchCode })
             .IsUnique()

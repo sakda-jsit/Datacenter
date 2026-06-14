@@ -132,6 +132,56 @@ public static class DbInitializer
             logger.LogInformation("Backfilled structured address for {Count} companies.", needAddr.Count);
         }
 
+        // ── Backfill ผู้ลงนาม free-text เดิม (CompanyAuditor) → ทะเบียน master + ค่าเริ่มต้นบริษัท ──
+        var legacy = await db.CompanyAuditors
+            .Where(x => x.AuditorId == null && x.AuditorName != null && x.AuditorName != "")
+            .ToListAsync();
+        if (legacy.Count > 0)
+        {
+            foreach (var row in legacy)
+            {
+                // ผู้สอบบัญชี → หา/สร้าง master (dedupe ตามชื่อ+เลขผู้เสียภาษี)
+                var a = await db.Auditors.FirstOrDefaultAsync(x =>
+                    x.Name == row.AuditorName && x.TaxId == row.AuditorTaxId);
+                if (a is null)
+                {
+                    a = new Auditor
+                    {
+                        Name = row.AuditorName!, Type = Datacenter.Domain.Enums.AuditorType.Cpa,
+                        LicenseNo = row.AuditorLicenseNo, TaxId = row.AuditorTaxId,
+                        AuditFirmName = row.AuditFirmName, AuditFirmTaxId = row.AuditFirmTaxId,
+                        CreatedBy = "system-migrate",
+                    };
+                    db.Auditors.Add(a);
+                    await db.SaveChangesAsync();
+                }
+                row.AuditorId = a.Id;
+
+                if (!string.IsNullOrWhiteSpace(row.BookkeeperName))
+                {
+                    var b = await db.Bookkeepers.FirstOrDefaultAsync(x =>
+                        x.Name == row.BookkeeperName && x.TaxId == row.BookkeeperTaxId);
+                    if (b is null)
+                    {
+                        b = new Bookkeeper { Name = row.BookkeeperName!, TaxId = row.BookkeeperTaxId, CreatedBy = "system-migrate" };
+                        db.Bookkeepers.Add(b);
+                        await db.SaveChangesAsync();
+                    }
+                    row.BookkeeperId = b.Id;
+                }
+
+                // ตั้งเป็นค่าเริ่มต้นของบริษัท (ถ้ายังไม่มี) เพื่อให้ใช้ทุกปีอัตโนมัติ
+                var company = await db.ClientCompanies.FirstOrDefaultAsync(c => c.Id == row.ClientCompanyId);
+                if (company is not null)
+                {
+                    company.DefaultAuditorId ??= row.AuditorId;
+                    if (row.BookkeeperId is not null) company.DefaultBookkeeperId ??= row.BookkeeperId;
+                }
+            }
+            await db.SaveChangesAsync();
+            logger.LogInformation("Backfilled {Count} legacy CompanyAuditor rows -> Auditor/Bookkeeper master.", legacy.Count);
+        }
+
         // ── Seed admin user ───────────────────────────────────────────────────
         if (!await db.Users.AnyAsync(u => u.Username == "admin"))
         {

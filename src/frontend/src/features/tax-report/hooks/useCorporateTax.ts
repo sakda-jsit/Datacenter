@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { corporateTaxApi } from '../services/corporateTaxApi'
-import type { CompanyAuditorInput, TaxComputationInput } from '../types/corporateTax.types'
+import type {
+  CompanyDefaultSignersInput,
+  CompanyYearSignersInput,
+  TaxComputationInput,
+} from '../types/corporateTax.types'
 
 const KEY = 'corporate-tax'
 
@@ -25,21 +29,30 @@ export function useSaveTaxComputation() {
   })
 }
 
-export function useCompanyAuditor(companyId: number, year: number, enabled = true) {
+export function useCompanySigners(companyId: number, year: number, enabled = true) {
   return useQuery({
-    queryKey: [KEY, 'auditor', companyId, year],
-    queryFn: () => corporateTaxApi.getAuditor(companyId, year),
+    queryKey: [KEY, 'signers', companyId, year],
+    queryFn: () => corporateTaxApi.getSigners(companyId, year),
     enabled: enabled && companyId > 0,
   })
 }
 
-export function useSaveCompanyAuditor() {
+export function useSetDefaultSigners() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (vars: { companyId: number; year: number; data: CompanyAuditorInput }) =>
-      corporateTaxApi.saveAuditor(vars.companyId, vars.year, vars.data),
-    onSuccess: (_res, vars) => {
-      qc.invalidateQueries({ queryKey: [KEY, 'auditor', vars.companyId, vars.year] })
-    },
+    mutationFn: (vars: { companyId: number; data: CompanyDefaultSignersInput }) =>
+      corporateTaxApi.setDefaultSigners(vars.companyId, vars.data),
+    onSuccess: (_res, vars) =>
+      qc.invalidateQueries({ queryKey: [KEY, 'signers', vars.companyId] }),
+  })
+}
+
+export function useSaveYearSigners() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { companyId: number; year: number; data: CompanyYearSignersInput }) =>
+      corporateTaxApi.saveYearSigners(vars.companyId, vars.year, vars.data),
+    onSuccess: (_res, vars) =>
+      qc.invalidateQueries({ queryKey: [KEY, 'signers', vars.companyId, vars.year] }),
   })
 }

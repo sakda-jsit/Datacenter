@@ -78,30 +78,27 @@ export interface TaxComputationInput {
   lines: TaxAdjustmentLineInput[]
 }
 
-// ── ผู้ลงนามรับผิดชอบงบ (ผู้สอบบัญชี + ผู้ทำบัญชี) ต่อรอบปี — เปลี่ยนได้รายปี ──
-export interface CompanyAuditor {
+// ── ผู้ลงนาม: master (ทะเบียน) + ค่าเริ่มต้นบริษัท + override รายปี ──
+export interface CompanySigners {
   clientCompanyId: number
   fiscalYear: number
-  auditorName: string
-  auditorLicenseNo?: string | null
-  auditorTaxId?: string | null
-  bookkeeperName?: string | null
-  bookkeeperTaxId?: string | null
-  auditFirmName?: string | null
-  auditFirmTaxId?: string | null
+  defaultAuditorId?: number | null
+  defaultBookkeeperId?: number | null
+  yearAuditorId?: number | null
+  yearBookkeeperId?: number | null
+  resolvedAuditorId?: number | null
+  resolvedBookkeeperId?: number | null
   signDate?: string | null
-  note?: string | null
-  exists: boolean
+  hasYearOverride: boolean
 }
 
-export interface CompanyAuditorInput {
-  auditorName: string
-  auditorLicenseNo?: string | null
-  auditorTaxId?: string | null
-  bookkeeperName?: string | null
-  bookkeeperTaxId?: string | null
-  auditFirmName?: string | null
-  auditFirmTaxId?: string | null
+export interface CompanyDefaultSignersInput {
+  auditorId?: number | null
+  bookkeeperId?: number | null
+}
+
+export interface CompanyYearSignersInput {
+  auditorId?: number | null
+  bookkeeperId?: number | null
   signDate?: string | null
-  note?: string | null
 }

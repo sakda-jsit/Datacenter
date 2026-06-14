@@ -1,7 +1,8 @@
 import apiClient from '../../../shared/services/apiClient'
 import type {
-  CompanyAuditor,
-  CompanyAuditorInput,
+  CompanyDefaultSignersInput,
+  CompanySigners,
+  CompanyYearSignersInput,
   TaxComputation,
   TaxComputationInput,
 } from '../types/corporateTax.types'
@@ -25,14 +26,19 @@ export const corporateTaxApi = {
       .get(`${BASE}/pnd50-pdf`, { params: { clientCompanyId, fiscalYear }, responseType: 'blob' })
       .then((r) => r.data as Blob),
 
-  // ผู้ตรวจสอบและรับรองบัญชี (ต่อรอบปี)
-  getAuditor: (clientCompanyId: number, fiscalYear: number) =>
+  // ผู้ลงนาม (ค่าเริ่มต้นบริษัท + override รายปี + resolved)
+  getSigners: (clientCompanyId: number, fiscalYear: number) =>
     apiClient
-      .get<CompanyAuditor>(`${BASE}/auditor`, { params: { clientCompanyId, fiscalYear } })
+      .get<CompanySigners>(`${BASE}/signers`, { params: { clientCompanyId, fiscalYear } })
       .then((r) => r.data),
 
-  saveAuditor: (clientCompanyId: number, fiscalYear: number, data: CompanyAuditorInput) =>
+  setDefaultSigners: (clientCompanyId: number, data: CompanyDefaultSignersInput) =>
     apiClient
-      .put<CompanyAuditor>(`${BASE}/auditor`, data, { params: { clientCompanyId, fiscalYear } })
+      .put<CompanySigners>(`${BASE}/signers/default`, data, { params: { clientCompanyId } })
+      .then((r) => r.data),
+
+  saveYearSigners: (clientCompanyId: number, fiscalYear: number, data: CompanyYearSignersInput) =>
+    apiClient
+      .put<CompanySigners>(`${BASE}/signers/year`, data, { params: { clientCompanyId, fiscalYear } })
       .then((r) => r.data),
 }

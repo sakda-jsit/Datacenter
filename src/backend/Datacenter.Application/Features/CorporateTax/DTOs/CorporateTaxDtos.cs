@@ -64,33 +64,28 @@ public record TaxAdjustmentLineInput(
     decimal Amount,
     int SortOrder);
 
-/// <summary>ผู้ลงนามรับผิดชอบงบ (ผู้สอบบัญชี + ผู้ทำบัญชี) ของ (บริษัท, ปีงบ) — ต่อรอบปี.</summary>
-public record CompanyAuditorDto(
+/// <summary>
+/// ผู้ลงนามของ (บริษัท, ปีงบ) — master + ค่าเริ่มต้นบริษัท + override รายปี.
+/// Resolved* = ค่าที่ใช้จริง (override ปีนี้ ?? ค่าเริ่มต้นบริษัท).
+/// </summary>
+public record CompanySignersDto(
     int ClientCompanyId,
     int FiscalYear,
-    string AuditorName,
-    string? AuditorLicenseNo,
-    string? AuditorTaxId,
-    string? BookkeeperName,
-    string? BookkeeperTaxId,
-    string? AuditFirmName,
-    string? AuditFirmTaxId,
+    int? DefaultAuditorId,
+    int? DefaultBookkeeperId,
+    int? YearAuditorId,
+    int? YearBookkeeperId,
+    int? ResolvedAuditorId,
+    int? ResolvedBookkeeperId,
     DateTime? SignDate,
-    string? Note,
-    /// <summary>มีบันทึกของปีนี้แล้วหรือไม่ (false = ค่าว่างเริ่มต้น)</summary>
-    bool Exists);
+    /// <summary>ปีนี้มี override ผู้ลงนามต่างจากค่าเริ่มต้นหรือไม่</summary>
+    bool HasYearOverride);
 
-/// <summary>ข้อมูล input บันทึกผู้สอบบัญชี + ผู้ทำบัญชีต่อรอบปี.</summary>
-public record CompanyAuditorInput(
-    string AuditorName,
-    string? AuditorLicenseNo,
-    string? AuditorTaxId,
-    string? BookkeeperName,
-    string? BookkeeperTaxId,
-    string? AuditFirmName,
-    string? AuditFirmTaxId,
-    DateTime? SignDate,
-    string? Note);
+/// <summary>ตั้งผู้ลงนามประจำบริษัท (ค่าเริ่มต้นทุกปี).</summary>
+public record CompanyDefaultSignersInput(int? AuditorId, int? BookkeeperId);
+
+/// <summary>บันทึกผู้ลงนามเฉพาะรอบปี (override + วันที่ในรายงาน). AuditorId/BookkeeperId null = ใช้ค่าเริ่มต้น.</summary>
+public record CompanyYearSignersInput(int? AuditorId, int? BookkeeperId, DateTime? SignDate);
 
 /// <summary>ข้อมูลสำหรับเติมแบบ ภ.ง.ด.50 (PDF) เฟส A — หน้า 1 (หัว + ที่อยู่) + หน้า 2 (การคำนวณภาษี).</summary>
 public record Pnd50FormData(
