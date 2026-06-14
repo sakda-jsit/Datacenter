@@ -3,6 +3,7 @@ import type {
   CompanyDefaultSignersInput,
   CompanySigners,
   CompanyYearSignersInput,
+  SignerAssignment,
   TaxComputation,
   TaxComputationInput,
 } from '../types/corporateTax.types'
@@ -40,5 +41,11 @@ export const corporateTaxApi = {
   saveYearSigners: (clientCompanyId: number, fiscalYear: number, data: CompanyYearSignersInput) =>
     apiClient
       .put<CompanySigners>(`${BASE}/signers/year`, data, { params: { clientCompanyId, fiscalYear } })
+      .then((r) => r.data),
+
+  // ภาพรวมมอบหมายผู้ลงนามของทุกบริษัท (จัดการรวมศูนย์)
+  getSignerAssignments: (params: { search?: string; auditorId?: number; bookkeeperId?: number }) =>
+    apiClient
+      .get<SignerAssignment[]>(`${BASE}/signer-assignments`, { params })
       .then((r) => r.data),
 }

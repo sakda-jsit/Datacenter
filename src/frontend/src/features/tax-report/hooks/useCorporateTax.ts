@@ -37,13 +37,22 @@ export function useCompanySigners(companyId: number, year: number, enabled = tru
   })
 }
 
+export function useSignerAssignments(filters: { search?: string; auditorId?: number; bookkeeperId?: number }) {
+  return useQuery({
+    queryKey: [KEY, 'signer-assignments', filters],
+    queryFn: () => corporateTaxApi.getSignerAssignments(filters),
+  })
+}
+
 export function useSetDefaultSigners() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (vars: { companyId: number; data: CompanyDefaultSignersInput }) =>
       corporateTaxApi.setDefaultSigners(vars.companyId, vars.data),
-    onSuccess: (_res, vars) =>
-      qc.invalidateQueries({ queryKey: [KEY, 'signers', vars.companyId] }),
+    onSuccess: (_res, vars) => {
+      qc.invalidateQueries({ queryKey: [KEY, 'signers', vars.companyId] })
+      qc.invalidateQueries({ queryKey: [KEY, 'signer-assignments'] })
+    },
   })
 }
 

@@ -116,6 +116,7 @@ const navGroups: NavGroup[] = [
       { to: '/settings/office-profile', icon: 'building', label: 'โปรไฟล์สำนักงานบัญชี', desc: 'ข้อมูลสำนักงานคุณ (ใช้ทุกบริษัท)' },
       { to: '/settings/auditors', icon: 'users', label: 'ทะเบียนผู้สอบบัญชี', desc: 'master ใช้เลือกในแบบภาษี' },
       { to: '/settings/bookkeepers', icon: 'users', label: 'ทะเบียนผู้ทำบัญชี', desc: 'master ใช้เลือกในแบบภาษี' },
+      { to: '/settings/signer-assignments', icon: 'scale', label: 'มอบหมายผู้ลงนาม', desc: 'ภาพรวมผู้สอบ/ผู้ทำบัญชี ทุกบริษัท' },
       { to: '/settings/payroll-rates', icon: 'shield', label: 'อัตราเงินสมทบ ปกส.', desc: 'ค่ากลาง ปกส./กองทุนทดแทน' },
       { to: '/audit-log', icon: 'history', label: 'ประวัติการใช้งาน', desc: 'Audit log' },
     ],

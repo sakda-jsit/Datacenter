@@ -84,6 +84,18 @@ public record CompanySignersDto(
 /// <summary>ตั้งผู้ลงนามประจำบริษัท (ค่าเริ่มต้นทุกปี).</summary>
 public record CompanyDefaultSignersInput(int? AuditorId, int? BookkeeperId);
 
+/// <summary>หนึ่งแถวในภาพรวมมอบหมายผู้ลงนาม (ผู้สอบ/ผู้ทำบัญชี ประจำของแต่ละบริษัท).</summary>
+public record SignerAssignmentDto(
+    int CompanyId,
+    string CompanyName,
+    string CompanyCode,
+    int? DefaultAuditorId,
+    string? DefaultAuditorName,
+    int? DefaultBookkeeperId,
+    string? DefaultBookkeeperName,
+    /// <summary>จำนวนปีที่มี override ต่างจากค่าเริ่มต้น</summary>
+    int OverrideYears);
+
 /// <summary>บันทึกผู้ลงนามเฉพาะรอบปี (override + วันที่ในรายงาน). AuditorId/BookkeeperId null = ใช้ค่าเริ่มต้น.</summary>
 public record CompanyYearSignersInput(int? AuditorId, int? BookkeeperId, DateTime? SignDate);
 

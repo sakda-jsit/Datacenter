@@ -97,6 +97,17 @@ export interface CompanyDefaultSignersInput {
   bookkeeperId?: number | null
 }
 
+export interface SignerAssignment {
+  companyId: number
+  companyName: string
+  companyCode: string
+  defaultAuditorId?: number | null
+  defaultAuditorName?: string | null
+  defaultBookkeeperId?: number | null
+  defaultBookkeeperName?: string | null
+  overrideYears: number
+}
+
 export interface CompanyYearSignersInput {
   auditorId?: number | null
   bookkeeperId?: number | null

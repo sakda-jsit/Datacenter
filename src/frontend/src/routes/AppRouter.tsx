@@ -27,6 +27,7 @@ import PayrollRatesPage from '../features/settings/pages/PayrollRatesPage'
 import OfficeProfilePage from '../features/settings/pages/OfficeProfilePage'
 import AuditorsPage from '../features/settings/pages/AuditorsPage'
 import BookkeepersPage from '../features/settings/pages/BookkeepersPage'
+import SignerAssignmentsPage from '../features/settings/pages/SignerAssignmentsPage'
 import BankReconciliationPage from '../features/bank-reconciliation/pages/BankReconciliationPage'
 import GeneralLedgerPage from '../features/general-ledger/pages/GeneralLedgerPage'
 import Pnd50Page from '../features/tax-report/pages/Pnd50Page'
@@ -75,6 +76,7 @@ export default function AppRouter() {
           <Route path="settings/office-profile" element={<OfficeProfilePage />} />
           <Route path="settings/auditors" element={<AuditorsPage />} />
           <Route path="settings/bookkeepers" element={<BookkeepersPage />} />
+          <Route path="settings/signer-assignments" element={<SignerAssignmentsPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

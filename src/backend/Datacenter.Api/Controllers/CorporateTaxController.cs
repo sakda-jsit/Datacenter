@@ -52,4 +52,10 @@ public class CorporateTaxController(IMediator mediator) : ControllerBase
         [FromQuery] int clientCompanyId, [FromQuery] int fiscalYear,
         [FromBody] CompanyYearSignersInput data, CancellationToken ct)
         => Ok(await mediator.Send(new SaveCompanyYearSignersCommand(clientCompanyId, fiscalYear, data), ct));
+
+    /// <summary>GET /corporate-tax/signer-assignments — ภาพรวมผู้ลงนามประจำของทุกบริษัท (จัดการรวมศูนย์)</summary>
+    [HttpGet("signer-assignments")]
+    public async Task<IActionResult> GetSignerAssignments(
+        [FromQuery] string? search, [FromQuery] int? auditorId, [FromQuery] int? bookkeeperId, CancellationToken ct)
+        => Ok(await mediator.Send(new GetSignerAssignmentsQuery(search, auditorId, bookkeeperId), ct));
 }
