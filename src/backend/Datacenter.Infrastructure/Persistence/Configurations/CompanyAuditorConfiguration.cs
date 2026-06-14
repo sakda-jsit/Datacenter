@@ -16,6 +16,8 @@ public class CompanyAuditorConfiguration : IEntityTypeConfiguration<CompanyAudit
         builder.Property(x => x.AuditorTaxId).HasMaxLength(13);
         builder.Property(x => x.BookkeeperName).HasMaxLength(200);
         builder.Property(x => x.BookkeeperTaxId).HasMaxLength(13);
+        builder.Property(x => x.AuditFirmName).HasMaxLength(200);
+        builder.Property(x => x.AuditFirmTaxId).HasMaxLength(13);
         builder.Property(x => x.Note).HasMaxLength(500);
 
         builder.HasOne(x => x.ClientCompany)

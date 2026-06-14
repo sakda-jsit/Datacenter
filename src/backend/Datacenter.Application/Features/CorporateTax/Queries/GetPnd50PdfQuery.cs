@@ -34,6 +34,9 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             .FirstOrDefaultAsync(x => x.ClientCompanyId == req.ClientCompanyId
                                    && x.FiscalYear == req.FiscalYear, ct);
 
+        // สำนักงานทำบัญชี = โปรไฟล์สำนักงานบัญชีของผู้ใช้ (ค่ากลาง singleton) → ใช้ทุกบริษัท
+        var office = await db.OfficeProfiles.AsNoTracking().OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
+
         var isHeadOffice = string.IsNullOrWhiteSpace(company.BranchCode)
             || company.BranchCode.All(c => c == '0');
 
@@ -54,6 +57,8 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             AuditorTaxId: auditor?.AuditorTaxId,
             BookkeeperName: auditor?.BookkeeperName,
             BookkeeperTaxId: auditor?.BookkeeperTaxId,
+            AuditFirmTaxId: auditor?.AuditFirmTaxId,
+            BookkeepingFirmTaxId: office?.TaxId,
             AuditorSignDate: auditor?.SignDate,
             HouseNo: company.AddrHouseNo ?? p?.HouseNo,
             Moo: company.AddrMoo ?? p?.Moo,

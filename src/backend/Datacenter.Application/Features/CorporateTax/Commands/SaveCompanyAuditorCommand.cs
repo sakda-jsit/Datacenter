@@ -37,7 +37,7 @@ public class SaveCompanyAuditorCommandHandler(
                     entityId: $"{req.ClientCompanyId}:{req.FiscalYear}",
                     companyId: req.ClientCompanyId, cancellationToken: ct);
             }
-            return new CompanyAuditorDto(req.ClientCompanyId, req.FiscalYear, "", null, null, null, null, null, null, Exists: false);
+            return new CompanyAuditorDto(req.ClientCompanyId, req.FiscalYear, "", null, null, null, null, null, null, null, null, Exists: false);
         }
 
         bool isNew = entity is null;
@@ -64,6 +64,9 @@ public class SaveCompanyAuditorCommandHandler(
         entity.BookkeeperName = string.IsNullOrWhiteSpace(d.BookkeeperName) ? null : d.BookkeeperName.Trim();
         entity.BookkeeperTaxId = string.IsNullOrWhiteSpace(d.BookkeeperTaxId)
             ? null : new string(d.BookkeeperTaxId.Where(char.IsDigit).ToArray());
+        entity.AuditFirmName = string.IsNullOrWhiteSpace(d.AuditFirmName) ? null : d.AuditFirmName.Trim();
+        entity.AuditFirmTaxId = string.IsNullOrWhiteSpace(d.AuditFirmTaxId)
+            ? null : new string(d.AuditFirmTaxId.Where(char.IsDigit).ToArray());
         entity.SignDate = d.SignDate;
         entity.Note = string.IsNullOrWhiteSpace(d.Note) ? null : d.Note.Trim();
 
@@ -76,7 +79,7 @@ public class SaveCompanyAuditorCommandHandler(
 
         return new CompanyAuditorDto(entity.ClientCompanyId, entity.FiscalYear, entity.AuditorName,
             entity.AuditorLicenseNo, entity.AuditorTaxId, entity.BookkeeperName, entity.BookkeeperTaxId,
-            entity.SignDate, entity.Note, Exists: true);
+            entity.AuditFirmName, entity.AuditFirmTaxId, entity.SignDate, entity.Note, Exists: true);
     }
 }
 
@@ -93,6 +96,10 @@ public class CompanyAuditorInputValidator : AbstractValidator<CompanyAuditorInpu
         RuleFor(x => x.BookkeeperTaxId)
             .Must(v => string.IsNullOrWhiteSpace(v) || v.Count(char.IsDigit) == 13)
             .WithMessage("เลขประจำตัวผู้เสียภาษีอากรของผู้ทำบัญชีต้องมี 13 หลัก");
+        RuleFor(x => x.AuditFirmName).MaximumLength(200);
+        RuleFor(x => x.AuditFirmTaxId)
+            .Must(v => string.IsNullOrWhiteSpace(v) || v.Count(char.IsDigit) == 13)
+            .WithMessage("เลขประจำตัวผู้เสียภาษีอากรของสำนักงานสอบบัญชีต้องมี 13 หลัก");
     }
 }
 

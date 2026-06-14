@@ -35,7 +35,8 @@ internal static class AuditableEntityRegistry
         typeof(NoteTemplateSection),
         typeof(TaxComputation),    // กระดาษทำการ ภ.ง.ด.50 (อัตรา/ขาดทุนยกมา/WHT)
         typeof(VatBranchMapping),  // แมพเลขสาขา ภ.พ.30 (DEPCOD→RD)
-        typeof(CompanyAuditor),    // ผู้สอบบัญชีต่อรอบปี (ชื่อ/ทะเบียน/เลขผู้เสียภาษี/วันลงนาม)
+        typeof(CompanyAuditor),    // ผู้ลงนามต่อรอบปี (ผู้สอบ/ผู้ทำบัญชี/สำนักงานสอบ)
+        typeof(OfficeProfile),     // โปรไฟล์สำนักงานบัญชี (ค่ากลาง singleton)
     ];
 
     /// <summary>property ที่ไม่ต้องลง audit (metadata ของ BaseEntity)</summary>

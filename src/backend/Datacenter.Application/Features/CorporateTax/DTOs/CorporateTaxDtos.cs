@@ -73,6 +73,8 @@ public record CompanyAuditorDto(
     string? AuditorTaxId,
     string? BookkeeperName,
     string? BookkeeperTaxId,
+    string? AuditFirmName,
+    string? AuditFirmTaxId,
     DateTime? SignDate,
     string? Note,
     /// <summary>มีบันทึกของปีนี้แล้วหรือไม่ (false = ค่าว่างเริ่มต้น)</summary>
@@ -85,6 +87,8 @@ public record CompanyAuditorInput(
     string? AuditorTaxId,
     string? BookkeeperName,
     string? BookkeeperTaxId,
+    string? AuditFirmName,
+    string? AuditFirmTaxId,
     DateTime? SignDate,
     string? Note);
 
@@ -100,6 +104,8 @@ public record Pnd50FormData(
     string? AuditorTaxId,
     string? BookkeeperName,
     string? BookkeeperTaxId,
+    string? AuditFirmTaxId,        // เลขผู้เสียภาษีสำนักงานสอบบัญชี (field 49)
+    string? BookkeepingFirmTaxId,  // เลขผู้เสียภาษีสำนักงานทำบัญชี = โปรไฟล์สำนักงาน (field 52)
     DateTime? AuditorSignDate,   // วันที่ในรายงานของผู้ตรวจสอบและรับรองบัญชี (field 46-48)
     // ที่อยู่ (แยกช่อง — แยกจาก Address flat ด้วย ThaiAddressParser)
     string? HouseNo,

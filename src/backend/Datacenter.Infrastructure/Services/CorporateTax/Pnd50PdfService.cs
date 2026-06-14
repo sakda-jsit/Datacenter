@@ -24,6 +24,10 @@ public class Pnd50PdfService : IPnd50PdfService
     private static readonly double[] AuditorTaxIdCellCenters =
         [44.9, 58.6, 71.7, 84.8, 97.9, 110.8, 123.6, 136.4, 149.1, 161.9, 175.6, 190.2, 204.7];
 
+    /// <summary>พิกัดกึ่งกลาง 13 ช่องเลขผู้เสียภาษีของสำนักงานสอบบัญชี/ทำบัญชี (field 49/52 — กริดฝั่งขวา เหมือนกัน)</summary>
+    private static readonly double[] FirmTaxIdCellCenters =
+        [404.2, 417.9, 431.0, 444.0, 457.1, 470.0, 482.8, 495.6, 508.4, 521.2, 534.9, 549.4, 563.9];
+
     public Pnd50PdfService(string fontPath)
     {
         // ตั้ง global font resolver ครั้งเดียว (กันตั้งซ้ำ)
@@ -65,6 +69,8 @@ public class Pnd50PdfService : IPnd50PdfService
         DrawText(p1, font, d.AuditorName, 214.8, 733.3, 254.4, 12.8, XStringFormats.CenterLeft);
         DrawComb(p1, font, Digits(d.AuditorLicenseNo), 472.2, 732.1, 94.3, 12.1, 8);
 
+        // เลขผู้เสียภาษีสำนักงานสอบบัญชี (field 49, comb 13 — กริดฝั่งขวา)
+        DrawDigitsAtCenters(p1, font, Digits(d.AuditFirmTaxId), FirmTaxIdCellCenters, 756.3, 16.9);
         // วันที่ในรายงานของผู้สอบบัญชี (field 46 วัน / 47 เดือน / 48 พ.ศ. — comb 2/2/4)
         if (d.AuditorSignDate is { } sd)
         {
@@ -76,6 +82,8 @@ public class Pnd50PdfService : IPnd50PdfService
         // ผู้ทำบัญชี: เลขผู้เสียภาษี (field 50, comb 13 — กริดเดียวกับ field 43) + ชื่อ (field 51)
         DrawDigitsAtCenters(p1, font, Digits(d.BookkeeperTaxId), AuditorTaxIdCellCenters, 800.0, 16.9);
         DrawText(p1, font, d.BookkeeperName, 217.7, 801.5, 175.7, 12.8, XStringFormats.CenterLeft);
+        // เลขผู้เสียภาษีสำนักงานทำบัญชี = โปรไฟล์สำนักงาน (field 52, comb 13 — กริดฝั่งขวา)
+        DrawDigitsAtCenters(p1, font, Digits(d.BookkeepingFirmTaxId), FirmTaxIdCellCenters, 800.5, 16.9);
 
         // ประเภทการยื่น: (1) ยื่นปกติ (Group1)
         DrawCheck(p1, font, 357.0, 166.0, 13.1, 13.7);

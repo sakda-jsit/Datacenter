@@ -351,6 +351,8 @@ function AuditorCard({ companyId, year }: { companyId: number; year: number }) {
   const [name, setName] = useState('')
   const [license, setLicense] = useState('')
   const [taxId, setTaxId] = useState('')
+  const [firmName, setFirmName] = useState('')
+  const [firmTaxId, setFirmTaxId] = useState('')
   const [bkName, setBkName] = useState('')
   const [bkTaxId, setBkTaxId] = useState('')
   const [signDate, setSignDate] = useState('')
@@ -360,6 +362,8 @@ function AuditorCard({ companyId, year }: { companyId: number; year: number }) {
     setName(data.auditorName ?? '')
     setLicense(data.auditorLicenseNo ?? '')
     setTaxId(data.auditorTaxId ?? '')
+    setFirmName(data.auditFirmName ?? '')
+    setFirmTaxId(data.auditFirmTaxId ?? '')
     setBkName(data.bookkeeperName ?? '')
     setBkTaxId(data.bookkeeperTaxId ?? '')
     setSignDate(data.signDate ? data.signDate.slice(0, 10) : '')
@@ -367,9 +371,11 @@ function AuditorCard({ companyId, year }: { companyId: number; year: number }) {
 
   const taxIdDigits = taxId.replace(/\D/g, '')
   const taxIdInvalid = taxIdDigits.length > 0 && taxIdDigits.length !== 13
+  const firmTaxIdDigits = firmTaxId.replace(/\D/g, '')
+  const firmTaxIdInvalid = firmTaxIdDigits.length > 0 && firmTaxIdDigits.length !== 13
   const bkTaxIdDigits = bkTaxId.replace(/\D/g, '')
   const bkTaxIdInvalid = bkTaxIdDigits.length > 0 && bkTaxIdDigits.length !== 13
-  const anyInvalid = taxIdInvalid || bkTaxIdInvalid
+  const anyInvalid = taxIdInvalid || firmTaxIdInvalid || bkTaxIdInvalid
 
   async function onSave() {
     if (!companyId || anyInvalid) return
@@ -380,6 +386,8 @@ function AuditorCard({ companyId, year }: { companyId: number; year: number }) {
         auditorName: name.trim(),
         auditorLicenseNo: license.trim() || null,
         auditorTaxId: taxIdDigits || null,
+        auditFirmName: firmName.trim() || null,
+        auditFirmTaxId: firmTaxIdDigits || null,
         bookkeeperName: bkName.trim() || null,
         bookkeeperTaxId: bkTaxIdDigits || null,
         signDate: signDate || null,
@@ -419,9 +427,24 @@ function AuditorCard({ companyId, year }: { companyId: number; year: number }) {
           <input type="date" value={signDate} onChange={(e) => setSignDate(e.target.value)}
             className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         </Field>
+        <Field label="ชื่อสำนักงานสอบบัญชี (สังกัดผู้สอบ)">
+          <input type="text" value={firmName} onChange={(e) => setFirmName(e.target.value)}
+            placeholder="เช่น บจก. ... สอบบัญชี" className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </Field>
+        <Field label="เลขประจำตัวผู้เสียภาษีอากรของสำนักงานสอบบัญชี (13 หลัก)">
+          <input type="text" value={firmTaxId} maxLength={17} onChange={(e) => setFirmTaxId(e.target.value)}
+            placeholder="0000000000000"
+            className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${firmTaxIdInvalid ? 'border-red-400' : 'border-gray-300'}`} />
+          {firmTaxIdInvalid && <p className="mt-1 text-xs text-red-500">ต้องมี 13 หลัก (ตอนนี้ {firmTaxIdDigits.length})</p>}
+        </Field>
       </div>
 
-      <p className="mb-2 mt-5 text-sm font-medium text-slate-600">ผู้ทำบัญชี</p>
+      <p className="mb-1 mt-5 text-sm font-medium text-slate-600">ผู้ทำบัญชี</p>
+      <p className="mb-2 text-xs text-gray-400">
+        เลขผู้เสียภาษี "สำนักงานทำบัญชี" ดึงจาก{' '}
+        <a href="/settings/office-profile" className="font-medium text-blue-600 hover:underline">โปรไฟล์สำนักงานบัญชี</a>
+        {' '}(ตั้งครั้งเดียวใช้ทุกบริษัท)
+      </p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="ชื่อผู้ทำบัญชี">
           <input type="text" value={bkName} onChange={(e) => setBkName(e.target.value)}

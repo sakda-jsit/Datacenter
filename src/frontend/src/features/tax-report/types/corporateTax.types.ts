@@ -87,6 +87,8 @@ export interface CompanyAuditor {
   auditorTaxId?: string | null
   bookkeeperName?: string | null
   bookkeeperTaxId?: string | null
+  auditFirmName?: string | null
+  auditFirmTaxId?: string | null
   signDate?: string | null
   note?: string | null
   exists: boolean
@@ -98,6 +100,8 @@ export interface CompanyAuditorInput {
   auditorTaxId?: string | null
   bookkeeperName?: string | null
   bookkeeperTaxId?: string | null
+  auditFirmName?: string | null
+  auditFirmTaxId?: string | null
   signDate?: string | null
   note?: string | null
 }

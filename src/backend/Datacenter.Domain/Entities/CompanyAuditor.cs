@@ -31,6 +31,12 @@ public class CompanyAuditor : BaseEntity
     /// <summary>เลขประจำตัวผู้เสียภาษีอากร (13 หลัก) ของผู้ทำบัญชี</summary>
     public string? BookkeeperTaxId { get; set; }
 
+    /// <summary>ชื่อสำนักงานสอบบัญชี (สังกัดของผู้สอบบัญชี — อาจต่างกันแต่ละบริษัท/ปี)</summary>
+    public string? AuditFirmName { get; set; }
+
+    /// <summary>เลขประจำตัวผู้เสียภาษีอากร (13 หลัก) ของสำนักงานสอบบัญชี</summary>
+    public string? AuditFirmTaxId { get; set; }
+
     /// <summary>วันที่ลงนามรับรองงบการเงิน</summary>
     public DateTime? SignDate { get; set; }
 
