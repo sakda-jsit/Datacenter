@@ -351,6 +351,8 @@ function AuditorCard({ companyId, year }: { companyId: number; year: number }) {
   const [name, setName] = useState('')
   const [license, setLicense] = useState('')
   const [taxId, setTaxId] = useState('')
+  const [bkName, setBkName] = useState('')
+  const [bkTaxId, setBkTaxId] = useState('')
   const [signDate, setSignDate] = useState('')
 
   useEffect(() => {
@@ -358,14 +360,19 @@ function AuditorCard({ companyId, year }: { companyId: number; year: number }) {
     setName(data.auditorName ?? '')
     setLicense(data.auditorLicenseNo ?? '')
     setTaxId(data.auditorTaxId ?? '')
+    setBkName(data.bookkeeperName ?? '')
+    setBkTaxId(data.bookkeeperTaxId ?? '')
     setSignDate(data.signDate ? data.signDate.slice(0, 10) : '')
   }, [data])
 
   const taxIdDigits = taxId.replace(/\D/g, '')
   const taxIdInvalid = taxIdDigits.length > 0 && taxIdDigits.length !== 13
+  const bkTaxIdDigits = bkTaxId.replace(/\D/g, '')
+  const bkTaxIdInvalid = bkTaxIdDigits.length > 0 && bkTaxIdDigits.length !== 13
+  const anyInvalid = taxIdInvalid || bkTaxIdInvalid
 
   async function onSave() {
-    if (!companyId || taxIdInvalid) return
+    if (!companyId || anyInvalid) return
     await save.mutateAsync({
       companyId,
       year,
@@ -373,6 +380,8 @@ function AuditorCard({ companyId, year }: { companyId: number; year: number }) {
         auditorName: name.trim(),
         auditorLicenseNo: license.trim() || null,
         auditorTaxId: taxIdDigits || null,
+        bookkeeperName: bkName.trim() || null,
+        bookkeeperTaxId: bkTaxIdDigits || null,
         signDate: signDate || null,
         note: null,
       },
@@ -382,13 +391,15 @@ function AuditorCard({ companyId, year }: { companyId: number; year: number }) {
   return (
     <Card className="mt-5 p-6">
       <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-slate-800">ผู้ตรวจสอบและรับรองบัญชี (รอบปี {year + 543})</h2>
+        <h2 className="text-base font-semibold text-slate-800">ผู้ลงนามรับผิดชอบงบ (รอบปี {year + 543})</h2>
         {data?.exists && <span className="text-xs text-gray-400">บันทึกไว้สำหรับปีนี้แล้ว</span>}
       </div>
       <p className="mb-4 text-xs text-gray-400">
-        ผูกกับรอบปีบัญชี — เปลี่ยนผู้สอบรายปีได้ (ปีอื่นไม่กระทบ). ใช้เติมส่วนผู้สอบในแบบ ภ.ง.ด.50.
-        ปล่อยชื่อว่างแล้วบันทึก = ล้างผู้สอบของปีนี้
+        ผูกกับรอบปีบัญชี — ผู้สอบบัญชีและผู้ทำบัญชีเปลี่ยนรายปีได้ (ปีอื่นไม่กระทบ). ใช้เติมในแบบ ภ.ง.ด.50.
+        ปล่อยชื่อทั้งสองว่างแล้วบันทึก = ล้างข้อมูลของปีนี้
       </p>
+
+      <p className="mb-2 text-sm font-medium text-slate-600">ผู้ตรวจสอบและรับรองบัญชี (ผู้สอบบัญชี)</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="ชื่อผู้ตรวจสอบและรับรองบัญชี">
           <input type="text" value={name} onChange={(e) => setName(e.target.value)}
@@ -409,10 +420,25 @@ function AuditorCard({ companyId, year }: { companyId: number; year: number }) {
             className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         </Field>
       </div>
-      <div className="mt-4 flex items-center gap-3">
-        <Button type="button" onClick={onSave} disabled={save.isPending || taxIdInvalid}
+
+      <p className="mb-2 mt-5 text-sm font-medium text-slate-600">ผู้ทำบัญชี</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="ชื่อผู้ทำบัญชี">
+          <input type="text" value={bkName} onChange={(e) => setBkName(e.target.value)}
+            placeholder="เช่น นาย/นางสาว ... " className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </Field>
+        <Field label="เลขประจำตัวผู้เสียภาษีอากรของผู้ทำบัญชี (13 หลัก)">
+          <input type="text" value={bkTaxId} maxLength={17} onChange={(e) => setBkTaxId(e.target.value)}
+            placeholder="0000000000000"
+            className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${bkTaxIdInvalid ? 'border-red-400' : 'border-gray-300'}`} />
+          {bkTaxIdInvalid && <p className="mt-1 text-xs text-red-500">ต้องมี 13 หลัก (ตอนนี้ {bkTaxIdDigits.length})</p>}
+        </Field>
+      </div>
+
+      <div className="mt-5 flex items-center gap-3">
+        <Button type="button" onClick={onSave} disabled={save.isPending || anyInvalid}
           className="bg-blue-600 text-white hover:bg-blue-700">
-          {save.isPending ? 'กำลังบันทึก...' : 'บันทึกผู้สอบบัญชี'}
+          {save.isPending ? 'กำลังบันทึก...' : 'บันทึกผู้ลงนาม'}
         </Button>
         {save.isSuccess && !save.isPending && <span className="text-sm text-green-600">บันทึกแล้ว ✓</span>}
         {save.isError && <span className="text-sm text-red-600">บันทึกไม่สำเร็จ — ตรวจข้อมูล</span>}

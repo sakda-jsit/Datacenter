@@ -78,13 +78,15 @@ export interface TaxComputationInput {
   lines: TaxAdjustmentLineInput[]
 }
 
-// ── ผู้ตรวจสอบและรับรองบัญชี (ต่อรอบปี — เปลี่ยนได้รายปี) ──
+// ── ผู้ลงนามรับผิดชอบงบ (ผู้สอบบัญชี + ผู้ทำบัญชี) ต่อรอบปี — เปลี่ยนได้รายปี ──
 export interface CompanyAuditor {
   clientCompanyId: number
   fiscalYear: number
   auditorName: string
   auditorLicenseNo?: string | null
   auditorTaxId?: string | null
+  bookkeeperName?: string | null
+  bookkeeperTaxId?: string | null
   signDate?: string | null
   note?: string | null
   exists: boolean
@@ -94,6 +96,8 @@ export interface CompanyAuditorInput {
   auditorName: string
   auditorLicenseNo?: string | null
   auditorTaxId?: string | null
+  bookkeeperName?: string | null
+  bookkeeperTaxId?: string | null
   signDate?: string | null
   note?: string | null
 }

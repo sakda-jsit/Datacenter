@@ -22,8 +22,9 @@ public class GetCompanyAuditorQueryHandler(IApplicationDbContext db)
                                    && x.FiscalYear == req.FiscalYear, ct);
 
         return e is null
-            ? new CompanyAuditorDto(req.ClientCompanyId, req.FiscalYear, "", null, null, null, null, Exists: false)
+            ? new CompanyAuditorDto(req.ClientCompanyId, req.FiscalYear, "", null, null, null, null, null, null, Exists: false)
             : new CompanyAuditorDto(e.ClientCompanyId, e.FiscalYear, e.AuditorName,
-                e.AuditorLicenseNo, e.AuditorTaxId, e.SignDate, e.Note, Exists: true);
+                e.AuditorLicenseNo, e.AuditorTaxId, e.BookkeeperName, e.BookkeeperTaxId,
+                e.SignDate, e.Note, Exists: true);
     }
 }

@@ -64,23 +64,27 @@ public record TaxAdjustmentLineInput(
     decimal Amount,
     int SortOrder);
 
-/// <summary>ผู้ตรวจสอบและรับรองบัญชีของ (บริษัท, ปีงบ) — ต่อรอบปี.</summary>
+/// <summary>ผู้ลงนามรับผิดชอบงบ (ผู้สอบบัญชี + ผู้ทำบัญชี) ของ (บริษัท, ปีงบ) — ต่อรอบปี.</summary>
 public record CompanyAuditorDto(
     int ClientCompanyId,
     int FiscalYear,
     string AuditorName,
     string? AuditorLicenseNo,
     string? AuditorTaxId,
+    string? BookkeeperName,
+    string? BookkeeperTaxId,
     DateTime? SignDate,
     string? Note,
-    /// <summary>มีบันทึกผู้สอบของปีนี้แล้วหรือไม่ (false = ค่าว่างเริ่มต้น)</summary>
+    /// <summary>มีบันทึกของปีนี้แล้วหรือไม่ (false = ค่าว่างเริ่มต้น)</summary>
     bool Exists);
 
-/// <summary>ข้อมูล input บันทึกผู้สอบบัญชีต่อรอบปี.</summary>
+/// <summary>ข้อมูล input บันทึกผู้สอบบัญชี + ผู้ทำบัญชีต่อรอบปี.</summary>
 public record CompanyAuditorInput(
     string AuditorName,
     string? AuditorLicenseNo,
     string? AuditorTaxId,
+    string? BookkeeperName,
+    string? BookkeeperTaxId,
     DateTime? SignDate,
     string? Note);
 
@@ -94,6 +98,8 @@ public record Pnd50FormData(
     string? AuditorName,
     string? AuditorLicenseNo,
     string? AuditorTaxId,
+    string? BookkeeperName,
+    string? BookkeeperTaxId,
     // ที่อยู่ (แยกช่อง — แยกจาก Address flat ด้วย ThaiAddressParser)
     string? HouseNo,
     string? Moo,

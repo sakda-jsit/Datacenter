@@ -26,8 +26,8 @@ public class SaveCompanyAuditorCommandHandler(
             .FirstOrDefaultAsync(x => x.ClientCompanyId == req.ClientCompanyId
                                    && x.FiscalYear == req.FiscalYear, ct);
 
-        // ชื่อว่าง = เคลียร์ผู้สอบของปีนี้
-        if (string.IsNullOrWhiteSpace(d.AuditorName))
+        // ทั้งชื่อผู้สอบและผู้ทำบัญชีว่าง = เคลียร์บันทึกของปีนี้
+        if (string.IsNullOrWhiteSpace(d.AuditorName) && string.IsNullOrWhiteSpace(d.BookkeeperName))
         {
             if (entity is not null)
             {
@@ -37,7 +37,7 @@ public class SaveCompanyAuditorCommandHandler(
                     entityId: $"{req.ClientCompanyId}:{req.FiscalYear}",
                     companyId: req.ClientCompanyId, cancellationToken: ct);
             }
-            return new CompanyAuditorDto(req.ClientCompanyId, req.FiscalYear, "", null, null, null, null, Exists: false);
+            return new CompanyAuditorDto(req.ClientCompanyId, req.FiscalYear, "", null, null, null, null, null, null, Exists: false);
         }
 
         bool isNew = entity is null;
@@ -57,10 +57,13 @@ public class SaveCompanyAuditorCommandHandler(
             entity.ModifiedAt = DateTime.UtcNow;
         }
 
-        entity.AuditorName = d.AuditorName.Trim();
+        entity.AuditorName = (d.AuditorName ?? "").Trim();
         entity.AuditorLicenseNo = string.IsNullOrWhiteSpace(d.AuditorLicenseNo) ? null : d.AuditorLicenseNo.Trim();
         entity.AuditorTaxId = string.IsNullOrWhiteSpace(d.AuditorTaxId)
             ? null : new string(d.AuditorTaxId.Where(char.IsDigit).ToArray());
+        entity.BookkeeperName = string.IsNullOrWhiteSpace(d.BookkeeperName) ? null : d.BookkeeperName.Trim();
+        entity.BookkeeperTaxId = string.IsNullOrWhiteSpace(d.BookkeeperTaxId)
+            ? null : new string(d.BookkeeperTaxId.Where(char.IsDigit).ToArray());
         entity.SignDate = d.SignDate;
         entity.Note = string.IsNullOrWhiteSpace(d.Note) ? null : d.Note.Trim();
 
@@ -68,11 +71,12 @@ public class SaveCompanyAuditorCommandHandler(
 
         await audit.LogAsync(isNew ? "Create" : "Update", "CompanyAuditor",
             entityId: $"{req.ClientCompanyId}:{req.FiscalYear}",
-            afterValue: $"{entity.AuditorName} / ทะเบียน {entity.AuditorLicenseNo}",
+            afterValue: $"ผู้สอบ {entity.AuditorName} (ทะเบียน {entity.AuditorLicenseNo}) / ผู้ทำบัญชี {entity.BookkeeperName}",
             companyId: req.ClientCompanyId, cancellationToken: ct);
 
         return new CompanyAuditorDto(entity.ClientCompanyId, entity.FiscalYear, entity.AuditorName,
-            entity.AuditorLicenseNo, entity.AuditorTaxId, entity.SignDate, entity.Note, Exists: true);
+            entity.AuditorLicenseNo, entity.AuditorTaxId, entity.BookkeeperName, entity.BookkeeperTaxId,
+            entity.SignDate, entity.Note, Exists: true);
     }
 }
 
@@ -85,6 +89,10 @@ public class CompanyAuditorInputValidator : AbstractValidator<CompanyAuditorInpu
         RuleFor(x => x.AuditorTaxId)
             .Must(v => string.IsNullOrWhiteSpace(v) || v.Count(char.IsDigit) == 13)
             .WithMessage("เลขประจำตัวผู้เสียภาษีอากรของผู้สอบบัญชีต้องมี 13 หลัก");
+        RuleFor(x => x.BookkeeperName).MaximumLength(200);
+        RuleFor(x => x.BookkeeperTaxId)
+            .Must(v => string.IsNullOrWhiteSpace(v) || v.Count(char.IsDigit) == 13)
+            .WithMessage("เลขประจำตัวผู้เสียภาษีอากรของผู้ทำบัญชีต้องมี 13 หลัก");
     }
 }
 
