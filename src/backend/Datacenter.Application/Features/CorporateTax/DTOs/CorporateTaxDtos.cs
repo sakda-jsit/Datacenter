@@ -146,9 +146,10 @@ public record Pnd50ScheduleCell(int Page, double X, double Y, double W, decimal 
 
 /// <summary>ข้อมูลหน้า 3 (รายการที่ 3) — reconciliation กำไรบัญชี → เงินได้สุทธิเพื่อเสียภาษี.</summary>
 public record Pnd50Page3Data(
-    decimal Revenue,             // 1. รายได้โดยตรง
+    decimal Revenue,             // 1. รายได้โดยตรง (I1+I2 = ขาย+บริการ)
     decimal Cogs,                // 2. ต้นทุนขาย
-    decimal GrossProfit,         // 3. กำไร(ขาดทุน)ขั้นต้น
+    decimal GrossProfit,         // 3. กำไร(ขาดทุน)ขั้นต้น (= Revenue − Cogs)
+    decimal OtherIncome,         // 4. รายได้อื่น (I3+I4)
     decimal Sga,                 // 8. รายจ่ายขายและบริหาร (รวมต้นทุนการเงิน)
     decimal NetAccountingProfit, // 9. กำไร(ขาดทุน)สุทธิตามบัญชี (= ก่อนภาษี)
     decimal AddBack,             // 11. บวก รายจ่ายต้องห้าม

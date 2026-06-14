@@ -37,13 +37,17 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             catch { /* ไม่มีงบ */ }
         }
 
-        // หน้า 3 (รายการที่ 3): reconcile กับ r
+        // หน้า 3 (รายการที่ 3): reconcile กับ r — แยกรายได้โดยตรง (I1+I2) กับ รายได้อื่น (I3+I4) ตามแบบจริง
         Pnd50Page3Data? page3 = null;
         if (pl is not null)
         {
+            decimal Inc(params string[] codes) => pl.IncomeLines.Where(l => codes.Contains(l.RefCode)).Sum(l => l.Amount);
+            var operatingRev = Inc("I1", "I2");
+            var otherIncome = pl.TotalIncome - operatingRev; // ที่เหลือ (I3/I4/อื่น) = รายได้อื่น
             var sga = pl.TotalExpenses - pl.CostOfGoods.Amount + Math.Abs(pl.FinanceCost.Amount);
             page3 = new Pnd50Page3Data(
-                Revenue: pl.TotalIncome, Cogs: pl.CostOfGoods.Amount, GrossProfit: pl.GrossProfit, Sga: sga,
+                Revenue: operatingRev, Cogs: pl.CostOfGoods.Amount,
+                GrossProfit: operatingRev - pl.CostOfGoods.Amount, OtherIncome: otherIncome, Sga: sga,
                 NetAccountingProfit: r.NetProfitBeforeTax, AddBack: r.AddBackTotal, Deduction: r.DeductionTotal,
                 AdjustedProfit: r.AdjustedProfit, LossUsed: r.LossUsed, NetTaxableIncome: r.NetTaxableIncome);
         }

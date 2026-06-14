@@ -146,8 +146,9 @@ public class Pnd50PdfService : IPnd50PdfService
             Row(97.6, p3d.Revenue);              // 1. รายได้โดยตรง
             Row(123.0, p3d.Cogs);                // 2. หัก ต้นทุนขาย
             Row(139.8, p3d.GrossProfit);         // 3. กำไร(ขาดทุน)ขั้นต้น
-            Row(174.2, p3d.GrossProfit);         // 5. รวม (3+4)
-            Row(209.3, p3d.GrossProfit);         // 7. รวม (5-6)
+            Row(157.4, p3d.OtherIncome);         // 4. บวก รายได้อื่น
+            Row(174.2, p3d.GrossProfit + p3d.OtherIncome);  // 5. รวม (3+4)
+            Row(209.3, p3d.GrossProfit + p3d.OtherIncome);  // 7. รวม (5-6)
             Row(226.2, p3d.Sga);                 // 8. หัก รายจ่ายขายและบริหาร
             Row(243.7, p3d.NetAccountingProfit); // 9. กำไร(ขาดทุน)สุทธิตามบัญชี
             Row(288.2, p3d.AddBack);             // 11. บวก รายจ่ายต้องห้าม
