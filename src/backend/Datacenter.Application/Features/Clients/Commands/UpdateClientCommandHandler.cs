@@ -25,6 +25,23 @@ public class UpdateClientCommandHandler(IApplicationDbContext db, ICurrentUserSe
         client.SsoBranchCode = request.SsoBranchCode?.Trim();
         client.Phone = request.Phone?.Trim();
         client.PostalCode = request.PostalCode?.Trim();
+
+        // ที่อยู่แยกช่อง (แก้ได้เอง)
+        if (request.AddressDetail is { } a)
+        {
+            client.AddrBuilding = a.Building?.Trim();
+            client.AddrRoomNo = a.RoomNo?.Trim();
+            client.AddrFloor = a.Floor?.Trim();
+            client.AddrVillage = a.Village?.Trim();
+            client.AddrHouseNo = a.HouseNo?.Trim();
+            client.AddrMoo = a.Moo?.Trim();
+            client.AddrSoi = a.Soi?.Trim();
+            client.AddrRoad = a.Road?.Trim();
+            client.AddrSubDistrict = a.SubDistrict?.Trim();
+            client.AddrDistrict = a.District?.Trim();
+            client.AddrProvince = a.Province?.Trim();
+        }
+
         client.ModifiedAt = DateTime.UtcNow;
         client.ModifiedBy = currentUser.Username;
 

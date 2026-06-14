@@ -112,6 +112,26 @@ public static class DbInitializer
             }
         }
 
+        // ── Backfill ที่อยู่แยกช่องจาก Address flat (ครั้งเดียว สำหรับบริษัทที่ import ก่อนมี column) ──
+        var needAddr = await db.ClientCompanies
+            .Where(c => c.Address != null && c.Address != ""
+                     && c.AddrHouseNo == null && c.AddrMoo == null && c.AddrRoad == null
+                     && c.AddrSubDistrict == null && c.AddrDistrict == null && c.AddrProvince == null)
+            .ToListAsync();
+        if (needAddr.Count > 0)
+        {
+            foreach (var c in needAddr)
+            {
+                var a = Datacenter.Application.Features.CorporateTax.Services.ThaiAddressParser.Parse(c.Address);
+                c.AddrHouseNo = a.HouseNo; c.AddrMoo = a.Moo; c.AddrSoi = a.Soi; c.AddrRoad = a.Road;
+                c.AddrSubDistrict = a.SubDistrict; c.AddrDistrict = a.District; c.AddrProvince = a.Province;
+                if (string.IsNullOrWhiteSpace(c.PostalCode) && !string.IsNullOrWhiteSpace(a.PostalCode))
+                    c.PostalCode = a.PostalCode;
+            }
+            await db.SaveChangesAsync();
+            logger.LogInformation("Backfilled structured address for {Count} companies.", needAddr.Count);
+        }
+
         // ── Seed admin user ───────────────────────────────────────────────────
         if (!await db.Users.AnyAsync(u => u.Username == "admin"))
         {

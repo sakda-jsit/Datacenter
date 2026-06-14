@@ -29,22 +29,27 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
         var tax = await sender.Send(new GetTaxComputationQuery(req.ClientCompanyId, req.FiscalYear), ct);
         var r = tax.Result;
 
-        var addr = Services.ThaiAddressParser.Parse(company.Address);
         var isHeadOffice = string.IsNullOrWhiteSpace(company.BranchCode)
             || company.BranchCode.All(c => c == '0');
+
+        // ใช้ที่อยู่แยกช่องที่บันทึกไว้ (แก้ได้); ถ้ายังว่างทั้งหมด fallback แยกจาก Address flat
+        bool hasStructured = new[] { company.AddrHouseNo, company.AddrMoo, company.AddrRoad,
+            company.AddrSubDistrict, company.AddrDistrict, company.AddrProvince }
+            .Any(v => !string.IsNullOrWhiteSpace(v));
+        var p = hasStructured ? null : Services.ThaiAddressParser.Parse(company.Address);
 
         var data = new Pnd50FormData(
             CompanyName: string.IsNullOrWhiteSpace(company.LegalName) ? company.Name : company.LegalName,
             TaxId: company.TaxId,
             IsHeadOffice: isHeadOffice,
-            HouseNo: addr.HouseNo,
-            Moo: addr.Moo,
-            Soi: addr.Soi,
-            Road: addr.Road,
-            SubDistrict: addr.SubDistrict,
-            District: addr.District,
-            Province: addr.Province,
-            PostalCode: addr.PostalCode ?? company.PostalCode,
+            HouseNo: company.AddrHouseNo ?? p?.HouseNo,
+            Moo: company.AddrMoo ?? p?.Moo,
+            Soi: company.AddrSoi ?? p?.Soi,
+            Road: company.AddrRoad ?? p?.Road,
+            SubDistrict: company.AddrSubDistrict ?? p?.SubDistrict,
+            District: company.AddrDistrict ?? p?.District,
+            Province: company.AddrProvince ?? p?.Province,
+            PostalCode: company.PostalCode ?? p?.PostalCode,
             Phone: company.Phone,
             PeriodStart: periodStart,
             PeriodEnd: periodEnd,

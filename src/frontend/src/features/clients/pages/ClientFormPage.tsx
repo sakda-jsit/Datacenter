@@ -12,7 +12,14 @@ const MONTHS = [
   'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม',
 ]
 
-const emptyForm: CreateClientRequest = {
+// ช่องที่อยู่แยก (ใช้ตอนแก้ไข — สำหรับฟอร์มราชการ เช่น ภ.ง.ด.50)
+type FormState = CreateClientRequest & {
+  addrBuilding: string; addrRoomNo: string; addrFloor: string; addrVillage: string
+  addrHouseNo: string; addrMoo: string; addrSoi: string; addrRoad: string
+  addrSubDistrict: string; addrDistrict: string; addrProvince: string
+}
+
+const emptyForm: FormState = {
   code: '',
   name: '',
   taxId: '',
@@ -23,6 +30,9 @@ const emptyForm: CreateClientRequest = {
   ssoBranchCode: '000000',
   phone: '',
   postalCode: '',
+  addrBuilding: '', addrRoomNo: '', addrFloor: '', addrVillage: '',
+  addrHouseNo: '', addrMoo: '', addrSoi: '', addrRoad: '',
+  addrSubDistrict: '', addrDistrict: '', addrProvince: '',
 }
 
 export default function ClientFormPage() {
@@ -50,6 +60,17 @@ export default function ClientFormPage() {
         ssoBranchCode: existing.ssoBranchCode ?? '000000',
         phone: existing.phone ?? '',
         postalCode: existing.postalCode ?? '',
+        addrBuilding: existing.addressDetail?.building ?? '',
+        addrRoomNo: existing.addressDetail?.roomNo ?? '',
+        addrFloor: existing.addressDetail?.floor ?? '',
+        addrVillage: existing.addressDetail?.village ?? '',
+        addrHouseNo: existing.addressDetail?.houseNo ?? '',
+        addrMoo: existing.addressDetail?.moo ?? '',
+        addrSoi: existing.addressDetail?.soi ?? '',
+        addrRoad: existing.addressDetail?.road ?? '',
+        addrSubDistrict: existing.addressDetail?.subDistrict ?? '',
+        addrDistrict: existing.addressDetail?.district ?? '',
+        addrProvince: existing.addressDetail?.province ?? '',
       })
     }
   }, [existing])
@@ -72,6 +93,19 @@ export default function ClientFormPage() {
             ssoBranchCode: values.ssoBranchCode || undefined,
             phone: values.phone || undefined,
             postalCode: values.postalCode || undefined,
+            addressDetail: {
+              building: values.addrBuilding || undefined,
+              roomNo: values.addrRoomNo || undefined,
+              floor: values.addrFloor || undefined,
+              village: values.addrVillage || undefined,
+              houseNo: values.addrHouseNo || undefined,
+              moo: values.addrMoo || undefined,
+              soi: values.addrSoi || undefined,
+              road: values.addrRoad || undefined,
+              subDistrict: values.addrSubDistrict || undefined,
+              district: values.addrDistrict || undefined,
+              province: values.addrProvince || undefined,
+            },
           },
         })
       } else {
@@ -185,6 +219,30 @@ export default function ClientFormPage() {
               </Field>
             </div>
           </div>
+        )}
+
+        {isEdit && (
+          <details className="rounded-lg border border-slate-100 bg-slate-50/50 p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+              ที่อยู่แยกช่อง (สำหรับฟอร์มราชการ เช่น ภ.ง.ด.50)
+            </summary>
+            <p className="mt-1 text-xs text-gray-400">
+              เติมอัตโนมัติจากที่อยู่ตอนนำเข้า — แก้ไขให้ตรงกับทะเบียนได้ (ใช้รหัสไปรษณีย์ช่องด้านบน)
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <Field label="อาคาร"><input name="addrBuilding" value={values.addrBuilding} onChange={handleChange} className={inputCls(false)} /></Field>
+              <Field label="ห้องเลขที่"><input name="addrRoomNo" value={values.addrRoomNo} onChange={handleChange} className={inputCls(false)} /></Field>
+              <Field label="ชั้นที่"><input name="addrFloor" value={values.addrFloor} onChange={handleChange} className={inputCls(false)} /></Field>
+              <Field label="หมู่บ้าน"><input name="addrVillage" value={values.addrVillage} onChange={handleChange} className={inputCls(false)} /></Field>
+              <Field label="เลขที่"><input name="addrHouseNo" value={values.addrHouseNo} onChange={handleChange} className={inputCls(false)} /></Field>
+              <Field label="หมู่ที่"><input name="addrMoo" value={values.addrMoo} onChange={handleChange} className={inputCls(false)} /></Field>
+              <Field label="ตรอก/ซอย"><input name="addrSoi" value={values.addrSoi} onChange={handleChange} className={inputCls(false)} /></Field>
+              <Field label="ถนน"><input name="addrRoad" value={values.addrRoad} onChange={handleChange} className={inputCls(false)} /></Field>
+              <Field label="ตำบล/แขวง"><input name="addrSubDistrict" value={values.addrSubDistrict} onChange={handleChange} className={inputCls(false)} /></Field>
+              <Field label="อำเภอ/เขต"><input name="addrDistrict" value={values.addrDistrict} onChange={handleChange} className={inputCls(false)} /></Field>
+              <Field label="จังหวัด"><input name="addrProvince" value={values.addrProvince} onChange={handleChange} className={inputCls(false)} /></Field>
+            </div>
+          </details>
         )}
 
         <div className="flex gap-3 pt-2">

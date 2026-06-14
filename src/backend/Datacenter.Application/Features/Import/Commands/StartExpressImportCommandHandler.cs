@@ -439,11 +439,34 @@ public class StartExpressImportCommandHandler(
             // backfill LegalName ถ้ายังว่าง (เช่น ข้อมูลเก่าก่อนมี column)
             if (string.IsNullOrWhiteSpace(company.LegalName))
                 company.LegalName = expressName;
+
+            // เติมที่อยู่แยกช่องจาก Address (ครั้งแรกที่ยังว่าง — ไม่ทับที่แก้เอง)
+            FillStructuredAddressIfEmpty(company);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // อ่าน ISINFO ไม่ได้ — ข้าม ไม่ให้ import ล้ม
         }
+    }
+
+    /// <summary>แยกที่อยู่ flat → ช่อง Addr* เมื่อยังไม่มีค่า (ผู้ใช้แก้เองแล้วจะไม่ถูกทับ)</summary>
+    internal static void FillStructuredAddressIfEmpty(Domain.Entities.ClientCompany company)
+    {
+        bool hasStructured = new[] { company.AddrHouseNo, company.AddrMoo, company.AddrRoad,
+            company.AddrSubDistrict, company.AddrDistrict, company.AddrProvince }
+            .Any(v => !string.IsNullOrWhiteSpace(v));
+        if (hasStructured || string.IsNullOrWhiteSpace(company.Address)) return;
+
+        var a = CorporateTax.Services.ThaiAddressParser.Parse(company.Address);
+        company.AddrHouseNo = a.HouseNo;
+        company.AddrMoo = a.Moo;
+        company.AddrSoi = a.Soi;
+        company.AddrRoad = a.Road;
+        company.AddrSubDistrict = a.SubDistrict;
+        company.AddrDistrict = a.District;
+        company.AddrProvince = a.Province;
+        if (string.IsNullOrWhiteSpace(company.PostalCode) && !string.IsNullOrWhiteSpace(a.PostalCode))
+            company.PostalCode = a.PostalCode;
     }
 
     /// <summary>

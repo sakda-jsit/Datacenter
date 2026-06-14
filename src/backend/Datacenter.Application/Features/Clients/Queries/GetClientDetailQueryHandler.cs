@@ -17,6 +17,8 @@ public class GetClientDetailQueryHandler(IApplicationDbContext db)
             ?? throw new NotFoundException(nameof(ClientDetailDto), request.Id);
 
         return new ClientDetailDto(c.Id, c.Code, c.Name, c.LegalName, c.TaxId, c.BranchCode, c.Address, c.FiscalYearStartMonth, c.IsActive,
-            c.SsoAccountNo, c.SsoBranchCode, c.Phone, c.PostalCode);
+            c.SsoAccountNo, c.SsoBranchCode, c.Phone, c.PostalCode,
+            new ClientAddressDto(c.AddrBuilding, c.AddrRoomNo, c.AddrFloor, c.AddrVillage, c.AddrHouseNo,
+                c.AddrMoo, c.AddrSoi, c.AddrRoad, c.AddrSubDistrict, c.AddrDistrict, c.AddrProvince));
     }
 }

@@ -1,4 +1,5 @@
 using Datacenter.Application.Common.Security;
+using Datacenter.Application.Features.Clients.DTOs;
 using MediatR;
 
 namespace Datacenter.Application.Features.Clients.Commands;
@@ -13,7 +14,8 @@ public record UpdateClientCommand(
     string? SsoAccountNo = null,
     string? SsoBranchCode = null,
     string? Phone = null,
-    string? PostalCode = null)
+    string? PostalCode = null,
+    ClientAddressDto? AddressDetail = null)
     : IRequest, IRequireCompanyAccess
 {
     public int ClientCompanyId => Id;

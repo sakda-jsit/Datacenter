@@ -6,6 +6,20 @@ export interface ClientListDto {
   isActive: boolean
 }
 
+export interface ClientAddress {
+  building?: string | null
+  roomNo?: string | null
+  floor?: string | null
+  village?: string | null
+  houseNo?: string | null
+  moo?: string | null
+  soi?: string | null
+  road?: string | null
+  subDistrict?: string | null
+  district?: string | null
+  province?: string | null
+}
+
 export interface ClientDetailDto extends ClientListDto {
   legalName: string   // ชื่อทางการ (แก้ได้/ใช้ออกงบ); name = ชื่อจาก Express (อ้างอิง)
   branchCode: string
@@ -15,6 +29,7 @@ export interface ClientDetailDto extends ClientListDto {
   ssoBranchCode?: string | null
   phone?: string | null
   postalCode?: string | null
+  addressDetail?: ClientAddress | null
 }
 
 export interface CreateClientRequest {
@@ -41,4 +56,5 @@ export interface UpdateClientRequest {
   ssoBranchCode?: string
   phone?: string
   postalCode?: string
+  addressDetail?: ClientAddress
 }
