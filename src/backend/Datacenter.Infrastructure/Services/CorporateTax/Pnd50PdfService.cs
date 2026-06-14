@@ -1,6 +1,7 @@
 using System.Globalization;
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Features.CorporateTax.DTOs;
+using Datacenter.Domain.Enums;
 using PdfSharpCore.Drawing;
 using PdfSharpCore.Fonts;
 using PdfSharpCore.Pdf;
@@ -105,6 +106,32 @@ public class Pnd50PdfService : IPnd50PdfService
         DrawMoney(p2, font, d.TotalCredit, 461.9, 425.7, 101.1, 17.5);     // Text14 รวมรายการหัก
         DrawMoney(p2, font, Math.Abs(d.NetPayable), 461.8, 443.6, 101.1, 17.5); // Text15 คงเหลือ
         DrawMoney(p2, font, Math.Abs(d.NetPayable), 461.7, 479.6, 101.1, 17.5); // Text17 รวมสุทธิ
+
+        // ── หน้า 2: ติ๊ก checkbox ตามผลคำนวณ ──
+        // รายการ 2: เงินได้ที่ต้องเสียภาษี — (1) กำไรสุทธิ / (2) ขาดทุนสุทธิ (Group4)
+        if (d.IsNetProfit)
+            DrawCheck(p2, font, 32.8, 232.3, 13.1, 13.7);   // (1) กำไรสุทธิที่ต้องเสียภาษี
+        else
+            DrawCheck(p2, font, 171.6, 232.3, 13.2, 13.7);  // (2) ขาดทุนสุทธิ
+
+        // การคำนวณภาษี: SME = ลดอัตราภาษี (Group5 ข้อ 1) + ประเภท (1.2) ทุนชำระแล้ว ≤ 5 ล้าน (Group6)
+        if (d.RateScheme == TaxRateScheme.SmeTiered)
+        {
+            DrawCheck(p2, font, 32.8, 286.4, 13.7, 13.7);   // (1) กรณีลดอัตราภาษี
+            DrawCheck(p2, font, 174.9, 286.4, 13.7, 14.2);  // (1.2) SME
+        }
+
+        // คงเหลือภาษี (Group7) + รวมภาษี (Group8): ชำระเพิ่มเติม (≥0) / ชำระไว้เกิน (<0)
+        if (d.NetPayable >= 0)
+        {
+            DrawCheck(p2, font, 97.8, 449.3, 13.7, 13.1);   // คงเหลือ — ชำระเพิ่มเติม
+            DrawCheck(p2, font, 97.8, 484.3, 13.2, 14.2);   // รวม — ชำระเพิ่มเติม
+        }
+        else
+        {
+            DrawCheck(p2, font, 171.6, 449.3, 13.2, 12.6);  // คงเหลือ — ชำระไว้เกิน
+            DrawCheck(p2, font, 171.6, 484.3, 13.7, 13.7);  // รวม — ชำระไว้เกิน
+        }
 
         using var output = new MemoryStream();
         doc.Save(output);

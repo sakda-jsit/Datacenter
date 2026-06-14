@@ -82,7 +82,9 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             TaxAmount: r.TaxAmount,
             WhtCredit: r.WhtCredit,
             TotalCredit: r.WhtCredit,
-            NetPayable: r.NetPayable);
+            NetPayable: r.NetPayable,
+            RateScheme: tax.RateScheme,
+            IsNetProfit: r.AdjustedProfit >= 0);
 
         return svc.Build(data);
     }

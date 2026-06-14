@@ -130,4 +130,7 @@ public record Pnd50FormData(
     decimal TaxAmount,          // ภาษีที่คำนวณได้
     decimal WhtCredit,          // ภาษีหัก ณ ที่จ่าย
     decimal TotalCredit,        // รวมรายการหัก
-    decimal NetPayable);        // คงเหลือชำระเพิ่ม (>0) / ชำระเกิน (&lt;0)
+    decimal NetPayable,         // คงเหลือชำระเพิ่ม (>0) / ชำระเกิน (&lt;0)
+    // สำหรับติ๊ก checkbox หน้า 2
+    TaxRateScheme RateScheme,   // อัตราภาษี (SME → ติ๊กกรณีลดอัตรา 1.2)
+    bool IsNetProfit);          // กำไรสุทธิ (true) / ขาดทุนสุทธิ (false)
