@@ -72,7 +72,7 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
                         if (code is not null && sums.ContainsKey(code)) sums[code] += Math.Abs(a.NetBalance);
                     }
                 var total = sums.Where(kv => lines8.First(l => l.Code == kv.Key) is { IsTotal: false }).Sum(kv => kv.Value);
-                const double col2Offset = 108.3; // ระยะจากคอลัมน์ "รวม" ไป "เสียภาษี" (รายการ 8)
+                const double col2Offset = 107.3; // ระยะจากคอลัมน์ "รวม" ไป "เสียภาษี" (รายการ 7 ฟอร์มใหม่)
                 foreach (var l in lines8)
                 {
                     var v = l.IsTotal ? total : sums[l.Code];

@@ -182,34 +182,42 @@ public static class DbInitializer
             logger.LogInformation("Backfilled {Count} legacy CompanyAuditor rows -> Auditor/Bookkeeper master.", legacy.Count);
         }
 
-        // ── Seed taxonomy บรรทัด CIT50 รายการที่ 8 (รายจ่ายขายและบริหาร) — idempotent ──
+        // ── Seed/upsert taxonomy บรรทัด CIT50 รายการที่ 7 รายจ่ายขายและบริหาร (ฟอร์มใหม่ 2568, หน้า 5) ──
         var cit50Seed = new (string Code, string Label, int Sort, double Y, bool Catch, bool Total)[]
         {
-            ("R8_EMP", "รายจ่ายเกี่ยวกับพนักงาน", 1, 56.4, false, false),
-            ("R8_DIR", "ค่าตอบแทนกรรมการ", 2, 75.1, false, false),
-            ("R8_FREIGHT", "ค่าระวาง ค่าขนส่ง", 5, 131.8, false, false),
-            ("R8_RENT", "ค่าเช่า", 6, 150.8, false, false),
-            ("R8_ENT", "ค่ารับรอง", 8, 188.2, false, false),
-            ("R8_SBT", "ค่าภาษีธุรกิจเฉพาะ", 10, 226.2, false, false),
-            ("R8_TAXOTHER", "ค่าภาษีอากรอื่นๆ", 11, 245.6, false, false),
-            ("R8_FIN", "ต้นทุนทางการเงิน", 12, 264.2, false, false),
-            ("R8_BOOK", "ค่าทำบัญชี", 13, 282.9, false, false),
-            ("R8_AUDIT", "ค่าสอบบัญชี", 14, 302.4, false, false),
-            ("R8_CONSULT", "ค่าธรรมเนียมการให้คำปรึกษา", 25, 530.3, false, false),
-            ("R8_FEEOTHER", "ค่าธรรมเนียมอื่นๆ", 26, 550.0, false, false),
-            ("R8_BADDEBT", "หนี้สูญ", 27, 568.7, false, false),
-            ("R8_DEPREC", "ค่าสึกหรอและค่าเสื่อมราคา", 28, 587.2, false, false),
-            ("R8_OTHER", "รายจ่ายอื่น (1.-29.)", 29, 606.7, true, false),
-            ("R8_TOTAL", "รวม 1. ถึง 30.", 30, 625.0, false, true),
+            ("R8_EMP", "รายจ่ายเกี่ยวกับพนักงาน", 1, 56.9, false, false),
+            ("R8_DIR", "ค่าตอบแทนกรรมการ", 2, 76.1, false, false),
+            ("R8_FREIGHT", "ค่าระวาง ค่าขนส่ง", 5, 133.5, false, false),
+            ("R8_RENT", "ค่าเช่า", 6, 151.9, false, false),
+            ("R8_ENT", "ค่ารับรอง", 8, 189.0, false, false),
+            ("R8_SBT", "ค่าภาษีธุรกิจเฉพาะ", 10, 227.4, false, false),
+            ("R8_TAXOTHER", "ค่าภาษีอากรอื่นๆ", 11, 246.0, false, false),
+            ("R8_FIN", "ต้นทุนทางการเงิน", 12, 265.2, false, false),
+            ("R8_BOOK", "ค่าทำบัญชี", 13, 284.4, false, false),
+            ("R8_AUDIT", "ค่าสอบบัญชี", 14, 303.3, false, false),
+            ("R8_CONSULT", "ค่าธรรมเนียมการให้คำปรึกษา", 25, 380.1, false, false),
+            ("R8_FEEOTHER", "ค่าธรรมเนียมอื่นๆ", 26, 398.9, false, false),
+            ("R8_BADDEBT", "หนี้สูญ", 27, 417.6, false, false),
+            ("R8_DEPREC", "ค่าสึกหรอและค่าเสื่อมราคา", 28, 436.9, false, false),
+            ("R8_OTHER", "รายจ่ายอื่น", 29, 455.1, true, false),
+            ("R8_TOTAL", "รวม", 30, 493.1, false, true),
         };
-        var existingCodes = await db.Cit50ScheduleLines.Select(x => x.Code).ToListAsync();
-        foreach (var s in cit50Seed.Where(s => !existingCodes.Contains(s.Code)))
-            db.Cit50ScheduleLines.Add(new Cit50ScheduleLine
-            {
-                Code = s.Code, ScheduleNo = 8, Label = s.Label, SortOrder = s.Sort,
-                PdfPage = 4, PdfX = 462.7, PdfY = s.Y, PdfW = 101.1,
-                IsCatchAll = s.Catch, IsTotal = s.Total, CreatedBy = "system",
-            });
+        var cit50Existing = await db.Cit50ScheduleLines.ToDictionaryAsync(x => x.Code);
+        foreach (var s in cit50Seed)
+        {
+            if (cit50Existing.TryGetValue(s.Code, out var ex))
+            {   // upsert พิกัด (ฟอร์มเปลี่ยน → อัปเดต)
+                ex.Label = s.Label; ex.SortOrder = s.Sort; ex.PdfPage = 4; ex.PdfX = 462.1;
+                ex.PdfY = s.Y; ex.PdfW = 105.0; ex.IsCatchAll = s.Catch; ex.IsTotal = s.Total;
+            }
+            else
+                db.Cit50ScheduleLines.Add(new Cit50ScheduleLine
+                {
+                    Code = s.Code, ScheduleNo = 8, Label = s.Label, SortOrder = s.Sort,
+                    PdfPage = 4, PdfX = 462.1, PdfY = s.Y, PdfW = 105.0,
+                    IsCatchAll = s.Catch, IsTotal = s.Total, CreatedBy = "system",
+                });
+        }
         if (db.ChangeTracker.HasChanges()) await db.SaveChangesAsync();
 
         // ── Seed admin user ───────────────────────────────────────────────────

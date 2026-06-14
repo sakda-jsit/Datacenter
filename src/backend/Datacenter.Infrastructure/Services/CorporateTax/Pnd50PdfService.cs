@@ -45,92 +45,81 @@ public class Pnd50PdfService : IPnd50PdfService
         var p1 = XGraphics.FromPdfPage(doc.Pages[0], XGraphicsPdfPageOptions.Append);
         var p2 = XGraphics.FromPdfPage(doc.Pages[1], XGraphicsPdfPageOptions.Append);
 
-        // ── หน้า 1: หัวแบบ ──
-        // เลขประจำตัวผู้เสียภาษี — วางแต่ละหลักกึ่งกลางช่องจริง (ช่องไม่เท่ากัน มีช่องคั่นกลุ่ม X-XXXX-XXXXX-XX-X)
-        DrawDigitsAtCenters(p1, font, Digits(d.TaxId), TaxIdCellCenters, 88.6, 16.9);
-        // ชื่อบริษัท
-        DrawText(p1, font, d.CompanyName, 42, 115.9, 291, 12.6, XStringFormats.CenterLeft);
+        // ── หน้า 1: หัวแบบ (ฟอร์มฉบับใหม่ 2568) ──
+        DrawDigitsAtCenters(p1, font, Digits(d.TaxId), TaxIdCellCenters, 86.8, 16.0);             // f1 เลขผู้เสียภาษี
+        DrawText(p1, font, d.CompanyName, 41.2, 113.1, 290, 13.0, XStringFormats.CenterLeft);     // f2 ชื่อ
         // ที่ตั้งสำนักงาน (แยกช่อง)
-        DrawText(p1, font, d.HouseNo, 150.5, 152.4, 37.8, 10.6, XStringFormats.CenterLeft);       // f7 เลขที่
-        DrawText(p1, font, d.Moo, 206.6, 151.3, 12.1, 10.6, XStringFormats.Center);               // f8 หมู่ที่
-        DrawText(p1, font, d.Soi, 256.2, 149.2, 77.8, 12.8, XStringFormats.CenterLeft);           // f9 ตรอก/ซอย
-        DrawText(p1, font, d.Road, 45.4, 164.9, 124.8, 12.8, XStringFormats.CenterLeft);          // f10 ถนน
-        DrawText(p1, font, d.SubDistrict, 214.1, 164.9, 119.9, 12.8, XStringFormats.CenterLeft);  // f11 ตำบล/แขวง
-        DrawText(p1, font, d.District, 69.4, 180.5, 119.9, 12.8, XStringFormats.CenterLeft);       // f12 อำเภอ/เขต
-        DrawText(p1, font, d.Province, 214.7, 180.5, 119.9, 12.8, XStringFormats.CenterLeft);     // f13 จังหวัด
-        DrawComb(p1, font, Digits(d.PostalCode), 82.7, 197.0, 59.2, 13.2, 5);                     // f14 รหัสไปรษณีย์ (comb 5)
-        DrawText(p1, font, d.Phone, 180.1, 196.0, 153.8, 12.8, XStringFormats.CenterLeft);        // f15 โทรศัพท์
+        DrawText(p1, font, d.HouseNo, 148.0, 153.5, 36.5, 11.0, XStringFormats.CenterLeft);       // f7 เลขที่
+        DrawText(p1, font, d.Moo, 204.3, 152.8, 13.9, 11.0, XStringFormats.Center);               // f8 หมู่ที่
+        DrawText(p1, font, d.Soi, 256.7, 152.4, 74.0, 12.8, XStringFormats.CenterLeft);           // f9 ตรอก/ซอย
+        DrawText(p1, font, d.Road, 115.7, 165.1, 65.5, 12.8, XStringFormats.CenterLeft);          // Text10.1 ถนน
+        DrawText(p1, font, d.SubDistrict, 229.9, 166.7, 106.7, 12.8, XStringFormats.CenterLeft);  // f11 ตำบล/แขวง
+        DrawText(p1, font, d.District, 69.2, 182.5, 115.8, 12.8, XStringFormats.CenterLeft);      // f12 อำเภอ/เขต
+        DrawText(p1, font, d.Province, 215.5, 182.1, 118.9, 12.8, XStringFormats.CenterLeft);     // f13 จังหวัด
+        DrawComb(p1, font, Digits(d.PostalCode), 81.4, 197.9, 60.1, 13.0, 5);                     // f14 รหัสไปรษณีย์
+        DrawText(p1, font, d.Phone, 180.9, 196.8, 153.2, 12.8, XStringFormats.CenterLeft);        // f15 โทรศัพท์
 
-        // ประกอบกิจการ (field 23) — ประเภทกิจการที่ประกอบ + รหัส ISIC (field 24, comb 6)
-        DrawText(p1, font, d.BusinessActivity, 360.0, 356.0, 208.9, 14.0, XStringFormats.CenterLeft);
-        DrawComb(p1, font, Digits(d.IsicCode), 498.5, 373.1, 70.7, 14.6, 6);
+        // ประกอบกิจการ (field 23.1) + รหัส ISIC (field 24, comb 6)
+        DrawText(p1, font, d.BusinessActivity, 349.6, 357.5, 129.1, 13.0, XStringFormats.CenterLeft);
+        DrawComb(p1, font, Digits(d.IsicCode), 496.9, 356.9, 72.6, 13.0, 6);
 
-        // ผู้ตรวจสอบและรับรองบัญชี: เลขผู้เสียภาษี (field 43, comb 13) + ชื่อ (field 44) + เลขทะเบียน (field 45, comb 8)
-        DrawDigitsAtCenters(p1, font, Digits(d.AuditorTaxId), AuditorTaxIdCellCenters, 732.5, 16.9);
-        DrawText(p1, font, d.AuditorName, 214.8, 733.3, 254.4, 12.8, XStringFormats.CenterLeft);
-        DrawComb(p1, font, Digits(d.AuditorLicenseNo), 472.2, 732.1, 94.3, 12.1, 8);
-
-        // เลขผู้เสียภาษีสำนักงานสอบบัญชี (field 49, comb 13 — กริดฝั่งขวา)
-        DrawDigitsAtCenters(p1, font, Digits(d.AuditFirmTaxId), FirmTaxIdCellCenters, 756.3, 16.9);
-        // วันที่ในรายงานของผู้สอบบัญชี (field 46 วัน / 47 เดือน / 48 พ.ศ. — comb 2/2/4)
+        // ผู้ตรวจสอบและรับรองบัญชี (ล่างหน้า 1): taxId (f43) / ชื่อ (f44) / ทะเบียน (f45 comb8)
+        DrawDigitsAtCenters(p1, font, Digits(d.AuditorTaxId), AuditorTaxIdCellCenters, 730.4, 16.5);
+        DrawText(p1, font, d.AuditorName, 216.6, 730.5, 250.0, 12.8, XStringFormats.CenterLeft);
+        DrawComb(p1, font, Digits(d.AuditorLicenseNo), 471.9, 730.1, 95.7, 12.1, 8);
+        // เลขผู้เสียภาษีสำนักงานสอบบัญชี (f49)
+        DrawDigitsAtCenters(p1, font, Digits(d.AuditFirmTaxId), FirmTaxIdCellCenters, 755.2, 16.5);
+        // วันที่ในรายงานผู้สอบ (f46 วัน / f47 เดือน / f48 พ.ศ.)
         if (d.AuditorSignDate is { } sd)
         {
-            DrawComb(p1, font, sd.Day.ToString("00"), 232.3, 757.5, 23.6, 14.0, 2);
-            DrawComb(p1, font, sd.Month.ToString("00"), 282.4, 757.5, 23.5, 14.0, 2);
-            DrawComb(p1, font, (sd.Year + 543).ToString(), 329.0, 757.5, 47.3, 14.0, 4);
+            DrawComb(p1, font, sd.Day.ToString("00"), 232.9, 753.7, 23.9, 14.0, 2);
+            DrawComb(p1, font, sd.Month.ToString("00"), 282.6, 754.0, 23.5, 14.0, 2);
+            DrawComb(p1, font, (sd.Year + 543).ToString(), 329.4, 755.1, 48.2, 14.0, 4);
         }
+        // ผู้ทำบัญชี: taxId (f50) + ชื่อ (44-2)
+        DrawDigitsAtCenters(p1, font, Digits(d.BookkeeperTaxId), AuditorTaxIdCellCenters, 802.4, 16.5);
+        DrawText(p1, font, d.BookkeeperName, 215.0, 800.7, 182.1, 12.8, XStringFormats.CenterLeft);
+        // เลขผู้เสียภาษีสำนักงานทำบัญชี (f52)
+        DrawDigitsAtCenters(p1, font, Digits(d.BookkeepingFirmTaxId), FirmTaxIdCellCenters, 801.4, 16.5);
 
-        // ผู้ทำบัญชี: เลขผู้เสียภาษี (field 50, comb 13 — กริดเดียวกับ field 43) + ชื่อ (field 51)
-        DrawDigitsAtCenters(p1, font, Digits(d.BookkeeperTaxId), AuditorTaxIdCellCenters, 800.0, 16.9);
-        DrawText(p1, font, d.BookkeeperName, 217.7, 801.5, 175.7, 12.8, XStringFormats.CenterLeft);
-        // เลขผู้เสียภาษีสำนักงานทำบัญชี = โปรไฟล์สำนักงาน (field 52, comb 13 — กริดฝั่งขวา)
-        DrawDigitsAtCenters(p1, font, Digits(d.BookkeepingFirmTaxId), FirmTaxIdCellCenters, 800.5, 16.9);
-
-        // ประเภทการยื่น: (1) ยื่นปกติ (Group1)
-        DrawCheck(p1, font, 357.0, 166.0, 13.1, 13.7);
-        // สถานะ: (1) บริษัท/ห้างฯ ตั้งตามกฎหมายไทย (Group2) — ค่าปกติ; ข้ามถ้าเป็นบริษัทมหาชน (สถานะอื่น)
-        if (!(d.CompanyName?.Contains("มหาชน") ?? false))
-            DrawCheck(p1, font, 47.0, 245.0, 13.7, 13.7);
-        // รอบบัญชี ตั้งแต่ / ถึง (วัน/เดือน/ปี พ.ศ.) — ฟิลด์เป็น comb (วัน 2 / เดือน 2 / ปี 4 ช่อง)
-        DrawComb(p1, font, d.PeriodStart.Day.ToString("00"), 400.4, 100.7, 22.6, 12.5, 2);
-        DrawComb(p1, font, d.PeriodStart.Month.ToString("00"), 454.3, 100.7, 22.6, 12.5, 2);
-        DrawComb(p1, font, (d.PeriodStart.Year + 543).ToString(), 511.2, 100.7, 45.7, 12.5, 4);
-        DrawComb(p1, font, d.PeriodEnd.Day.ToString("00"), 400.4, 131.6, 22.6, 12.6, 2);
-        DrawComb(p1, font, d.PeriodEnd.Month.ToString("00"), 454.3, 131.6, 22.6, 12.6, 2);
-        DrawComb(p1, font, (d.PeriodEnd.Year + 543).ToString(), 511.2, 130.7, 45.7, 12.5, 4);
+        // (1) ยื่นปกติ (Group1 first)
+        DrawCheck(p1, font, 357.0, 158.3, 13.2, 13.6);
+        // รอบบัญชี ตั้งแต่/ถึง (comb 2/2/4)
+        DrawComb(p1, font, d.PeriodStart.Day.ToString("00"), 399.8, 97.9, 24.0, 12.5, 2);
+        DrawComb(p1, font, d.PeriodStart.Month.ToString("00"), 453.9, 97.4, 24.9, 12.5, 2);
+        DrawComb(p1, font, (d.PeriodStart.Year + 543).ToString(), 511.1, 96.9, 46.7, 12.5, 4);
+        DrawComb(p1, font, d.PeriodEnd.Day.ToString("00"), 399.6, 127.6, 23.5, 12.5, 2);
+        DrawComb(p1, font, d.PeriodEnd.Month.ToString("00"), 453.3, 128.5, 24.4, 12.5, 2);
+        DrawComb(p1, font, (d.PeriodEnd.Year + 543).ToString(), 511.3, 127.5, 47.1, 12.5, 4);
 
         // ── หน้า 2: การคำนวณภาษี (ขวา = จำนวนเงิน) ──
-        DrawMoney(p2, font, d.NetTaxableIncome, 461.2, 244.3, 101.1, 19.7); // Text6 ฐานภาษี
-        DrawMoney(p2, font, d.TaxAmount, 461.0, 316.8, 101.1, 19.7);        // Text7 ภาษีที่คำนวณได้
-        DrawMoney(p2, font, d.WhtCredit, 327.8, 371.7, 101.1, 17.5);       // Text10 ภาษีหัก ณ ที่จ่าย
-        DrawMoney(p2, font, d.TotalCredit, 461.9, 425.7, 101.1, 17.5);     // Text14 รวมรายการหัก
-        DrawMoney(p2, font, Math.Abs(d.NetPayable), 461.8, 443.6, 101.1, 17.5); // Text15 คงเหลือ
-        DrawMoney(p2, font, Math.Abs(d.NetPayable), 461.7, 479.6, 101.1, 17.5); // Text17 รวมสุทธิ
+        // ── หน้า 2: รายการที่ 1 การคำนวณภาษี (ฟอร์มใหม่ 2568) ── ฐานภาษีไปอยู่หน้า 3 (บรรทัด 21)
+        DrawMoney(p2, font, d.TaxAmount, 461.7, 458.3, 105.8, 16.5);        // f50 ภาษีที่คำนวณได้
+        DrawMoney(p2, font, d.WhtCredit, 327.6, 524.3, 105.5, 16.5);       // f54 ภาษีหัก ณ ที่จ่าย
+        DrawMoney(p2, font, d.TotalCredit, 461.3, 590.5, 106.5, 16.5);     // f57รวม รวมรายการหัก
+        DrawMoney(p2, font, Math.Abs(d.NetPayable), 461.3, 612.6, 106.5, 16.5); // f58 คงเหลือ
+        DrawMoney(p2, font, Math.Abs(d.NetPayable), 461.7, 656.0, 106.5, 16.5); // f61 รวม
 
-        // ── หน้า 2: ติ๊ก checkbox ตามผลคำนวณ ──
-        // รายการ 2: เงินได้ที่ต้องเสียภาษี — (1) กำไรสุทธิ / (2) ขาดทุนสุทธิ (Group4)
-        if (d.IsNetProfit)
-            DrawCheck(p2, font, 32.8, 232.3, 13.1, 13.7);   // (1) กำไรสุทธิที่ต้องเสียภาษี
-        else
-            DrawCheck(p2, font, 171.6, 232.3, 13.2, 13.7);  // (2) ขาดทุนสุทธิ
-
-        // การคำนวณภาษี: SME = ลดอัตราภาษี (Group5 ข้อ 1) + ประเภท (1.2) ทุนชำระแล้ว ≤ 5 ล้าน (Group6)
+        // checkbox: กำไร/ขาดทุนสุทธิ (Group5)
+        if (d.IsNetProfit) DrawCheck(p2, font, 34.0, 330.2, 12.0, 11.0);
+        else DrawCheck(p2, font, 173.2, 330.9, 12.0, 11.0);
+        // การคำนวณภาษี: SME → (2) ลดอัตราภาษี (Group21) + SMEs (Group6); อื่น → (1) กรณีทั่วไป
         if (d.RateScheme == TaxRateScheme.SmeTiered)
         {
-            DrawCheck(p2, font, 32.8, 286.4, 13.7, 13.7);   // (1) กรณีลดอัตราภาษี
-            DrawCheck(p2, font, 174.9, 286.4, 13.7, 14.2);  // (1.2) SME
+            DrawCheck(p2, font, 32.8, 419.6, 12.1, 12.6);   // (2) กรณีลดอัตราภาษี
+            DrawCheck(p2, font, 136.6, 418.6, 11.5, 12.0);  // SMEs
         }
-
-        // คงเหลือภาษี (Group7) + รวมภาษี (Group8): ชำระเพิ่มเติม (≥0) / ชำระไว้เกิน (<0)
+        else DrawCheck(p2, font, 34.0, 396.4, 11.2, 12.6);  // (1) กรณีทั่วไป
+        // คงเหลือ (Group7) + รวม (Group8): ชำระเพิ่มเติม (≥0) / ชำระไว้เกิน (<0)
         if (d.NetPayable >= 0)
         {
-            DrawCheck(p2, font, 97.8, 449.3, 13.7, 13.1);   // คงเหลือ — ชำระเพิ่มเติม
-            DrawCheck(p2, font, 97.8, 484.3, 13.2, 14.2);   // รวม — ชำระเพิ่มเติม
+            DrawCheck(p2, font, 99.0, 616.4, 10.5, 12.2);   // คงเหลือ ชำระเพิ่มเติม
+            DrawCheck(p2, font, 98.4, 659.7, 11.8, 11.5);   // รวม ชำระเพิ่มเติม
         }
         else
         {
-            DrawCheck(p2, font, 171.6, 449.3, 13.2, 12.6);  // คงเหลือ — ชำระไว้เกิน
-            DrawCheck(p2, font, 171.6, 484.3, 13.7, 13.7);  // รวม — ชำระไว้เกิน
+            DrawCheck(p2, font, 172.8, 616.8, 10.9, 11.2);  // คงเหลือ ชำระไว้เกิน
+            DrawCheck(p2, font, 173.6, 659.6, 10.5, 11.4);  // รวม ชำระไว้เกิน
         }
 
         // ── หน้า 3: รายการที่ 3 — reconciliation กำไรบัญชี → เงินได้สุทธิเพื่อเสียภาษี ──
@@ -140,62 +129,62 @@ public class Pnd50PdfService : IPnd50PdfService
             // เติมคอลัมน์ 2 (กิจการที่ต้องเสียภาษี) + คอลัมน์ 3 (รวม) เท่ากัน; คอลัมน์ 1 (ยกเว้น) เว้น
             void Row(double y, decimal v)
             {
-                DrawMoney(p3, font, v, 359.0, y, 101.2, 13.0);   // col2 เสียภาษี
+                DrawMoney(p3, font, v, 357.0, y, 109.0, 13.0);   // col2 เสียภาษี
                 DrawMoney(p3, font, v, 466.9, y, 101.2, 13.0);   // col3 รวม
             }
-            Row(97.6, p3d.Revenue);              // 1. รายได้โดยตรง
-            Row(123.0, p3d.Cogs);                // 2. หัก ต้นทุนขาย
-            Row(139.8, p3d.GrossProfit);         // 3. กำไร(ขาดทุน)ขั้นต้น
-            Row(157.4, p3d.OtherIncome);         // 4. บวก รายได้อื่น
-            Row(174.2, p3d.GrossProfit + p3d.OtherIncome);  // 5. รวม (3+4)
-            Row(209.3, p3d.GrossProfit + p3d.OtherIncome);  // 7. รวม (5-6)
-            Row(226.2, p3d.Sga);                 // 8. หัก รายจ่ายขายและบริหาร
-            Row(243.7, p3d.NetAccountingProfit); // 9. กำไร(ขาดทุน)สุทธิตามบัญชี
-            Row(288.2, p3d.AddBack);             // 11. บวก รายจ่ายต้องห้าม
-            Row(305.6, p3d.NetAccountingProfit + p3d.AddBack); // 12. รวม (9+10+11)
-            Row(330.9, p3d.Deduction);           // 13. หัก รายได้ยกเว้น/หักเพิ่ม
-            Row(348.3, p3d.AdjustedProfit);      // 14. รวม (12-13)
-            Row(364.9, p3d.LossUsed);            // 15. หัก ขาดทุนยกมา
-            Row(382.3, p3d.NetTaxableIncome);    // 16. รวม (14-15)
-            DrawMoney(p3, font, p3d.NetTaxableIncome, 466.1, 632.3, 101.1, 13.0); // 21. เงินได้สุทธิเพื่อเสียภาษี (col3)
+            Row(124.0, p3d.Revenue);             // 1. รายได้โดยตรง
+            Row(155.7, p3d.Cogs);                // 2. หัก ต้นทุนขาย
+            Row(176.6, p3d.GrossProfit);         // 3. กำไร(ขาดทุน)ขั้นต้น
+            Row(196.5, p3d.OtherIncome);         // 4. บวก รายได้อื่น
+            Row(217.6, p3d.GrossProfit + p3d.OtherIncome);  // 5. รวม (3+4)
+            Row(258.3, p3d.GrossProfit + p3d.OtherIncome);  // 7. รวม (5-6)
+            Row(276.2, p3d.Sga);                 // 8. หัก รายจ่ายขายและบริหาร
+            Row(294.7, p3d.NetAccountingProfit); // 9. กำไร(ขาดทุน)สุทธิตามบัญชี
+            Row(343.4, p3d.AddBack);             // 11. บวก รายจ่ายต้องห้าม
+            Row(366.0, p3d.NetAccountingProfit + p3d.AddBack); // 12. รวม
+            Row(397.3, p3d.Deduction);           // 13. หัก รายได้ยกเว้น/หักเพิ่ม
+            Row(419.0, p3d.AdjustedProfit);      // 14. รวม
+            Row(449.5, p3d.LossUsed);            // 15. หัก ขาดทุนยกมา
+            Row(477.7, p3d.NetTaxableIncome);    // 16. รวม
+            DrawMoney(p3, font, p3d.NetTaxableIncome, 466.9, 594.8, 101.2, 13.0); // 21. เงินได้สุทธิเพื่อเสียภาษี (col3)
 
-            // checkbox กำไร/ขาดทุน
-            if (p3d.GrossProfit >= 0) DrawCheck(p3, font, 38.3, 143.8, 12.0, 13.1);   // 3. กำไรขั้นต้น
-            else DrawCheck(p3, font, 108.8, 143.8, 13.1, 13.1);                        // 3. ขาดทุนขั้นต้น
-            if (p3d.NetAccountingProfit >= 0) DrawCheck(p3, font, 37.7, 247.1, 13.1, 12.6); // 9. กำไรสุทธิ
-            else DrawCheck(p3, font, 108.8, 247.1, 13.1, 12.6);                        // 9. ขาดทุนสุทธิ
-            if (p3d.NetTaxableIncome > 0) DrawCheck(p3, font, 38.3, 635.7, 12.6, 13.1); // 21. กำไรสุทธิที่ต้องเสียภาษี
-            else DrawCheck(p3, font, 157.4, 635.2, 12.6, 14.2);                        // 21. ขาดทุนสุทธิ
+            // checkbox กำไร/ขาดทุน (Group100 L3 / Group101 L9 / Group9 L21)
+            if (p3d.GrossProfit >= 0) DrawCheck(p3, font, 36.5, 180.7, 12.6, 13.0);
+            else DrawCheck(p3, font, 107.1, 181.2, 13.1, 13.0);
+            if (p3d.NetAccountingProfit >= 0) DrawCheck(p3, font, 36.6, 297.8, 13.0, 12.6);
+            else DrawCheck(p3, font, 106.9, 297.4, 13.0, 12.6);
+            if (p3d.NetTaxableIncome > 0) DrawCheck(p3, font, 36.9, 598.3, 12.6, 13.0);
+            else DrawCheck(p3, font, 144.5, 597.6, 12.6, 13.0);
         }
 
-        // ── หน้า 7: รายการที่ 12 — งบดุล (crosswalk จากผังงบ) ──
-        if (d.Page7 is { } p7 && doc.Pages.Count > 6)
+        // ── หน้า 6 (index 5): รายการที่ 9 — งบดุล (ฟอร์มใหม่ 2568, crosswalk จากผังงบ) ──
+        if (d.Page7 is { } p7 && doc.Pages.Count > 5)
         {
-            var p7g = XGraphics.FromPdfPage(doc.Pages[6], XGraphicsPdfPageOptions.Append);
-            void Bs(double y, decimal v) => DrawMoney(p7g, font, v, 459.1, y, 100.6, 14.0);
-            Bs(80.4, p7.Cash);                 // 140 เงินสด
-            Bs(98.2, p7.Ar);                   // 141 ลูกหนี้การค้า
-            Bs(116.3, p7.Inventory);           // 142 สินค้าคงเหลือ
-            Bs(134.2, p7.OtherCurrentAsset);   // 143 สินทรัพย์หมุนเวียนอื่น
-            Bs(169.6, p7.LoansToRelated);      // 144 เงินให้กู้ยืมบุคคลที่เกี่ยวข้อง
-            Bs(187.5, p7.Ppe);                 // 145 ที่ดิน อาคาร อุปกรณ์-สุทธิ
-            Bs(205.5, p7.OtherAssetNet);       // 146 ทรัพย์สินอื่น-สุทธิ
-            Bs(242.2, p7.OtherNonCurrentAsset);// 148 สินทรัพย์ไม่หมุนเวียนอื่น
-            Bs(260.1, p7.TotalAssets);         // รวมสินทรัพย์
-            Bs(312.8, p7.BankOdShortLoan);     // 149 เบิกเกินบัญชี+กู้ระยะสั้น
-            Bs(330.7, p7.Ap);                  // 150 เจ้าหนี้การค้า
-            Bs(348.8, p7.CurrentLoan);         // 151 เงินกู้ยืม
-            Bs(366.7, p7.OtherCurrentLiab);    // 152 หนี้สินหมุนเวียนอื่น
-            Bs(401.3, p7.LongTermLoan);        // 153 เงินกู้ยืมระยะยาว
-            Bs(419.2, p7.OtherNonCurrentLiab); // 154 หนี้สินไม่หมุนเวียนอื่น
-            Bs(437.9, p7.TotalLiabilities);    // รวมหนี้สิน
-            Bs(472.8, p7.PaidUpCapital);       // 156 ทุนที่ออกและชำระแล้ว
-            Bs(509.5, p7.RetainedEarnings);    // 158-159 กำไร/ขาดทุนสะสม
-            Bs(529.0, p7.TotalEquity);         // 160 รวมส่วนของผู้ถือหุ้น
-            Bs(546.2, p7.TotalLiabAndEquity);  // 161 รวมหนี้สิน+ทุน
-            // checkbox กำไรสะสม (Group12)
-            if (p7.IsRetainedProfit) DrawCheck(p7g, font, 44.3, 514.4, 13.1, 13.7);  // กำไรสะสม
-            else DrawCheck(p7g, font, 128.5, 514.9, 13.7, 13.7);                      // ขาดทุนสะสม
+            var p7g = XGraphics.FromPdfPage(doc.Pages[5], XGraphicsPdfPageOptions.Append);
+            void Bs(double y, decimal v) => DrawMoney(p7g, font, v, 456.6, y, 100.6, 14.0);
+            Bs(74.7, p7.Cash);                 // เงินสด
+            Bs(91.7, p7.Ar);                   // ลูกหนี้การค้า
+            Bs(111.0, p7.Inventory);           // สินค้าคงเหลือ
+            Bs(128.3, p7.OtherCurrentAsset);   // สินทรัพย์หมุนเวียนอื่น
+            Bs(164.7, p7.LoansToRelated);      // เงินให้กู้ยืมบุคคลที่เกี่ยวข้อง
+            Bs(181.8, p7.Ppe);                 // ที่ดิน อาคาร อุปกรณ์-สุทธิ
+            Bs(201.0, p7.OtherAssetNet);       // ทรัพย์สินอื่น-สุทธิ
+            Bs(237.9, p7.OtherNonCurrentAsset);// สินทรัพย์ไม่หมุนเวียนอื่น
+            Bs(256.2, p7.TotalAssets);         // รวมสินทรัพย์
+            Bs(297.9, p7.BankOdShortLoan);     // เบิกเกินบัญชี+กู้ระยะสั้น
+            Bs(316.2, p7.Ap);                  // เจ้าหนี้การค้า
+            Bs(333.8, p7.CurrentLoan);         // เงินกู้ยืม
+            Bs(351.1, p7.OtherCurrentLiab);    // หนี้สินหมุนเวียนอื่น
+            Bs(388.1, p7.LongTermLoan);        // เงินกู้ยืมระยะยาว
+            Bs(405.9, p7.OtherNonCurrentLiab); // หนี้สินไม่หมุนเวียนอื่น
+            Bs(424.4, p7.TotalLiabilities);    // รวมหนี้สิน
+            Bs(462.2, p7.PaidUpCapital);       // ทุนที่ออกและชำระแล้ว
+            Bs(499.9, p7.RetainedEarnings);    // กำไร/ขาดทุนสะสม
+            Bs(517.8, p7.TotalEquity);         // รวมส่วนของผู้ถือหุ้น
+            Bs(535.5, p7.TotalLiabAndEquity);  // รวมหนี้สิน+ทุน
+            // checkbox กำไร/ขาดทุนสะสม (Group91)
+            if (p7.IsRetainedProfit) DrawCheck(p7g, font, 41.7, 503.9, 10.5, 10.5);
+            else DrawCheck(p7g, font, 127.8, 503.9, 10.5, 10.5);
         }
 
         // ── schedule cells (รายการ 8 ฯลฯ จาก mapping บัญชี→CIT50) — วาดตามพิกัด ──
