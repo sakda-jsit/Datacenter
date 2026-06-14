@@ -83,11 +83,26 @@ public class SaveCompanyYearSignersCommandHandler(
         row.AuditorId = d.AuditorId;
         row.BookkeeperId = d.BookkeeperId;
         row.SignDate = d.SignDate;
+
+        // เปลี่ยนผู้ลงนามปีนี้ → เลื่อนเป็นค่าเริ่มต้นบริษัทด้วย (ปีถัดไปดึงคนใหม่อัตโนมัติ);
+        // ปีเก่าที่ override ไว้ยังคงค่าเดิม (freeze ประวัติ) เพราะมี AuditorId/BookkeeperId ของตัวเอง
+        if (d.AuditorId is not null || d.BookkeeperId is not null)
+        {
+            var company = await db.ClientCompanies.FirstOrDefaultAsync(c => c.Id == req.ClientCompanyId, ct);
+            if (company is not null)
+            {
+                if (d.AuditorId is not null) company.DefaultAuditorId = d.AuditorId;
+                if (d.BookkeeperId is not null) company.DefaultBookkeeperId = d.BookkeeperId;
+                company.ModifiedBy = user.Username;
+                company.ModifiedAt = DateTime.UtcNow;
+            }
+        }
+
         await db.SaveChangesAsync(ct);
 
         await audit.LogAsync(isNew ? "Create" : "Update", "CompanyAuditor",
             entityId: $"{req.ClientCompanyId}:{req.FiscalYear}",
-            afterValue: $"override ผู้สอบ#{d.AuditorId} / ผู้ทำบัญชี#{d.BookkeeperId} / ลงวันที่ {d.SignDate:yyyy-MM-dd}",
+            afterValue: $"override+เลื่อน default ผู้สอบ#{d.AuditorId} / ผู้ทำบัญชี#{d.BookkeeperId} / ลงวันที่ {d.SignDate:yyyy-MM-dd}",
             companyId: req.ClientCompanyId, cancellationToken: ct);
 
         return await sender.Send(new GetCompanySignersQuery(req.ClientCompanyId, req.FiscalYear), ct);

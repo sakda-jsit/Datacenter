@@ -52,7 +52,8 @@ export function useSaveYearSigners() {
   return useMutation({
     mutationFn: (vars: { companyId: number; year: number; data: CompanyYearSignersInput }) =>
       corporateTaxApi.saveYearSigners(vars.companyId, vars.year, vars.data),
+    // เลื่อนเป็น default ด้วย → กระทบทุกปี → invalidate ทั้งบริษัท
     onSuccess: (_res, vars) =>
-      qc.invalidateQueries({ queryKey: [KEY, 'signers', vars.companyId, vars.year] }),
+      qc.invalidateQueries({ queryKey: [KEY, 'signers', vars.companyId] }),
   })
 }

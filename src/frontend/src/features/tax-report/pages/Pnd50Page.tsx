@@ -456,6 +456,11 @@ function SignersCard({ companyId, year }: { companyId: number; year: number }) {
           ปีนี้เปลี่ยนผู้ลงนามต่างจากค่าเริ่มต้น
         </label>
         {override && (
+          <p className="mt-1 text-xs text-amber-600">
+            เปลี่ยนปีนี้แล้วจะตั้งเป็นค่าเริ่มต้นของปีถัดไปด้วยอัตโนมัติ (ปีเก่าที่บันทึกไว้ยังคงเดิม)
+          </p>
+        )}
+        {override && (
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
             <Field label="ผู้สอบบัญชี (เฉพาะปีนี้)">
               <SignerSelect value={yrAuditor} onChange={setYrAuditor}
