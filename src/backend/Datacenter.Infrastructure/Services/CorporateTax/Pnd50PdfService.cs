@@ -52,8 +52,13 @@ public class Pnd50PdfService : IPnd50PdfService
         DrawComb(p1, font, Digits(d.PostalCode), 82.7, 197.0, 59.2, 13.2, 5);                     // f14 รหัสไปรษณีย์ (comb 5)
         DrawText(p1, font, d.Phone, 180.1, 196.0, 153.8, 12.8, XStringFormats.CenterLeft);        // f15 โทรศัพท์
 
-        // ประกอบกิจการ (field 23) — ประเภทกิจการที่ประกอบ
+        // ประกอบกิจการ (field 23) — ประเภทกิจการที่ประกอบ + รหัส ISIC (field 24, comb 6)
         DrawText(p1, font, d.BusinessActivity, 360.0, 356.0, 208.9, 14.0, XStringFormats.CenterLeft);
+        DrawComb(p1, font, Digits(d.IsicCode), 498.5, 373.1, 70.7, 14.6, 6);
+
+        // ผู้ตรวจสอบและรับรองบัญชี: ชื่อ (field 44) + เลขทะเบียน (field 45, comb 8)
+        DrawText(p1, font, d.AuditorName, 214.8, 733.3, 254.4, 12.8, XStringFormats.CenterLeft);
+        DrawComb(p1, font, Digits(d.AuditorLicenseNo), 472.2, 732.1, 94.3, 12.1, 8);
 
         // ประเภทการยื่น: (1) ยื่นปกติ (Group1)
         DrawCheck(p1, font, 357.0, 166.0, 13.1, 13.7);

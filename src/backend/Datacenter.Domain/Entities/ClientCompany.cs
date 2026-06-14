@@ -41,6 +41,12 @@ public class ClientCompany : BaseEntity
 
     /// <summary>ประเภทกิจการที่ประกอบ (สำหรับช่อง "ประกอบกิจการ" ในแบบ ภ.ง.ด.50) — ป้อนเอง (Express ไม่มี)</summary>
     public string? BusinessActivity { get; set; }
+    /// <summary>รหัส ISIC (ประเภทธุรกิจ) สำหรับแบบ ภ.ง.ด.50 — ป้อนเอง</summary>
+    public string? IsicCode { get; set; }
+    /// <summary>ชื่อผู้ตรวจสอบและรับรองบัญชี (ผู้สอบบัญชี) — ป้อนเอง</summary>
+    public string? AuditorName { get; set; }
+    /// <summary>เลขทะเบียนผู้ตรวจสอบและรับรองบัญชี (CPA/TA) — ป้อนเอง</summary>
+    public string? AuditorLicenseNo { get; set; }
 
     public int FiscalYearStartMonth { get; set; } = 1;
     public bool IsActive { get; set; } = true;

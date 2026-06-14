@@ -70,6 +70,9 @@ public record Pnd50FormData(
     string TaxId,
     bool IsHeadOffice,
     string? BusinessActivity,
+    string? IsicCode,
+    string? AuditorName,
+    string? AuditorLicenseNo,
     // ที่อยู่ (แยกช่อง — แยกจาก Address flat ด้วย ThaiAddressParser)
     string? HouseNo,
     string? Moo,
