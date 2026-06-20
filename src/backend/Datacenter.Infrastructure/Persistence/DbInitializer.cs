@@ -220,6 +220,49 @@ public static class DbInitializer
         }
         if (db.ChangeTracker.HasChanges()) await db.SaveChangesAsync();
 
+        // ── Seed taxonomy รายการ 4 (ต้นทุนผลิต/ต้นทุนการให้บริการ) หน้า 4 (index 3) — 17 บรรทัด ──
+        //    IsTotal=true = บรรทัดคำนวณ (ไม่รับ map): purchases/subtotals/totals/RM-close/WIP-close.
+        //    บรรทัดที่รับ map (IsTotal=false): R4_RM_OPEN(บัญชีวัตถุดิบ), R4_RM_USED(ซื้อ/ต้นทุนใช้ไป),
+        //    R4_PUR_OTH, R4_WIP_OPEN(บัญชีงานระหว่างทำ), R4_WAGE/ROYALTY/FUEL/PKG/DEPREC/PRODOTH.
+        //    PdfY = template col③ widget y; PdfX=468.0/PdfW=105 (wall 573, offset 108) เหมือนรายการ 5/6.
+        var sched4 = new (string Code, string Label, int Sort, double Y, bool Total)[]
+        {
+            ("R4_RM_OPEN",  "วัตถุดิบและวัสดุคงเหลือ (ต้นงวด)", 1, 63.0,  false),
+            ("R4_PURCHASE", "ซื้อวัตถุดิบและวัสดุ", 2, 83.5,  true),
+            ("R4_PUR_OTH",  "ค่าใช้จ่ายอื่นๆ ในการซื้อวัตถุดิบและวัสดุ", 3, 104.0, false),
+            ("R4_SUB1",     "รวม (1.-3.)", 4, 125.2, true),
+            ("R4_RM_CLOSE", "หักวัตถุดิบและวัสดุคงเหลือ (ปลายงวด)", 5, 146.1, true),
+            ("R4_RM_USED",  "ต้นทุนวัตถุดิบและวัสดุใช้ไป", 6, 166.9, false),
+            ("R4_WIP_OPEN", "งานระหว่างทำ/สินค้าระหว่างผลิตคงเหลือ (ต้นงวด)", 7, 209.2, false),
+            ("R4_WAGE",     "เงินเดือนและค่าจ้างแรงงาน", 8, 229.7, false),
+            ("R4_ROYALTY",  "ค่าแห่งกู๊ดวิลล์ ค่าแห่งลิขสิทธิ์ หรือสิทธิอย่างอื่น", 9, 250.2, false),
+            ("R4_FUEL",     "ค่าเชื้อเพลิงหรือพลังงาน", 10, 271.3, false),
+            ("R4_PKG",      "ค่าภาชนะบรรจุ ค่าหีบห่อ", 11, 292.3, false),
+            ("R4_DEPREC",   "ค่าสึกหรอและค่าเสื่อมราคา", 12, 314.1, false),
+            ("R4_PRODOTH",  "ค่าใช้จ่ายในการผลิต/การให้บริการอื่นๆ", 13, 335.7, false),
+            ("R4_SUB2",     "รวม (7.-13.)", 14, 356.3, true),
+            ("R4_TOTAL",    "รวม", 15, 375.9, true),
+            ("R4_WIP_CLOSE","หักงานระหว่างทำ/สินค้าระหว่างผลิตคงเหลือ (ปลายงวด)", 16, 419.1, true),
+            ("R4_FINAL",    "ต้นทุนผลิต/ต้นทุนการให้บริการ", 17, 440.1, true),
+        };
+        var sched4Existing = await db.Cit50ScheduleLines.Where(x => x.ScheduleNo == 4).ToDictionaryAsync(x => x.Code);
+        foreach (var s in sched4)
+        {
+            if (sched4Existing.TryGetValue(s.Code, out var ex))
+            {
+                ex.Label = s.Label; ex.SortOrder = s.Sort; ex.PdfPage = 3; ex.PdfX = 468.0;
+                ex.PdfY = s.Y; ex.PdfW = 105.0; ex.IsCatchAll = false; ex.IsTotal = s.Total;
+            }
+            else
+                db.Cit50ScheduleLines.Add(new Cit50ScheduleLine
+                {
+                    Code = s.Code, ScheduleNo = 4, Label = s.Label, SortOrder = s.Sort,
+                    PdfPage = 3, PdfX = 468.0, PdfY = s.Y, PdfW = 105.0,
+                    IsCatchAll = false, IsTotal = s.Total, CreatedBy = "system",
+                });
+        }
+        if (db.ChangeTracker.HasChanges()) await db.SaveChangesAsync();
+
         // ── Seed taxonomy บรรทัดรายการ 5 (รายได้อื่น) + 6 (รายจ่ายอื่น) หน้า 4 (index 3) ──
         //    โครงสร้าง 3 คอลัมน์ ①ยกเว้น ②เสียภาษี ③รวม (เหมือนหน้า 3/รายการ 8): วาด col③(PdfX) +
         //    col②(PdfX−108). PdfX=468.0/PdfW=105 → wall col③=573.0 (วัดกริด comb หน้า 4).

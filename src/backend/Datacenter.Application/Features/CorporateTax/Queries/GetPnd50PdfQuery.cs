@@ -62,7 +62,7 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
                 .Where(m => m.ClientCompanyId == req.ClientCompanyId)
                 .ToDictionaryAsync(m => m.AccountCode, m => m.Cit50LineCode, ct);
             var schedLines = await db.Cit50ScheduleLines.AsNoTracking()
-                .Where(l => l.ScheduleNo == 5 || l.ScheduleNo == 6 || l.ScheduleNo == 8).ToListAsync(ct);
+                .Where(l => l.ScheduleNo == 4 || l.ScheduleNo == 5 || l.ScheduleNo == 6 || l.ScheduleNo == 8).ToListAsync(ct);
             const double col2Offset = 108.0; // ระยะจากคอลัมน์ "รวม" ไป "เสียภาษี" (ขอบกริด)
 
             void Build(int scheduleNo, IEnumerable<(string Acc, decimal Amt, string? Def)> items)
@@ -95,6 +95,55 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
 
             // รายการ 6 (รายจ่ายอื่น): ต้นทุนทางการเงิน (FinanceCost) → ต้นทุนทางการเงิน
             Build(6, pl.FinanceCost.Accounts.Select(a => (a.AccountCode, a.NetBalance, (string?)"R6_FIN")));
+
+            // รายการ 4 (ต้นทุนผลิต/ต้นทุนการให้บริการ): mapping-driven (รหัส R4_*) + คำนวณ subtotal/total.
+            // บัญชีที่ map R4_* จะถูกกันออกจากรายการ 8 อัตโนมัติ (code ไม่อยู่ใน sums ของรายการ 8).
+            var r4lines = schedLines.Where(l => l.ScheduleNo == 4).ToList();
+            if (r4lines.Count > 0)
+            {
+                // net ต้นทุน/ค่าใช้จ่ายต่อบัญชี (COGS + ขายบริหาร + ต้นทุนการเงิน)
+                var acctNet = new Dictionary<string, decimal>();
+                foreach (var a in pl.CostOfGoods.Accounts) acctNet[a.AccountCode] = a.NetBalance;
+                foreach (var line in pl.ExpenseLines) foreach (var a in line.Accounts) acctNet[a.AccountCode] = a.NetBalance;
+                foreach (var a in pl.FinanceCost.Accounts) acctNet[a.AccountCode] = a.NetBalance;
+
+                // ยอดคงเหลือต้น/ปลายงวด (บัญชีวัตถุดิบ/งานระหว่างทำ)
+                var opens  = await FinancialStatement.Services.FsJournalNets.OpeningAsync(db, req.ClientCompanyId, req.FiscalYear, ct);
+                var closes = await FinancialStatement.Services.FsJournalNets.CumulativeAsync(db, req.ClientCompanyId, req.FiscalYear, ct);
+
+                var byCode = maps.Where(kv => kv.Value.StartsWith("R4_"))
+                    .GroupBy(kv => kv.Value).ToDictionary(g => g.Key, g => g.Select(kv => kv.Key).ToList());
+                List<string> Acc(string code) => byCode.GetValueOrDefault(code) ?? new List<string>();
+                decimal Net(string code)   => Acc(code).Sum(a => Math.Abs(acctNet.GetValueOrDefault(a)));
+                decimal Open(string code)  => Acc(code).Sum(a => opens.GetValueOrDefault(a));
+                decimal Close(string code) => Acc(code).Sum(a => closes.GetValueOrDefault(a));
+
+                decimal rmOpen = Open("R4_RM_OPEN"),  rmClose = Close("R4_RM_OPEN");
+                decimal wipOpen = Open("R4_WIP_OPEN"), wipClose = Close("R4_WIP_OPEN");
+                decimal rmUsed = Net("R4_RM_USED"), purOth = Net("R4_PUR_OTH");
+                decimal wage = Net("R4_WAGE"), royalty = Net("R4_ROYALTY"), fuel = Net("R4_FUEL"),
+                        pkg = Net("R4_PKG"), deprec = Net("R4_DEPREC"), prodOth = Net("R4_PRODOTH");
+                decimal purchases = rmUsed - rmOpen + rmClose;   // ซื้อ = ต้นทุนใช้ไป − ต้นงวด + ปลายงวด
+                decimal sub1  = rmOpen + purchases + purOth;
+                decimal sub2  = wipOpen + wage + royalty + fuel + pkg + deprec + prodOth;
+                decimal total = rmUsed + sub2;
+                decimal final = total - wipClose;
+
+                var r4v = new Dictionary<string, decimal>
+                {
+                    ["R4_RM_OPEN"] = rmOpen, ["R4_PURCHASE"] = purchases, ["R4_PUR_OTH"] = purOth, ["R4_SUB1"] = sub1,
+                    ["R4_RM_CLOSE"] = rmClose, ["R4_RM_USED"] = rmUsed, ["R4_WIP_OPEN"] = wipOpen, ["R4_WAGE"] = wage,
+                    ["R4_ROYALTY"] = royalty, ["R4_FUEL"] = fuel, ["R4_PKG"] = pkg, ["R4_DEPREC"] = deprec,
+                    ["R4_PRODOTH"] = prodOth, ["R4_SUB2"] = sub2, ["R4_TOTAL"] = total, ["R4_WIP_CLOSE"] = wipClose,
+                    ["R4_FINAL"] = final,
+                };
+                foreach (var l in r4lines)
+                {
+                    var v = r4v.GetValueOrDefault(l.Code);
+                    scheduleCells.Add(new Pnd50ScheduleCell(l.PdfPage, l.PdfX, l.PdfY, l.PdfW, v));
+                    scheduleCells.Add(new Pnd50ScheduleCell(l.PdfPage, l.PdfX - col2Offset, l.PdfY, l.PdfW, v));
+                }
+            }
         }
 
         // หน้างบดุล (รายการที่ 9): crosswalk บรรทัด ← RefCode ผังงบ (ยอด presentation จาก BS engine)
