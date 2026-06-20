@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
+import MyTasksWidget from '../components/MyTasksWidget'
 import { useWorkTracker } from '../hooks/useWorkTracker'
 import {
   useComplianceDashboard,
@@ -73,6 +74,8 @@ export default function DashboardPage() {
           )}
         </div>
       </section>
+
+      <MyTasksWidget />
 
       {companyId
         ? <CompanyView companyId={companyId} year={year} />
