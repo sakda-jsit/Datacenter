@@ -89,8 +89,8 @@ public class Pnd50PdfService : IPnd50PdfService
         SetRadio(doc, "Group00", "Choice1");
 
         // อีเมล: ผู้ประกอบการ (บริษัท) / ผู้ทำบัญชี (สำนักงานบัญชี) — บนเส้นประหลัง label (x เริ่มหลังคำต่างกัน)
-        DrawText(p1, font, d.BusinessEmail, 165.0, 230.0, 169.0, 13.0, XStringFormats.CenterLeft);
-        DrawText(p1, font, d.BookkeeperEmail, 148.0, 245.0, 186.0, 13.0, XStringFormats.CenterLeft);
+        DrawText(p1, font, d.BusinessEmail, 165.0, 227.0, 169.0, 13.0, XStringFormats.CenterLeft);
+        DrawText(p1, font, d.BookkeeperEmail, 148.0, 242.0, 186.0, 13.0, XStringFormats.CenterLeft);
 
         // ม.71ทวิ (รายได้ระหว่างกัน): เกิน 200 ล้าน → "มี" (Group06) / ไม่เกิน → "ไม่มี" (Group07)
         SetRadio(doc, d.RevenueOver200M ? "Group06" : "Group07", "Choice1");
@@ -131,7 +131,7 @@ public class Pnd50PdfService : IPnd50PdfService
             // เติมคอลัมน์ 2 (กิจการที่ต้องเสียภาษี) + คอลัมน์ 3 (รวม) เท่ากัน; คอลัมน์ 1 (ยกเว้น) เว้น
             void Row(double y, decimal v)
             {
-                DrawMoneyComb(p3, font, v, 465.5, y, 17.5);   // col2 เสียภาษี (wall 465.5)
+                DrawMoneyComb(p3, font, v, 463.7, y, 17.5);   // col2 เสียภาษี (wall 463.7 — กริดช่องเยื้องซ้ายกว่า col3)
                 DrawMoneyComb(p3, font, v, 571.5, y, 17.5);   // col3 รวม (wall 571.5)
             }
             Row(124.0, p3d.Revenue);             // 1. รายได้โดยตรง

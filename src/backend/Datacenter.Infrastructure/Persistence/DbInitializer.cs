@@ -207,14 +207,14 @@ public static class DbInitializer
         {
             if (cit50Existing.TryGetValue(s.Code, out var ex))
             {   // upsert พิกัด (ฟอร์มเปลี่ยน → อัปเดต)
-                ex.Label = s.Label; ex.SortOrder = s.Sort; ex.PdfPage = 4; ex.PdfX = 466.9;
+                ex.Label = s.Label; ex.SortOrder = s.Sort; ex.PdfPage = 4; ex.PdfX = 462.8;
                 ex.PdfY = s.Y; ex.PdfW = 105.0; ex.IsCatchAll = s.Catch; ex.IsTotal = s.Total;
             }
             else
                 db.Cit50ScheduleLines.Add(new Cit50ScheduleLine
                 {
                     Code = s.Code, ScheduleNo = 8, Label = s.Label, SortOrder = s.Sort,
-                    PdfPage = 4, PdfX = 466.9, PdfY = s.Y, PdfW = 105.0,
+                    PdfPage = 4, PdfX = 462.8, PdfY = s.Y, PdfW = 105.0,
                     IsCatchAll = s.Catch, IsTotal = s.Total, CreatedBy = "system",
                 });
         }
