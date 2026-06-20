@@ -9,10 +9,10 @@ namespace Datacenter.Application.Features.OfficeProfile;
 // โปรไฟล์สำนักงานบัญชี = ค่ากลางของระบบ (singleton, ไม่แยกบริษัทลูกค้า) — ไม่ผูก IRequireCompanyAccess.
 
 public record OfficeProfileDto(
-    string OfficeName, string? TaxId, string? BranchCode, string? Address, string? Phone);
+    string OfficeName, string? TaxId, string? BranchCode, string? Address, string? Phone, string? Email = null);
 
 public record OfficeProfileInput(
-    string OfficeName, string? TaxId, string? BranchCode, string? Address, string? Phone);
+    string OfficeName, string? TaxId, string? BranchCode, string? Address, string? Phone, string? Email = null);
 
 // ── อ่านโปรไฟล์ (คืนค่าว่างถ้ายังไม่ตั้ง) ──
 public record GetOfficeProfileQuery : IRequest<OfficeProfileDto>;
@@ -25,7 +25,7 @@ public class GetOfficeProfileQueryHandler(IApplicationDbContext db)
         var e = await db.OfficeProfiles.AsNoTracking().OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
         return e is null
             ? new OfficeProfileDto("", null, null, null, null)
-            : new OfficeProfileDto(e.OfficeName, e.TaxId, e.BranchCode, e.Address, e.Phone);
+            : new OfficeProfileDto(e.OfficeName, e.TaxId, e.BranchCode, e.Address, e.Phone, e.Email);
     }
 }
 
@@ -56,12 +56,13 @@ public class SaveOfficeProfileCommandHandler(IApplicationDbContext db, ICurrentU
         e.BranchCode = string.IsNullOrWhiteSpace(d.BranchCode) ? null : d.BranchCode.Trim();
         e.Address = string.IsNullOrWhiteSpace(d.Address) ? null : d.Address.Trim();
         e.Phone = string.IsNullOrWhiteSpace(d.Phone) ? null : d.Phone.Trim();
+        e.Email = string.IsNullOrWhiteSpace(d.Email) ? null : d.Email.Trim();
 
         await db.SaveChangesAsync(ct);
         await audit.LogAsync(isNew ? "Create" : "Update", "OfficeProfile",
             entityId: e.Id.ToString(), afterValue: $"{e.OfficeName} / {e.TaxId}", cancellationToken: ct);
 
-        return new OfficeProfileDto(e.OfficeName, e.TaxId, e.BranchCode, e.Address, e.Phone);
+        return new OfficeProfileDto(e.OfficeName, e.TaxId, e.BranchCode, e.Address, e.Phone, e.Email);
     }
 }
 

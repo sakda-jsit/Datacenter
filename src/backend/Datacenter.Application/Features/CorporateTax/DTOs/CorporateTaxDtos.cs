@@ -134,6 +134,11 @@ public record Pnd50FormData(
     // สำหรับติ๊ก checkbox หน้า 2
     TaxRateScheme RateScheme,   // อัตราภาษี (SME → ติ๊กกรณีลดอัตรา 1.2)
     bool IsNetProfit,           // กำไรสุทธิ (true) / ขาดทุนสุทธิ (false)
+    // หน้า 1: อีเมล + ม.71ทวิ ; หน้า 6: ความเห็นผู้สอบบัญชี
+    string? BusinessEmail = null,   // อีเมลผู้ประกอบการ (หน้า 1)
+    string? BookkeeperEmail = null, // อีเมลผู้ทำบัญชี/สำนักงานบัญชี (หน้า 1)
+    bool RevenueOver200M = false,   // ม.71ทวิ: รายได้เกิน 200 ล้าน (true=มี / false=ไม่มี)
+    int AuditorOpinion = 1,         // ความเห็นผู้สอบ (หน้า 6): 1=ไม่มีเงื่อนไข 2=มีเงื่อนไข 3=ไม่แสดงความเห็น 4=ไม่ถูกต้อง
     // หน้า 3: รายการที่ 3 reconciliation (null = ไม่มีงบ/ไม่เติม)
     Pnd50Page3Data? Page3 = null,
     // หน้า 7: รายการที่ 12 งบดุล (null = ไม่มีงบดุล)

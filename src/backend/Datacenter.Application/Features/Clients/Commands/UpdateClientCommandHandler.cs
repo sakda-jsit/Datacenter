@@ -43,6 +43,7 @@ public class UpdateClientCommandHandler(IApplicationDbContext db, ICurrentUserSe
         }
         client.BusinessActivity = request.BusinessActivity?.Trim();
         client.IsicCode = request.IsicCode?.Trim();
+        client.Email = request.Email?.Trim();
 
         client.ModifiedAt = DateTime.UtcNow;
         client.ModifiedBy = currentUser.Username;

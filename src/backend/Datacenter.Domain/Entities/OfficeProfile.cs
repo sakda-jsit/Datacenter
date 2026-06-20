@@ -18,4 +18,6 @@ public class OfficeProfile : BaseEntity
     public string? BranchCode { get; set; }
     public string? Address { get; set; }
     public string? Phone { get; set; }
+    /// <summary>อีเมลสำนักงานบัญชี (ภ.ง.ด.50 หน้า 1 "ชื่ออีเมล แอดเดรสของผู้ทำบัญชี")</summary>
+    public string? Email { get; set; }
 }

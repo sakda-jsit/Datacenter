@@ -14,7 +14,7 @@ const MONTHS = [
 
 // ช่องที่อยู่แยก (ใช้ตอนแก้ไข — สำหรับฟอร์มราชการ เช่น ภ.ง.ด.50)
 type FormState = CreateClientRequest & {
-  businessActivity: string; isicCode: string
+  businessActivity: string; isicCode: string; email: string
   addrBuilding: string; addrRoomNo: string; addrFloor: string; addrVillage: string
   addrHouseNo: string; addrMoo: string; addrSoi: string; addrRoad: string
   addrSubDistrict: string; addrDistrict: string; addrProvince: string
@@ -31,7 +31,7 @@ const emptyForm: FormState = {
   ssoBranchCode: '000000',
   phone: '',
   postalCode: '',
-  businessActivity: '', isicCode: '',
+  businessActivity: '', isicCode: '', email: '',
   addrBuilding: '', addrRoomNo: '', addrFloor: '', addrVillage: '',
   addrHouseNo: '', addrMoo: '', addrSoi: '', addrRoad: '',
   addrSubDistrict: '', addrDistrict: '', addrProvince: '',
@@ -64,6 +64,7 @@ export default function ClientFormPage() {
         postalCode: existing.postalCode ?? '',
         businessActivity: existing.businessActivity ?? '',
         isicCode: existing.isicCode ?? '',
+        email: existing.email ?? '',
         addrBuilding: existing.addressDetail?.building ?? '',
         addrRoomNo: existing.addressDetail?.roomNo ?? '',
         addrFloor: existing.addressDetail?.floor ?? '',
@@ -99,6 +100,7 @@ export default function ClientFormPage() {
             postalCode: values.postalCode || undefined,
             businessActivity: values.businessActivity || undefined,
             isicCode: values.isicCode || undefined,
+            email: values.email || undefined,
             addressDetail: {
               building: values.addrBuilding || undefined,
               roomNo: values.addrRoomNo || undefined,
@@ -243,6 +245,9 @@ export default function ClientFormPage() {
               </Field>
               <Field label="รหัสไปรษณีย์" error={errors.postalcode}>
                 <input name="postalCode" value={values.postalCode ?? ''} onChange={handleChange} maxLength={10} className={inputCls(false)} />
+              </Field>
+              <Field label="อีเมลผู้ประกอบการ (ภ.ง.ด.50)" error={errors.email}>
+                <input name="email" type="email" value={values.email} onChange={handleChange} maxLength={150} placeholder="contact@company.co.th" className={inputCls(false)} />
               </Field>
             </div>
           </div>

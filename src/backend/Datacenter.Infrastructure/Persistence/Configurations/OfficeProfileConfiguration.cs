@@ -16,5 +16,6 @@ public class OfficeProfileConfiguration : IEntityTypeConfiguration<OfficeProfile
         builder.Property(x => x.BranchCode).HasMaxLength(10);
         builder.Property(x => x.Address).HasMaxLength(500);
         builder.Property(x => x.Phone).HasMaxLength(50);
+        builder.Property(x => x.Email).HasMaxLength(150);
     }
 }

@@ -7,6 +7,7 @@ export interface OfficeProfile {
   branchCode?: string | null
   address?: string | null
   phone?: string | null
+  email?: string | null
 }
 
 export const officeProfileApi = {

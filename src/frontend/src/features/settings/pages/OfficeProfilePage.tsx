@@ -14,6 +14,7 @@ export default function OfficeProfilePage() {
   const [branch, setBranch] = useState('')
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
 
   useEffect(() => {
     if (!data) return
@@ -22,6 +23,7 @@ export default function OfficeProfilePage() {
     setBranch(data.branchCode ?? '')
     setAddress(data.address ?? '')
     setPhone(data.phone ?? '')
+    setEmail(data.email ?? '')
   }, [data])
 
   const taxIdDigits = taxId.replace(/\D/g, '')
@@ -35,6 +37,7 @@ export default function OfficeProfilePage() {
       branchCode: branch.trim() || null,
       address: address.trim() || null,
       phone: phone.trim() || null,
+      email: email.trim() || null,
     })
   }
 
@@ -74,6 +77,9 @@ export default function OfficeProfilePage() {
             </Field>
             <Field label="โทรศัพท์">
               <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} className={cls(false)} />
+            </Field>
+            <Field label="อีเมลผู้ทำบัญชี (ภ.ง.ด.50)">
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="financial@office.co.th" className={cls(false)} />
             </Field>
 
             <div className="flex items-center gap-3 pt-1">

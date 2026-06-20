@@ -5,6 +5,8 @@ using Datacenter.Domain.Enums;
 using PdfSharpCore.Drawing;
 using PdfSharpCore.Fonts;
 using PdfSharpCore.Pdf;
+using PdfSharpCore.Pdf.AcroForms;
+using PdfSharpCore.Pdf.Advanced;
 using PdfSharpCore.Pdf.IO;
 
 namespace Datacenter.Infrastructure.Services.CorporateTax;
@@ -82,8 +84,16 @@ public class Pnd50PdfService : IPnd50PdfService
         // เลขผู้เสียภาษีสำนักงานทำบัญชี (f52)
         DrawDigitsAtCenters(p1, font, Digits(d.BookkeepingFirmTaxId), FirmTaxIdCellCenters, 801.4, 16.5);
 
-        // (1) ยื่นปกติ (Group1 first)
-        DrawCheck(p1, font, 357.0, 158.3, 13.2, 13.6);
+        // (1) ยื่นปกติ (Group1) + สถานภาพ (1) ตั้งขึ้นตามกฎหมายไทย (Group00) — set ค่า field ให้ widget ติ๊กเอง
+        SetRadio(doc, "Group1", "Choice1");
+        SetRadio(doc, "Group00", "Choice1");
+
+        // อีเมล: ผู้ประกอบการ (บริษัท) / ผู้ทำบัญชี (สำนักงานบัญชี) — บนเส้นประหลัง label (x เริ่มหลังคำต่างกัน)
+        DrawText(p1, font, d.BusinessEmail, 165.0, 230.0, 169.0, 13.0, XStringFormats.CenterLeft);
+        DrawText(p1, font, d.BookkeeperEmail, 148.0, 245.0, 186.0, 13.0, XStringFormats.CenterLeft);
+
+        // ม.71ทวิ (รายได้ระหว่างกัน): เกิน 200 ล้าน → "มี" (Group06) / ไม่เกิน → "ไม่มี" (Group07)
+        SetRadio(doc, d.RevenueOver200M ? "Group06" : "Group07", "Choice1");
         // รอบบัญชี ตั้งแต่/ถึง (comb 2/2/4)
         DrawComb(p1, font, d.PeriodStart.Day.ToString("00"), 399.8, 97.9, 24.0, 12.5, 2);
         DrawComb(p1, font, d.PeriodStart.Month.ToString("00"), 453.9, 97.4, 24.9, 12.5, 2);
@@ -100,27 +110,19 @@ public class Pnd50PdfService : IPnd50PdfService
         DrawMoneyComb(p2, font, Math.Abs(d.NetPayable), 567.2, 612.6, 16.9); // f58 คงเหลือ
         DrawMoneyComb(p2, font, Math.Abs(d.NetPayable), 567.2, 656.0, 16.9); // f61 รวม
 
-        // checkbox: กำไร/ขาดทุนสุทธิ (Group5)
-        if (d.IsNetProfit) DrawCheck(p2, font, 34.0, 330.2, 12.0, 11.0);
-        else DrawCheck(p2, font, 173.2, 330.9, 12.0, 11.0);
-        // การคำนวณภาษี: SME → (2) ลดอัตราภาษี (Group21) + SMEs (Group6); อื่น → (1) กรณีทั่วไป
+        // checkbox: กำไร/ขาดทุนสุทธิ (Group5): Choice1=กำไร / Choice2=ขาดทุน
+        SetRadio(doc, "Group5", d.IsNetProfit ? "Choice1" : "Choice2");
+        // การคำนวณภาษี (Group21): SME → (2) ลดอัตราภาษี (Choice2) + SMEs (Group6 Choice1); อื่น → (1) กรณีทั่วไป (Choice1)
         if (d.RateScheme == TaxRateScheme.SmeTiered)
         {
-            DrawCheck(p2, font, 32.8, 419.6, 12.1, 12.6);   // (2) กรณีลดอัตราภาษี
-            DrawCheck(p2, font, 136.6, 418.6, 11.5, 12.0);  // SMEs
+            SetRadio(doc, "Group21", "Choice2");  // (2) กรณีลดอัตราภาษี
+            SetRadio(doc, "Group6", "Choice1");   // SMEs
         }
-        else DrawCheck(p2, font, 34.0, 396.4, 11.2, 12.6);  // (1) กรณีทั่วไป
-        // คงเหลือ (Group7) + รวม (Group8): ชำระเพิ่มเติม (≥0) / ชำระไว้เกิน (<0)
-        if (d.NetPayable >= 0)
-        {
-            DrawCheck(p2, font, 99.0, 616.4, 10.5, 12.2);   // คงเหลือ ชำระเพิ่มเติม
-            DrawCheck(p2, font, 98.4, 659.7, 11.8, 11.5);   // รวม ชำระเพิ่มเติม
-        }
-        else
-        {
-            DrawCheck(p2, font, 172.8, 616.8, 10.9, 11.2);  // คงเหลือ ชำระไว้เกิน
-            DrawCheck(p2, font, 173.6, 659.6, 10.5, 11.4);  // รวม ชำระไว้เกิน
-        }
+        else SetRadio(doc, "Group21", "Choice1"); // (1) กรณีทั่วไป
+        // คงเหลือ (Group7) + รวม (Group8): ชำระเพิ่มเติม (Choice1, ≥0) / ชำระไว้เกิน (Choice2, <0)
+        var payState = d.NetPayable >= 0 ? "Choice1" : "Choice2";
+        SetRadio(doc, "Group7", payState);
+        SetRadio(doc, "Group8", payState);
 
         // ── หน้า 3: รายการที่ 3 — reconciliation กำไรบัญชี → เงินได้สุทธิเพื่อเสียภาษี ──
         if (d.Page3 is { } p3d && doc.Pages.Count > 2)
@@ -148,19 +150,18 @@ public class Pnd50PdfService : IPnd50PdfService
             Row(477.7, p3d.NetTaxableIncome);    // 16. รวม
             DrawMoneyComb(p3, font, p3d.NetTaxableIncome, 571.5, 594.8, 17.5); // 21. เงินได้สุทธิเพื่อเสียภาษี (col3)
 
-            // checkbox กำไร/ขาดทุน (Group100 L3 / Group101 L9 / Group9 L21)
-            if (p3d.GrossProfit >= 0) DrawCheck(p3, font, 36.5, 180.7, 12.6, 13.0);
-            else DrawCheck(p3, font, 107.1, 181.2, 13.1, 13.0);
-            if (p3d.NetAccountingProfit >= 0) DrawCheck(p3, font, 36.6, 297.8, 13.0, 12.6);
-            else DrawCheck(p3, font, 106.9, 297.4, 13.0, 12.6);
-            if (p3d.NetTaxableIncome > 0) DrawCheck(p3, font, 36.9, 598.3, 12.6, 13.0);
-            else DrawCheck(p3, font, 144.5, 597.6, 12.6, 13.0);
+            // checkbox กำไร/ขาดทุน (Group100 L3 / Group101 L9 ใช้ on-state "0"/"1" ; Group9 L21 ใช้ Choice1/2)
+            SetRadio(doc, "Group100", p3d.GrossProfit >= 0 ? "0" : "1");
+            SetRadio(doc, "Group101", p3d.NetAccountingProfit >= 0 ? "0" : "1");
+            SetRadio(doc, "Group9", p3d.NetTaxableIncome > 0 ? "Choice1" : "Choice2");
         }
 
-        // ── หน้า 6 (index 5): รายการที่ 9 — งบดุล (ฟอร์มใหม่ 2568, crosswalk จากผังงบ) ──
-        if (d.Page7 is { } p7 && doc.Pages.Count > 5)
+        // ── หน้า 6 (index 5): รายการที่ 9 งบดุล + ความเห็นผู้สอบบัญชี ──
+        if (doc.Pages.Count > 5 && (d.Page7 is not null || !string.IsNullOrWhiteSpace(d.AuditorName)))
         {
             var p7g = XGraphics.FromPdfPage(doc.Pages[5], XGraphicsPdfPageOptions.Append);
+          if (d.Page7 is { } p7)
+          {
             void Bs(double y, decimal v) => DrawMoneyComb(p7g, font, v, 563.0, y, 16.9); // wall 563.0
             Bs(74.7, p7.Cash);                 // เงินสด
             Bs(91.7, p7.Ar);                   // ลูกหนี้การค้า
@@ -182,9 +183,16 @@ public class Pnd50PdfService : IPnd50PdfService
             Bs(499.9, p7.RetainedEarnings);    // กำไร/ขาดทุนสะสม
             Bs(517.8, p7.TotalEquity);         // รวมส่วนของผู้ถือหุ้น
             Bs(535.5, p7.TotalLiabAndEquity);  // รวมหนี้สิน+ทุน
-            // checkbox กำไร/ขาดทุนสะสม (Group91)
-            if (p7.IsRetainedProfit) DrawCheck(p7g, font, 41.7, 503.9, 10.5, 10.5);
-            else DrawCheck(p7g, font, 127.8, 503.9, 10.5, 10.5);
+            // checkbox กำไร/ขาดทุนสะสม (Group91): Choice1=กำไรสะสม / Choice2=ขาดทุนสะสม
+            SetRadio(doc, "Group91", p7.IsRetainedProfit ? "Choice1" : "Choice2");
+          }
+
+            // ความเห็นของผู้สอบบัญชีรับอนุญาต (Group92): 1=ไม่มีเงื่อนไข 2=มีเงื่อนไข 3=ไม่แสดงความเห็น 4=ไม่ถูกต้อง
+            if (!string.IsNullOrWhiteSpace(d.AuditorName))
+            {
+                var opinion = d.AuditorOpinion is >= 1 and <= 4 ? d.AuditorOpinion : 1;
+                SetRadio(doc, "Group92", "Choice" + opinion);
+            }
         }
 
         // ── schedule cells (รายการ 8 ฯลฯ จาก mapping บัญชี→CIT50) — วาดตามพิกัด ──
@@ -214,17 +222,41 @@ public class Pnd50PdfService : IPnd50PdfService
         g.DrawString(text, f, XBrushes.Black, new XRect(x, y, w, h), fmt);
     }
 
-    /// <summary>ติ๊กช่อง (วาดเครื่องหมายถูก ✓ แบบเส้น — ไม่พึ่ง glyph ฟอนต์)</summary>
-    private static void DrawCheck(XGraphics g, XFont f, double x, double y, double w, double h)
+    /// <summary>
+    /// ติ๊ก radio/checkbox โดย "set ค่า field" บน AcroForm — widget จะ render เครื่องหมายเอง (native).
+    /// เชื่อถือได้กว่าการวาดทับ เพราะ widget appearance อยู่เหนือ page content (กล่องบางตัวมี Off-appearance ทึบบัง overlay).
+    /// <paramref name="onState"/> = ชื่อ on-state ของฟอร์ม (เช่น "Choice1", "0", "1").
+    /// </summary>
+    private static void SetRadio(PdfDocument doc, string fieldName, string onState)
     {
-        var pen = new XPen(XColors.Black, Math.Max(1.0, h * 0.12));
-        var pts = new[]
+        var form = doc.AcroForm;
+        if (form is null) return;
+        PdfAcroField? f;
+        try { f = form.Fields[fieldName]; } catch { return; }
+        if (f is null) return;
+
+        f.Elements.SetName("/V", onState);
+
+        var kids = f.Elements.GetArray("/Kids");
+        if (kids is { Elements.Count: > 0 })
         {
-            new XPoint(x + w * 0.20, y + h * 0.52),
-            new XPoint(x + w * 0.42, y + h * 0.74),
-            new XPoint(x + w * 0.82, y + h * 0.24),
-        };
-        g.DrawLines(pen, pts);
+            foreach (var item in kids.Elements)
+            {
+                if ((item is PdfReference r ? r.Value : item) is not PdfDictionary kid) continue;
+                kid.Elements.SetName("/AS", KidHasState(kid, onState) ? onState : "Off");
+            }
+        }
+        else
+        {
+            f.Elements.SetName("/AS", onState); // widget เดี่ยว (merged) — set บน field เอง
+        }
+    }
+
+    /// <summary>kid widget นี้มี appearance ของ on-state ที่ขอหรือไม่ (ถ้ามี = ตัวที่ต้องติ๊ก)</summary>
+    private static bool KidHasState(PdfDictionary kid, string onState)
+    {
+        var n = kid.Elements.GetDictionary("/AP")?.Elements.GetDictionary("/N");
+        return n is not null && n.Elements.ContainsKey("/" + onState);
     }
 
     private static void DrawMoney(XGraphics g, XFont f, decimal v, double x, double y, double w, double h)
@@ -232,6 +264,12 @@ public class Pnd50PdfService : IPnd50PdfService
 
     /// <summary>ระยะห่างหนึ่งช่องของกริดจำนวนเงินที่พิมพ์บนฟอร์ม CIT50 (point)</summary>
     private const double MoneyCombPitch = 7.9;
+
+    /// <summary>
+    /// PdfSharp's <see cref="XStringFormats.Center"/> วาง "กล่องบรรทัด" (รวมช่อง descender) ไว้กลางกรอบ
+    /// ตัวเลขไม่มีหาง (descender) จึงดูลอยสูงกว่ากลางช่องจริง ~0.12em — ขยับลงให้ตัวเลขอยู่กึ่งกลางช่องพอดี (วัดจาก template 9pt ≈ 1.0pt).
+    /// </summary>
+    private static double DigitVNudge(XFont f) => f.Size * 0.12;
 
     /// <summary>
     /// วาดจำนวนเงินทีละหลักลง "ช่อง" (comb) ที่พิมพ์ไว้บนฟอร์ม — หลักจำนวนเต็มชิดขวา + 2 ช่องสตางค์แยกขวาสุด.
@@ -245,7 +283,7 @@ public class Pnd50PdfService : IPnd50PdfService
         string ip = s[..dot], dp = s[(dot + 1)..];
 
         void Cell(string ch, double cx)
-            => g.DrawString(ch, f, XBrushes.Black, new XRect(cx - MoneyCombPitch / 2, y, MoneyCombPitch, h), XStringFormats.Center);
+            => g.DrawString(ch, f, XBrushes.Black, new XRect(cx - MoneyCombPitch / 2, y + DigitVNudge(f), MoneyCombPitch, h), XStringFormats.Center);
 
         Cell(dp[1].ToString(), wall - 3.95);   // สตางค์ หลัก 1/100 (ช่องขวาสุด)
         Cell(dp[0].ToString(), wall - 11.85);  // สตางค์ หลัก 1/10
@@ -261,7 +299,7 @@ public class Pnd50PdfService : IPnd50PdfService
         var cellW = w / cells;
         for (int i = 0; i < text.Length && i < cells; i++)
             g.DrawString(text[i].ToString(), f, XBrushes.Black,
-                new XRect(x + i * cellW, y, cellW, h), XStringFormats.Center);
+                new XRect(x + i * cellW, y + DigitVNudge(f), cellW, h), XStringFormats.Center);
     }
 
     /// <summary>วาดแต่ละหลักกึ่งกลางช่องตามพิกัด x ที่กำหนด (ช่องไม่เท่ากัน)</summary>
@@ -270,7 +308,7 @@ public class Pnd50PdfService : IPnd50PdfService
         if (string.IsNullOrEmpty(text)) return;
         for (int i = 0; i < text.Length && i < centers.Length; i++)
             g.DrawString(text[i].ToString(), f, XBrushes.Black,
-                new XRect(centers[i] - 5, y, 10, h), XStringFormats.Center);
+                new XRect(centers[i] - 5, y + DigitVNudge(f), 10, h), XStringFormats.Center);
     }
 }
 

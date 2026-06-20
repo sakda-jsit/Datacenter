@@ -160,6 +160,9 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             NetPayable: r.NetPayable,
             RateScheme: tax.RateScheme,
             IsNetProfit: r.AdjustedProfit >= 0,
+            BusinessEmail: company.Email,
+            BookkeeperEmail: office?.Email,
+            RevenueOver200M: pl is not null && pl.TotalIncome > 200_000_000m,
             Page3: page3,
             Page7: page7,
             ScheduleCells: scheduleCells);

@@ -63,6 +63,8 @@ public class ClientCompany : BaseEntity
     public string? SsoBranchCode { get; set; }
     public string? Phone { get; set; }
     public string? PostalCode { get; set; }
+    /// <summary>อีเมลผู้ประกอบการ (ภ.ง.ด.50 หน้า 1 "ชื่ออีเมล แอดเดรสของผู้ประกอบการ")</summary>
+    public string? Email { get; set; }
 
     /// <summary>รูปลายเซ็นผู้มีอำนาจ (PNG/JPG) — ใช้แนบในหนังสือรับรองหัก ณ ที่จ่าย ฯลฯ</summary>
     public byte[]? SignatureImage { get; set; }

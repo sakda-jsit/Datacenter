@@ -21,6 +21,7 @@ public class ClientCompanyConfiguration : IEntityTypeConfiguration<ClientCompany
         builder.Property(x => x.SsoBranchCode).HasMaxLength(6);
         builder.Property(x => x.Phone).HasMaxLength(30);
         builder.Property(x => x.PostalCode).HasMaxLength(10);
+        builder.Property(x => x.Email).HasMaxLength(150);
         builder.HasIndex(x => x.Code).IsUnique();
 
         // ผู้ลงนามประจำบริษัท (master, default ทุกปี)
