@@ -72,4 +72,11 @@ public class CorporateTaxController(IMediator mediator) : ControllerBase
         await mediator.Send(new SaveCit50MappingCommand(clientCompanyId, items), ct);
         return NoContent();
     }
+
+    /// <summary>GET /corporate-tax/cit50-bs-mapping?clientCompanyId=1&amp;fiscalYear=2025 — แมพบัญชี→บรรทัดงบดุล ภ.ง.ด.50 (รายการ 9)</summary>
+    [HttpGet("cit50-bs-mapping")]
+    public async Task<IActionResult> GetCit50BsMapping([FromQuery] GetCit50BsMappingQuery query, CancellationToken ct)
+        => Ok(await mediator.Send(query, ct));
+
+    // บันทึกใช้ PUT cit50-mapping เดิม (ตาราง AccountCit50Mappings เดียวกัน) — บัญชีงบดุล/ค่าใช้จ่ายไม่ทับกัน
 }

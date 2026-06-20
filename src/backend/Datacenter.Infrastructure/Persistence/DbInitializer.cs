@@ -220,6 +220,45 @@ public static class DbInitializer
         }
         if (db.ChangeTracker.HasChanges()) await db.SaveChangesAsync();
 
+        // ── Seed taxonomy บรรทัดงบดุล ภ.ง.ด.50 (ScheduleNo=9) — สำหรับ override การจัดประเภท
+        //    บัญชี→บรรทัดงบดุล ต่อบริษัท (เช่น แยกที่ดิน+อาคาร ออกจากทรัพย์สินอื่นหักค่าเสื่อม).
+        //    ไม่ใช้พิกัด PDF (Page7 วาดด้วยตำแหน่งคงที่อยู่แล้ว) — code ต้องตรงกับ field ใน Pnd50Page7Data.
+        var bsSeed = new (string Code, string Label, int Sort)[]
+        {
+            ("BS_CASH",       "เงินสดและรายการเทียบเท่าเงินสด", 1),
+            ("BS_AR",         "ลูกหนี้การค้าและลูกหนี้หมุนเวียนอื่น", 2),
+            ("BS_INV",        "สินค้าคงเหลือ", 3),
+            ("BS_OTHER_CA",   "สินทรัพย์หมุนเวียนอื่น", 4),
+            ("BS_LOANS_REL",  "เงินให้กู้ยืมระยะยาวแก่บุคคล/กิจการที่เกี่ยวข้อง", 5),
+            ("BS_LAND_BLDG",  "ที่ดินและอาคารซึ่งหักค่าสึกหรอและค่าเสื่อมราคาแล้ว", 6),
+            ("BS_OTHER_ASSET","ทรัพย์สินอื่นซึ่งหักค่าสึกหรอและค่าเสื่อมราคาแล้ว", 7),
+            ("BS_OTHER_NCA",  "สินทรัพย์ไม่หมุนเวียนอื่น", 8),
+            ("BS_BANK_OD",    "เงินเบิกเกินบัญชีและเงินกู้ยืมระยะสั้นจากสถาบันการเงิน", 11),
+            ("BS_AP",         "เจ้าหนี้การค้าและเจ้าหนี้หมุนเวียนอื่น", 12),
+            ("BS_CUR_LOAN",   "เงินกู้ยืมระยะสั้น", 13),
+            ("BS_OTHER_CL",   "หนี้สินหมุนเวียนอื่น", 14),
+            ("BS_LT_LOAN",    "เงินกู้ยืมระยะยาว", 15),
+            ("BS_OTHER_NCL",  "หนี้สินไม่หมุนเวียนอื่น", 16),
+            ("BS_PAIDUP",     "ทุนที่ออกและชำระแล้ว", 21),
+            ("BS_RE",         "กำไร (ขาดทุน) สะสม", 22),
+        };
+        var bsExisting = await db.Cit50ScheduleLines.Where(x => x.ScheduleNo == 9).ToDictionaryAsync(x => x.Code);
+        foreach (var s in bsSeed)
+        {
+            if (bsExisting.TryGetValue(s.Code, out var ex))
+            {
+                ex.Label = s.Label; ex.SortOrder = s.Sort;
+            }
+            else
+                db.Cit50ScheduleLines.Add(new Cit50ScheduleLine
+                {
+                    Code = s.Code, ScheduleNo = 9, Label = s.Label, SortOrder = s.Sort,
+                    PdfPage = 5, PdfX = 0, PdfY = 0, PdfW = 0,
+                    IsCatchAll = false, IsTotal = false, CreatedBy = "system",
+                });
+        }
+        if (db.ChangeTracker.HasChanges()) await db.SaveChangesAsync();
+
         // ── Seed admin user ───────────────────────────────────────────────────
         if (!await db.Users.AnyAsync(u => u.Username == "admin"))
         {

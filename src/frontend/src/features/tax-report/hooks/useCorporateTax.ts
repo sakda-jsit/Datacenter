@@ -46,13 +46,23 @@ export function useCit50Mapping(companyId: number, year: number, enabled = true)
   })
 }
 
+export function useCit50BsMapping(companyId: number, year: number, enabled = true) {
+  return useQuery({
+    queryKey: [KEY, 'cit50-bs-mapping', companyId, year],
+    queryFn: () => corporateTaxApi.getCit50BsMapping(companyId, year),
+    enabled: enabled && companyId > 0,
+  })
+}
+
 export function useSaveCit50Mapping() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (vars: { companyId: number; items: Cit50MappingItem[] }) =>
       corporateTaxApi.saveCit50Mapping(vars.companyId, vars.items),
-    onSuccess: (_res, vars) =>
-      qc.invalidateQueries({ queryKey: [KEY, 'cit50-mapping', vars.companyId] }),
+    onSuccess: (_res, vars) => {
+      qc.invalidateQueries({ queryKey: [KEY, 'cit50-mapping', vars.companyId] })
+      qc.invalidateQueries({ queryKey: [KEY, 'cit50-bs-mapping', vars.companyId] })
+    },
   })
 }
 

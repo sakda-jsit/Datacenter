@@ -196,7 +196,7 @@ export default function Pnd50Page() {
           />
         </div>
         <Button onClick={() => companyId && setQueried(true)} disabled={!companyId}>แสดงข้อมูล</Button>
-        <a href="/pnd50/cit50-mapping" className="text-sm text-blue-600 hover:underline">แมพบัญชี→รายการ 8</a>
+        <a href="/pnd50/cit50-mapping" className="text-sm text-blue-600 hover:underline">แมพบัญชี ภ.ง.ด.50 (รายการ 8 / งบดุล)</a>
         {queried && data && (
           <div className="ml-auto flex items-center gap-2">
             <Button type="button" variant="secondary" onClick={() => dlPnd50Pdf(companyId, year)}>⬇ ภ.ง.ด.50 (PDF)</Button>

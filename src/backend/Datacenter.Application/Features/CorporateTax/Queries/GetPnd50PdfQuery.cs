@@ -82,7 +82,10 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             }
         }
 
-        // หน้า 7 (รายการที่ 12 งบดุล): crosswalk บรรทัด CIT50 ← RefCode ผังงบ (ใช้ยอด presentation จาก BS)
+        // หน้างบดุล (รายการที่ 9): crosswalk บรรทัด ← RefCode ผังงบ (ยอด presentation จาก BS engine)
+        // + override การจัดประเภทต่อบัญชี (AccountCit50Mapping รหัส BS_*) — ฟอร์ม ภ.ง.ด.50 แยกบรรทัด
+        // ละเอียดกว่างบการเงิน (เช่น ที่ดิน+อาคาร แยกจากทรัพย์สินอื่นซึ่งหักค่าเสื่อม) โดยย้ายยอดภายใน
+        // section เดียวกัน → ยอดรวม (TotalAssets/Liabilities) ไม่เปลี่ยน เปลี่ยนแค่บรรทัดที่ลง.
         Pnd50Page7Data? page7 = null;
         try
         {
@@ -91,13 +94,51 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
             var amt = bs.Assets.Concat(bs.Liabilities).Concat(bs.Equity)
                 .GroupBy(l => l.RefCode).ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
             decimal R(params string[] codes) => codes.Sum(c => amt.TryGetValue(c, out var v) ? v : 0m);
+
+            var f = new Dictionary<string, decimal>
+            {
+                ["Cash"] = R("A1"), ["Ar"] = R("A7"), ["Inventory"] = R("A3"),
+                ["OtherCurrentAsset"] = R("A2", "A4", "TXR"), ["LoansToRelated"] = R("A8"),
+                ["Ppe"] = R("A5"), ["OtherAssetNet"] = R("A9", "A10"), ["OtherNonCurrentAsset"] = R("A6"),
+                ["BankOdShortLoan"] = R("L3"), ["Ap"] = R("L1"), ["CurrentLoan"] = R("L5"),
+                ["OtherCurrentLiab"] = R("L2", "TXP"), ["LongTermLoan"] = R("L6"), ["OtherNonCurrentLiab"] = R("L4"),
+            };
+
+            var bsOverrides = await db.AccountCit50Mappings.AsNoTracking()
+                .Where(m => m.ClientCompanyId == req.ClientCompanyId && m.Cit50LineCode.StartsWith("BS_"))
+                .ToDictionaryAsync(m => m.AccountCode, m => m.Cit50LineCode, ct);
+            if (bsOverrides.Count > 0)
+            {
+                var refByAcc = await db.AccountStatementMappings.AsNoTracking()
+                    .Where(m => m.ClientCompanyId == req.ClientCompanyId)
+                    .ToDictionaryAsync(m => m.AccountCode, m => m.RefCode, ct);
+                var nets = await FinancialStatement.Services.FsJournalNets.CumulativeAsync(
+                    db, req.ClientCompanyId, req.FiscalYear, ct);
+
+                foreach (var (accCode, bsCode) in bsOverrides)
+                {
+                    if (!Pnd50BsLines.FieldByCode.TryGetValue(bsCode, out var target)) continue;
+                    var def = refByAcc.TryGetValue(accCode, out var rc)
+                        ? Pnd50BsLines.FieldByRefCode.GetValueOrDefault(rc) : null;
+                    if (def is null || def == target || !f.ContainsKey(def) || !f.ContainsKey(target)) continue;
+                    // ย้ายเฉพาะภายใน section เดียวกัน (asset↔asset / liab↔liab) กันสลับเครื่องหมาย/ยอดรวมเพี้ยน
+                    if (Pnd50BsLines.IsAssetField(def) != Pnd50BsLines.IsAssetField(target)) continue;
+                    var net = nets.GetValueOrDefault(accCode);
+                    var pres = Pnd50BsLines.IsAssetField(def) ? net : -net; // presentation amount
+                    f[def] -= pres;
+                    f[target] += pres;
+                }
+            }
+
             var re = R("RE");
             page7 = new Pnd50Page7Data(
-                Cash: R("A1"), Ar: R("A7"), Inventory: R("A3"), OtherCurrentAsset: R("A2", "A4", "TXR"),
-                LoansToRelated: R("A8"), Ppe: R("A5"), OtherAssetNet: R("A9", "A10"), OtherNonCurrentAsset: R("A6"),
+                Cash: f["Cash"], Ar: f["Ar"], Inventory: f["Inventory"], OtherCurrentAsset: f["OtherCurrentAsset"],
+                LoansToRelated: f["LoansToRelated"], Ppe: f["Ppe"], OtherAssetNet: f["OtherAssetNet"],
+                OtherNonCurrentAsset: f["OtherNonCurrentAsset"],
                 TotalAssets: bs.TotalAssets,
-                BankOdShortLoan: R("L3"), Ap: R("L1"), CurrentLoan: R("L5"), OtherCurrentLiab: R("L2", "TXP"),
-                LongTermLoan: R("L6"), OtherNonCurrentLiab: R("L4"),
+                BankOdShortLoan: f["BankOdShortLoan"], Ap: f["Ap"], CurrentLoan: f["CurrentLoan"],
+                OtherCurrentLiab: f["OtherCurrentLiab"], LongTermLoan: f["LongTermLoan"],
+                OtherNonCurrentLiab: f["OtherNonCurrentLiab"],
                 TotalLiabilities: bs.TotalLiabilities,
                 PaidUpCapital: R("C1"), RetainedEarnings: Math.Abs(re), IsRetainedProfit: re >= 0,
                 TotalEquity: bs.TotalEquity, TotalLiabAndEquity: bs.TotalLiabilitiesAndEquity);

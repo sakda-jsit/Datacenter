@@ -48,6 +48,53 @@ public class GetCit50MappingQueryHandler(IApplicationDbContext db, ISender sende
     }
 }
 
+// ── แมพบัญชี → บรรทัดงบดุล ภ.ง.ด.50 (รายการที่ 9, ScheduleNo=9) — override การจัดประเภท ──
+// ใช้ตาราง AccountCit50Mappings ร่วมกับ schedule (คนละบัญชี: งบดุล=สินทรัพย์/หนี้สิน, schedule=ค่าใช้จ่าย).
+// บันทึกผ่าน SaveCit50MappingCommand เดิมได้เลย.
+public record GetCit50BsMappingQuery(int ClientCompanyId, int FiscalYear)
+    : IRequest<Cit50MappingViewDto>, IRequireCompanyAccess;
+
+public class GetCit50BsMappingQueryHandler(IApplicationDbContext db)
+    : IRequestHandler<GetCit50BsMappingQuery, Cit50MappingViewDto>
+{
+    public async Task<Cit50MappingViewDto> Handle(GetCit50BsMappingQuery req, CancellationToken ct)
+    {
+        var lines = (await db.Cit50ScheduleLines.AsNoTracking()
+                .Where(l => l.ScheduleNo == 9).OrderBy(l => l.SortOrder).ToListAsync(ct))
+            .Select(l => new Cit50LineDto(l.Code, l.ScheduleNo, l.Label, l.IsCatchAll, l.IsTotal)).ToList();
+
+        var maps = await db.AccountCit50Mappings.AsNoTracking()
+            .Where(m => m.ClientCompanyId == req.ClientCompanyId && m.Cit50LineCode.StartsWith("BS_"))
+            .ToDictionaryAsync(m => m.AccountCode, m => m.Cit50LineCode, ct);
+
+        // บัญชีงบดุล (สินทรัพย์/หนี้สิน) ที่ map RefCode ไว้ + ยอดสะสมปลายปี (OPEN-Y + MOVE-Y)
+        var refByAcc = await db.AccountStatementMappings.AsNoTracking()
+            .Where(m => m.ClientCompanyId == req.ClientCompanyId)
+            .ToDictionaryAsync(m => m.AccountCode, m => m.RefCode, ct);
+        var names = await db.Accounts.AsNoTracking()
+            .Where(a => a.ClientCompanyId == req.ClientCompanyId)
+            .ToDictionaryAsync(a => a.AccountCode, a => a.AccountName, ct);
+        var nets = await FinancialStatement.Services.FsJournalNets.CumulativeAsync(
+            db, req.ClientCompanyId, req.FiscalYear, ct);
+
+        // แสดงเฉพาะบัญชีที่จัดประเภทต่อได้ (RefCode สินทรัพย์/หนี้สินใน Pnd50BsLines) — ยอด != 0
+        var accounts = refByAcc
+            .Where(kv => Pnd50BsLines.FieldByRefCode.ContainsKey(kv.Value)
+                      && Math.Abs(nets.GetValueOrDefault(kv.Key)) > 0.005m)
+            .Select(kv =>
+            {
+                var isAsset = Pnd50BsLines.IsAssetField(Pnd50BsLines.FieldByRefCode[kv.Value]);
+                var net = nets.GetValueOrDefault(kv.Key);
+                return new Cit50AccountRowDto(kv.Key, names.GetValueOrDefault(kv.Key, ""),
+                    Math.Round(isAsset ? net : -net, 2), maps.GetValueOrDefault(kv.Key));
+            })
+            .OrderByDescending(a => Math.Abs(a.Amount))
+            .ToList();
+
+        return new Cit50MappingViewDto(lines, accounts);
+    }
+}
+
 public record SaveCit50MappingCommand(int ClientCompanyId, IReadOnlyList<Cit50MappingItemInput> Items)
     : IRequest, IRequireCompanyAccess;
 

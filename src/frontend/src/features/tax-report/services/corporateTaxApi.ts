@@ -61,4 +61,10 @@ export const corporateTaxApi = {
     apiClient
       .put(`${BASE}/cit50-mapping`, items, { params: { clientCompanyId } })
       .then((r) => r.data),
+
+  // แมพบัญชี → บรรทัดงบดุล ภ.ง.ด.50 (รายการ 9) — บันทึกผ่าน saveCit50Mapping เดิม
+  getCit50BsMapping: (clientCompanyId: number, fiscalYear: number) =>
+    apiClient
+      .get<Cit50MappingView>(`${BASE}/cit50-bs-mapping`, { params: { clientCompanyId, fiscalYear } })
+      .then((r) => r.data),
 }
