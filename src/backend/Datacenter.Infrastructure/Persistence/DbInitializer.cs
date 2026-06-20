@@ -220,6 +220,42 @@ public static class DbInitializer
         }
         if (db.ChangeTracker.HasChanges()) await db.SaveChangesAsync();
 
+        // ── Seed taxonomy บรรทัดรายการ 5 (รายได้อื่น) + 6 (รายจ่ายอื่น) หน้า 4 (index 3) ──
+        //    โครงสร้าง 3 คอลัมน์ ①ยกเว้น ②เสียภาษี ③รวม (เหมือนหน้า 3/รายการ 8): วาด col③(PdfX) +
+        //    col②(PdfX−108). PdfX=468.0/PdfW=105 → wall col③=573.0 (วัดกริด comb หน้า 4).
+        var sched56 = new (string Code, int Sched, string Label, int Sort, double Y, bool Catch, bool Total)[]
+        {
+            ("R5_GAINSALE",  5, "กำไรจากการจำหน่ายทรัพย์สิน", 1, 500.5, false, false),
+            ("R5_GAINFX",    5, "กำไรจากอัตราแลกเปลี่ยนเงินตรา", 2, 521.0, false, false),
+            ("R5_INT",       5, "ดอกเบี้ยรับ", 3, 541.5, false, false),
+            ("R5_DIV",       5, "เงินปันผลหรือส่วนแบ่งกำไร", 4, 562.7, false, false),
+            ("R5_TAXREFUND", 5, "เงินชดเชยค่าภาษีอากร", 5, 583.6, false, false),
+            ("R5_OTHER",     5, "รายได้อื่น", 6, 605.4, true, false),
+            ("R5_TOTAL",     5, "รวม", 7, 626.1, false, true),
+            ("R6_LOSSSALE",  6, "ขาดทุนจากการจำหน่ายทรัพย์สิน", 1, 681.0, false, false),
+            ("R6_LOSSFX",    6, "ขาดทุนจากอัตราแลกเปลี่ยนเงินตรา", 2, 702.1, false, false),
+            ("R6_FIN",       6, "ต้นทุนทางการเงิน", 3, 723.1, false, false),
+            ("R6_OTHER",     6, "รายจ่ายอื่น", 4, 744.9, true, false),
+            ("R6_TOTAL",     6, "รวม", 5, 766.5, false, true),
+        };
+        var sched56Existing = await db.Cit50ScheduleLines.Where(x => x.ScheduleNo == 5 || x.ScheduleNo == 6).ToDictionaryAsync(x => x.Code);
+        foreach (var s in sched56)
+        {
+            if (sched56Existing.TryGetValue(s.Code, out var ex))
+            {
+                ex.Label = s.Label; ex.SortOrder = s.Sort; ex.PdfPage = 3; ex.PdfX = 468.0;
+                ex.PdfY = s.Y; ex.PdfW = 105.0; ex.IsCatchAll = s.Catch; ex.IsTotal = s.Total;
+            }
+            else
+                db.Cit50ScheduleLines.Add(new Cit50ScheduleLine
+                {
+                    Code = s.Code, ScheduleNo = s.Sched, Label = s.Label, SortOrder = s.Sort,
+                    PdfPage = 3, PdfX = 468.0, PdfY = s.Y, PdfW = 105.0,
+                    IsCatchAll = s.Catch, IsTotal = s.Total, CreatedBy = "system",
+                });
+        }
+        if (db.ChangeTracker.HasChanges()) await db.SaveChangesAsync();
+
         // ── Seed taxonomy บรรทัดงบดุล ภ.ง.ด.50 (ScheduleNo=9) — สำหรับ override การจัดประเภท
         //    บัญชี→บรรทัดงบดุล ต่อบริษัท (เช่น แยกที่ดิน+อาคาร ออกจากทรัพย์สินอื่นหักค่าเสื่อม).
         //    ไม่ใช้พิกัด PDF (Page7 วาดด้วยตำแหน่งคงที่อยู่แล้ว) — code ต้องตรงกับ field ใน Pnd50Page7Data.

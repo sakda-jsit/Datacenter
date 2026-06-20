@@ -52,34 +52,49 @@ public class GetPnd50PdfQueryHandler(IApplicationDbContext db, ISender sender, I
                 AdjustedProfit: r.AdjustedProfit, LossUsed: r.LossUsed, NetTaxableIncome: r.NetTaxableIncome);
         }
 
-        // schedule รายการ 8 (รายจ่ายขายและบริหาร): aggregate ยอดบัญชีตาม mapping → บรรทัด CIT50
+        // Schedule รายการ 5 (รายได้อื่น, หน้า 4) / 6 (รายจ่ายอื่น, หน้า 4) / 8 (ขายและบริหาร, หน้า 5):
+        // aggregate ยอดบัญชี P&L ตาม mapping (AccountCit50Mappings) → บรรทัด CIT50; แต่ละบรรทัดวาด
+        // ② เสียภาษี (PdfX−108) + ③ รวม (PdfX). ① ยกเว้น (BOI) เว้นว่าง. บัญชีไม่ถูก map → catch-all.
         var scheduleCells = new List<Pnd50ScheduleCell>();
         if (pl is not null)
         {
-            var lines8 = await db.Cit50ScheduleLines.AsNoTracking()
-                .Where(l => l.ScheduleNo == 8).ToListAsync(ct);
-            if (lines8.Count > 0)
+            var maps = await db.AccountCit50Mappings.AsNoTracking()
+                .Where(m => m.ClientCompanyId == req.ClientCompanyId)
+                .ToDictionaryAsync(m => m.AccountCode, m => m.Cit50LineCode, ct);
+            var schedLines = await db.Cit50ScheduleLines.AsNoTracking()
+                .Where(l => l.ScheduleNo == 5 || l.ScheduleNo == 6 || l.ScheduleNo == 8).ToListAsync(ct);
+            const double col2Offset = 108.0; // ระยะจากคอลัมน์ "รวม" ไป "เสียภาษี" (ขอบกริด)
+
+            void Build(int scheduleNo, IEnumerable<(string Acc, decimal Amt, string? Def)> items)
             {
-                var maps = await db.AccountCit50Mappings.AsNoTracking()
-                    .Where(m => m.ClientCompanyId == req.ClientCompanyId)
-                    .ToDictionaryAsync(m => m.AccountCode, m => m.Cit50LineCode, ct);
-                var catchAll = lines8.FirstOrDefault(l => l.IsCatchAll)?.Code;
-                var sums = lines8.ToDictionary(l => l.Code, _ => 0m);
-                foreach (var line in pl.ExpenseLines.Append(pl.FinanceCost))
-                    foreach (var a in line.Accounts)
-                    {
-                        var code = maps.GetValueOrDefault(a.AccountCode) ?? catchAll;
-                        if (code is not null && sums.ContainsKey(code)) sums[code] += Math.Abs(a.NetBalance);
-                    }
-                var total = sums.Where(kv => lines8.First(l => l.Code == kv.Key) is { IsTotal: false }).Sum(kv => kv.Value);
-                const double col2Offset = 108.0; // ระยะจากคอลัมน์ "รวม" ไป "เสียภาษี" (รายการ 7 ฟอร์มใหม่ — ขอบกริด)
-                foreach (var l in lines8)
+                var lines = schedLines.Where(l => l.ScheduleNo == scheduleNo).ToList();
+                if (lines.Count == 0) return;
+                var catchAll = lines.FirstOrDefault(l => l.IsCatchAll)?.Code;
+                var sums = lines.ToDictionary(l => l.Code, _ => 0m);
+                foreach (var (acc, amt, def) in items)
+                {
+                    var code = maps.GetValueOrDefault(acc) ?? def ?? catchAll;
+                    if (code is not null && sums.ContainsKey(code)) sums[code] += Math.Abs(amt);
+                }
+                var total = sums.Where(kv => lines.First(l => l.Code == kv.Key) is { IsTotal: false }).Sum(kv => kv.Value);
+                foreach (var l in lines)
                 {
                     var v = l.IsTotal ? total : sums[l.Code];
-                    scheduleCells.Add(new Pnd50ScheduleCell(l.PdfPage, l.PdfX, l.PdfY, l.PdfW, v));            // รวม
-                    scheduleCells.Add(new Pnd50ScheduleCell(l.PdfPage, l.PdfX - col2Offset, l.PdfY, l.PdfW, v)); // เสียภาษี
+                    scheduleCells.Add(new Pnd50ScheduleCell(l.PdfPage, l.PdfX, l.PdfY, l.PdfW, v));            // ③ รวม
+                    scheduleCells.Add(new Pnd50ScheduleCell(l.PdfPage, l.PdfX - col2Offset, l.PdfY, l.PdfW, v)); // ② เสียภาษี
                 }
             }
+
+            // รายการ 8 (ขายและบริหาร): ค่าใช้จ่ายขาย/บริหาร (X1/X2) — ต้นทุนการเงินไปรายการ 6
+            Build(8, pl.ExpenseLines.SelectMany(line =>
+                line.Accounts.Select(a => (a.AccountCode, a.NetBalance, (string?)null))));
+
+            // รายการ 5 (รายได้อื่น): รายได้ที่ไม่ใช่จากการขาย/บริการ (ไม่ใช่ I1/I2); ดอกเบี้ยรับ (I3) → ดอกเบี้ยรับ
+            Build(5, pl.IncomeLines.Where(line => line.RefCode is not ("I1" or "I2")).SelectMany(line =>
+                line.Accounts.Select(a => (a.AccountCode, a.NetBalance, (string?)(line.RefCode == "I3" ? "R5_INT" : null)))));
+
+            // รายการ 6 (รายจ่ายอื่น): ต้นทุนทางการเงิน (FinanceCost) → ต้นทุนทางการเงิน
+            Build(6, pl.FinanceCost.Accounts.Select(a => (a.AccountCode, a.NetBalance, (string?)"R6_FIN")));
         }
 
         // หน้างบดุล (รายการที่ 9): crosswalk บรรทัด ← RefCode ผังงบ (ยอด presentation จาก BS engine)
