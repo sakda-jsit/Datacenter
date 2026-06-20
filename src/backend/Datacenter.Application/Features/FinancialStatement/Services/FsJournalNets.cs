@@ -17,30 +17,63 @@ namespace Datacenter.Application.Features.FinancialStatement.Services;
 /// </summary>
 public static class FsJournalNets
 {
-    private const string Opening = "OpeningBalance";
+    public const string OpeningBalance = "OpeningBalance";
+    /// <summary>ยอดยกมาที่ระบบ carry มาจาก AJE ปิดงบปีก่อน (Option B) — นับเป็น "ยอดยกมา" เช่นเดียวกับ OPEN-Y.</summary>
+    public const string CarryForwardOpening = "CarryForwardOpening";
+    /// <summary>SourceModule ที่ถือเป็น "ยอดยกมาต้นปี" (opening) — ไม่ใช่ movement.</summary>
+    public static readonly string[] OpeningSourceModules = { OpeningBalance, CarryForwardOpening };
 
-    /// <summary>ยอดยกมาต้นปี Y (OPEN-Y) ต่อ AccountCode.</summary>
+    /// <summary>ยอดยกมาต้นปี Y (OPEN-Y + CF-Y) ต่อ AccountCode.</summary>
     public static Task<Dictionary<string, decimal>> OpeningAsync(
         IApplicationDbContext db, int clientCompanyId, int fiscalYear, CancellationToken ct) =>
         NetsAsync(db, l =>
             l.JournalEntry.ClientCompanyId == clientCompanyId &&
             l.JournalEntry.FiscalYear == fiscalYear &&
-            l.JournalEntry.SourceModule == Opening, ct);
+            OpeningSourceModules.Contains(l.JournalEntry.SourceModule), ct);
 
-    /// <summary>ยอดเคลื่อนไหวระหว่างปี Y (MOVE-Y) ต่อ AccountCode.</summary>
+    /// <summary>ยอดเคลื่อนไหวระหว่างปี Y (MOVE-Y) ต่อ AccountCode — ไม่รวม opening (OPEN-Y/CF-Y).</summary>
     public static Task<Dictionary<string, decimal>> MovementAsync(
         IApplicationDbContext db, int clientCompanyId, int fiscalYear, CancellationToken ct) =>
         NetsAsync(db, l =>
             l.JournalEntry.ClientCompanyId == clientCompanyId &&
             l.JournalEntry.FiscalYear == fiscalYear &&
-            l.JournalEntry.SourceModule != Opening, ct);
+            !OpeningSourceModules.Contains(l.JournalEntry.SourceModule), ct);
 
-    /// <summary>ยอดสะสมถึงสิ้นปี Y = OPEN-Y + MOVE-Y ต่อ AccountCode.</summary>
+    /// <summary>ยอดสะสมถึงสิ้นปี Y = OPEN-Y + MOVE-Y (+ CF-Y ถ้ามี) ต่อ AccountCode — จาก JournalEntry เท่านั้น (ก่อนปรับปรุง).</summary>
     public static Task<Dictionary<string, decimal>> CumulativeAsync(
         IApplicationDbContext db, int clientCompanyId, int fiscalYear, CancellationToken ct) =>
         NetsAsync(db, l =>
             l.JournalEntry.ClientCompanyId == clientCompanyId &&
             l.JournalEntry.FiscalYear == fiscalYear, ct);
+
+    /// <summary>ยอด AJE (รายการปรับปรุงปิดงบใน-ระบบ) ของปี Y ต่อ AccountCode = ΣDr−Cr.</summary>
+    public static async Task<Dictionary<string, decimal>> AdjustmentNetsAsync(
+        IApplicationDbContext db, int clientCompanyId, int fiscalYear, CancellationToken ct)
+    {
+        var lines = await db.AdjustmentEntryLines.AsNoTracking()
+            .Where(l => l.AdjustmentEntry.ClientCompanyId == clientCompanyId
+                     && l.AdjustmentEntry.FiscalYear == fiscalYear)
+            .Select(l => new { l.Account.AccountCode, l.DebitAmount, l.CreditAmount })
+            .ToListAsync(ct);
+
+        return lines
+            .GroupBy(l => l.AccountCode)
+            .ToDictionary(g => g.Key, g => g.Sum(l => l.DebitAmount - l.CreditAmount));
+    }
+
+    /// <summary>
+    /// ยอดหลังปรับปรุง = CumulativeAsync(Y) + AdjustmentNetsAsync(Y) ต่อ AccountCode —
+    /// ฐานของงบการเงินที่ยื่น (BS/PL/Notes/Equity รวม AJE ปิดงบใน-ระบบ).
+    /// </summary>
+    public static async Task<Dictionary<string, decimal>> CumulativeWithAdjustmentsAsync(
+        IApplicationDbContext db, int clientCompanyId, int fiscalYear, CancellationToken ct)
+    {
+        var nets = await CumulativeAsync(db, clientCompanyId, fiscalYear, ct);
+        var adj  = await AdjustmentNetsAsync(db, clientCompanyId, fiscalYear, ct);
+        foreach (var kv in adj)
+            nets[kv.Key] = nets.GetValueOrDefault(kv.Key) + kv.Value;
+        return nets;
+    }
 
     /// <summary>
     /// รหัส JournalEntry ของ {OPEN-Y, MOVE-Y} (ยอดยกมา + เคลื่อนไหว) สำหรับปีงบ Y —
@@ -54,13 +87,13 @@ public static class FsJournalNets
             .Select(j => j.Id)
             .ToListAsync(ct);
 
-    /// <summary>รหัส JournalEntry ของ OPEN-Y (ยอดยกมาต้นปี) เท่านั้น — สำหรับคอลัมน์ "ยอดต้นปี".</summary>
+    /// <summary>รหัส JournalEntry ของยอดยกมาต้นปี (OPEN-Y + CF-Y) เท่านั้น — สำหรับคอลัมน์ "ยอดต้นปี".</summary>
     public static Task<List<int>> OpeningEntryIdsAsync(
         IApplicationDbContext db, int clientCompanyId, int fiscalYear, CancellationToken ct) =>
         db.JournalEntries.AsNoTracking()
             .Where(j => j.ClientCompanyId == clientCompanyId
                      && j.FiscalYear == fiscalYear
-                     && j.SourceModule == Opening)
+                     && OpeningSourceModules.Contains(j.SourceModule))
             .Select(j => j.Id)
             .ToListAsync(ct);
 

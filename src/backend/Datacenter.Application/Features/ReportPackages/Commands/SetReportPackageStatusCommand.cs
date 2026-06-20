@@ -74,11 +74,28 @@ public class SetReportPackageStatusCommandHandler(
         pkg.Status = target;
         pkg.ModifiedBy = user;
         pkg.ModifiedAt = now;
+
+        // Option B: เมื่อข้ามเส้น finalized (Final/Locked) → carry AJE ปิดงบเข้า opening ปีถัดไป.
+        // ทำก่อน SaveChanges เพื่อให้ status + CF commit รวมกัน (CF ล้ม = rollback การ finalize ทั้งหมด).
+        bool finalizedBefore = current is ReportPackageStatus.Final or ReportPackageStatus.Locked;
+        bool finalizedAfter  = target  is ReportPackageStatus.Final or ReportPackageStatus.Locked;
+        List<string> cfWarnings = [];
+        if (finalizedBefore != finalizedAfter)
+        {
+            var carryForward = new Services.CarryForwardService(db, currentUser);
+            cfWarnings = await carryForward.RegenerateAfterStatusChangeAsync(
+                request.ClientCompanyId, pkg.FiscalYear, finalizedAfter, ct);
+        }
+
         await db.SaveChangesAsync(ct);
 
         await audit.LogAsync(action, "ReportPackage", pkg.Id.ToString(),
             beforeValue: current.ToString(), afterValue: target.ToString(),
             companyId: request.ClientCompanyId, cancellationToken: ct);
+        if (cfWarnings.Count > 0)
+            await audit.LogAsync("CarryForwardWarning", "ReportPackage", pkg.Id.ToString(),
+                afterValue: string.Join(" · ", cfWarnings),
+                companyId: request.ClientCompanyId, cancellationToken: ct);
         await db.SaveChangesAsync(ct);
 
         return ReportPackageMapper.ToDto(pkg);

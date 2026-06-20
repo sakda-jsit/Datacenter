@@ -31,7 +31,7 @@ public class GetAdjustedTrialBalanceQueryHandler(IApplicationDbContext db)
             .Where(l => l.JournalEntry.ClientCompanyId == request.ClientCompanyId
                      && l.JournalEntry.FiscalYear == request.FiscalYear)
             .Select(l => new { l.AccountId, l.DebitAmount, l.CreditAmount,
-                               IsOpening = l.JournalEntry.SourceModule == "OpeningBalance" })
+                               IsOpening = FinancialStatement.Services.FsJournalNets.OpeningSourceModules.Contains(l.JournalEntry.SourceModule) })
             .ToListAsync(ct);
 
         // รายการปรับปรุงของปีงบนี้

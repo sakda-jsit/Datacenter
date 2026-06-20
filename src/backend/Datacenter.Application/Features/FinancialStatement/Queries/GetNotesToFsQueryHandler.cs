@@ -34,9 +34,10 @@ public class GetNotesToFsQueryHandler(IApplicationDbContext db)
 
         // ── ยอดบัญชีสะสมถึงสิ้นปี (OPEN-Y + MOVE-Y) — ฐานเดียวกับ GetProfitLoss/GetBalanceSheet ──
         // ใช้ FsJournalNets เพื่อไม่ดึง opening ของปีถัดไปมาเบิ้ล (ดู FsJournalNets / fs-cumulative-double-count).
-        var nCurrent  = await FsJournalNets.CumulativeAsync(db, request.ClientCompanyId, year,      ct);
-        var nPrior    = await FsJournalNets.CumulativeAsync(db, request.ClientCompanyId, prior,     ct);
-        var nTwoPrior = await FsJournalNets.CumulativeAsync(db, request.ClientCompanyId, prior - 1, ct);
+        // หลังปรับปรุง: แต่ละปีรวม AJE ปิดงบใน-ระบบ ของปีนั้น (ฐานเดียวกับ BS/PL ที่ยื่น)
+        var nCurrent  = await FsJournalNets.CumulativeWithAdjustmentsAsync(db, request.ClientCompanyId, year,      ct);
+        var nPrior    = await FsJournalNets.CumulativeWithAdjustmentsAsync(db, request.ClientCompanyId, prior,     ct);
+        var nTwoPrior = await FsJournalNets.CumulativeWithAdjustmentsAsync(db, request.ClientCompanyId, prior - 1, ct);
 
         var schedules = NotesEngine.BuildSchedules(
             allLines, mappings, accounts, nCurrent, nPrior);

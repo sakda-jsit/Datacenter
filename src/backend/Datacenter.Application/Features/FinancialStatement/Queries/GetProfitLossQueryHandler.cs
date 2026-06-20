@@ -44,7 +44,8 @@ public class GetProfitLossQueryHandler(IApplicationDbContext db)
         Dictionary<string, decimal> accountNets;
         if (isAnnual)
         {
-            accountNets = await FsJournalNets.CumulativeAsync(
+            // หลังปรับปรุง: รวม AJE ปิดงบใน-ระบบ ของปีนี้ (งบ PL ที่ยื่น = หลังปรับปรุง)
+            accountNets = await FsJournalNets.CumulativeWithAdjustmentsAsync(
                 db, request.ClientCompanyId, request.FiscalYear, ct);
         }
         else

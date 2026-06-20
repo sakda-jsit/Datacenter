@@ -38,7 +38,9 @@ public class GetBalanceSheetQueryHandler(IApplicationDbContext db)
         // inception, which re-adds each later year's full opening snapshot (e.g. OPEN-(Y+1),
         // which is itself a restated closing balance) and inflates the balance sheet ≈2× once
         // a company has two years of data posted.
-        var cumulativeNets = await FsJournalNets.CumulativeAsync(db, request.ClientCompanyId,
+        // หลังปรับปรุง: รวม AJE ปิดงบใน-ระบบ (AdjustmentEntry) ของปีนี้ด้วย — งบที่ยื่น = งบหลังปรับปรุง.
+        // การกระจาย: บัญชี BS → asset/liab/equity line; บัญชี P&L → netProfit → RE; บัญชี RE ตรง → reOpeningNet.
+        var cumulativeNets = await FsJournalNets.CumulativeWithAdjustmentsAsync(db, request.ClientCompanyId,
             request.FiscalYear, ct);
 
         // Net of the retained-earnings account(s) at fiscal year-end, EXCLUDING the current

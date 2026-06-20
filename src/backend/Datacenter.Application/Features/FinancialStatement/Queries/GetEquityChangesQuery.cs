@@ -33,7 +33,8 @@ public class GetEquityChangesQueryHandler(IApplicationDbContext db)
         // opening ปีถัดไป — ดู FsJournalNets / fs-cumulative-double-count). closing − opening = MOVE-Y
         // ให้ statement of changes articulate กับงบดุลพอดี.
         var openingNets = await FsJournalNets.OpeningAsync(db, request.ClientCompanyId, request.FiscalYear, ct);
-        var closingNets = await FsJournalNets.CumulativeAsync(db, request.ClientCompanyId, request.FiscalYear, ct);
+        // closing หลังปรับปรุง (รวม AJE ปีนี้) ให้ตรงงบดุล; opening ไม่รวม AJE ปีนี้ (AJE = movement ของปี)
+        var closingNets = await FsJournalNets.CumulativeWithAdjustmentsAsync(db, request.ClientCompanyId, request.FiscalYear, ct);
 
         // กำไรสุทธิปีนี้ (ฐานเดียวกับงบดุล/งบกำไรขาดทุน)
         var taxInputs = await db.FsExternalInputs.AsNoTracking()
