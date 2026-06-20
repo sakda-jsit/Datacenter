@@ -219,7 +219,8 @@ public class Pnd50PdfService : IPnd50PdfService
     private static void DrawText(XGraphics g, XFont f, string? text, double x, double y, double w, double h, XStringFormat fmt)
     {
         if (string.IsNullOrEmpty(text)) return;
-        g.DrawString(text, f, XBrushes.Black, new XRect(x, y, w, h), fmt);
+        // เว้นช่องเล็กน้อยหลัง label (inset) + ขยับลงให้ baseline นั่งใกล้เส้น (ไม่ลอยสูง) — กึ่งกลางคงเดิม
+        g.DrawString(text, f, XBrushes.Black, new XRect(x + 2.5, y + 1.8, w - 5.0, h), fmt);
     }
 
     /// <summary>
