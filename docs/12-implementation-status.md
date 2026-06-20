@@ -28,7 +28,7 @@
 | 14 | Audit Log | ✅ เสร็จ | viewer + ตัวกรอง (paginated) |
 | 15 | Dashboard & KPI | ✅ เสร็จ (operational) | นับลูกค้า/งาน compliance/import — ยังไม่รวม KPI การเงิน |
 
-**เสร็จ 15/15 + ภ.ง.ด.50 + ภ.พ.30 + ภ.ง.ด.3/53 + Payroll (P1+P2) + Attachment/Evidence + Field-audit + Audit export** — ครบ Phase-1 + ส่วนใหญ่ของ docs/18,23. ที่เหลือ (optional/อนาคต): bank-statement parser GSB/KTB/BBL + จับคู่หลายต่อหนึ่ง, Report Package version-control (docs/18 §Report Package), ภ.ง.ด.50 minor (ขาดทุนสะสมแยกอายุ 5 ปี / FA disposal journal / DBD NPAE code-map)
+**เสร็จ 15/15 + ภ.ง.ด.50 + ภ.พ.30 + ภ.ง.ด.3/53 + Payroll (P1+P2) + Attachment/Evidence + Field-audit + Audit export** — ครบ Phase-1 + ส่วนใหญ่ของ docs/18,23. ที่เหลือ (optional/อนาคต): bank-statement parser GSB/KTB/BBL + จับคู่หลายต่อหนึ่ง, Report Package version-control (docs/18 §Report Package), ภ.ง.ด.50 minor (ขาดทุนสะสมแยกอายุ 5 ปี / DBD NPAE code-map)
 
 ## Data Pipeline
 ```
@@ -71,7 +71,7 @@ Production (Account + JournalEntry/Line)
 ปิด loop ภาษีเงินได้ในงบการเงิน: หน้า `/pnd50` (เมนูภาษี) + `GET /financial-statement/external-inputs` + FsExternalInput รับ `X4`/`WHT` + StatementLines TXR/TXP. งบดุลลง counterpart และสมดุลทุกกรณี — verified end-to-end (API 3 กรณี + หน้า UI จริง). JSP CONNX → งบดุล 1,593,305.42 ตรงงบยื่นเป๊ะ
 
 ## งานถัดไป
-1. รอสเปก/ตัวอย่างตาราง DBF ของ VAT/sales/purchase/payroll → สร้าง entity + import + report ของโมดูลที่เหลือ (VAT/PP30, AR, AP, Payroll, Bank, ภ.ง.ด.3/53)
+1. ~~รอสเปก/ตัวอย่างตาราง DBF ของ VAT/sales/purchase/payroll → สร้าง entity + import + report~~ **เสร็จแล้วทั้งหมด** (VAT/PP30, AR, AP, Payroll, Bank, ภ.ง.ด.3/53 — ดูหัวข้อแต่ละโมดูลด้านล่าง)
 2. (ตัวเลือก) อ่านยอดรายเดือนจาก GLBAL (DEBIT1..12) เพื่อให้งบทดลอง/P&L รายเดือนแม่นยำ
 3. (ตัวเลือก) กลไกตั้ง/นำเข้า account→REF mapping ต่อบริษัท (ปัจจุบันตั้งผ่าน UI ทีละบัญชี)
 4. (Phase 2) ออกแบบ posting ใหม่รองรับนำเข้าหลายปีงบพร้อมกัน
@@ -138,7 +138,7 @@ Requirement v11 เพิ่มขอบเขตจาก workbook ปิดง
 - **API:** `FixedAssetsController` — `GET /fixed-assets/asset-types` + `GET/POST/PUT/DELETE /api/v1/fixed-assets` + `/fixed-assets/{id}` + `/fixed-assets/workpaper` + `/fixed-assets/generate-adjustment`
 - **Frontend:** เมนู "สินทรัพย์ถาวร" (ไอคอน building) → `/fixed-assets` 2 แท็บ (ทะเบียน + ฟอร์ม modal auto-fill อัตราจากประเภท + ตารางค่าเสื่อม 2 ชุด modal / กระดาษทำการ + สรุปประเภท + เทียบ GL + ปุ่ม generate ตามชุด)
 - **Verify:** ทดสอบ engine กับสินทรัพย์ที่รู้ผล — รถ 120,000 อัตรา 20% ได้มา 2024-07-01 → 2024 prorate 184/366 = 12,065.57, 2025 = 24,000, สะสม 36,065.57, NBV 83,934.43, ปีสุดท้าย 2029 absorb เศษปิด NBV 0.00 เป๊ะ; disposal รถขาย 100,000 อัตรา 20% ขาย 2025-06-30 ราคา 50,000 → ขาดทุน 82.19 (NBV 50,082.19); generate → ADJ-2025-0001 (source=FixedAsset) Dr ค่าเสื่อม / Cr ค่าเสื่อมสะสม สมดุล 33,917.81. API ครบ + UI ผ่าน Preview (ทะเบียน/modal 2 ชุด/workpaper/เทียบ GL) ไม่มี console error
-- **หมายเหตุ:** ใช้ตัดจำหน่ายแบบเส้นตรงเท่านั้น (req v11 = DATEDIF/straight-line); ยังไม่ generate journal ตัดจำหน่ายสินทรัพย์ออก (ลบ cost+accum+กำไร/ขาดทุน) — ตอนนี้แสดงกำไร/ขาดทุนให้บันทึก adjustment เองได้ที่หน้า adjustment
+- **หมายเหตุ:** ใช้ตัดจำหน่ายแบบเส้นตรงเท่านั้น (req v11 = DATEDIF/straight-line); การ generate journal ตัดจำหน่าย/ขายสินทรัพย์ (Dr ค่าเสื่อมสะสม+เงินรับ+ขาดทุน / Cr ราคาทุน+กำไร) **ทำเสร็จแล้ว** ผ่าน `GenerateDisposalAdjustmentCommand` — ดูหัวข้อ "ปิด gap NOTE2 + ตัดจำหน่าย" ด้านล่าง
 
 #### ✅ Import จาก Express FAMAS.DBF — เสร็จ (2026-06-05)
 Express มีทะเบียนสินทรัพย์เต็มรูปใน **`FAMAS.DBF`** (ตารางมาตรฐานทุกบริษัท) → import ได้ ไม่ต้องป้อนมือ
@@ -227,7 +227,7 @@ Utility กลางฝั่ง frontend + ปุ่ม `ExportMenu` ใช้�
 ##### ✅ ลายเซ็นผู้มีหน้าที่หัก + refine layout 50 ทวิ ตามแบบราชการ (2026-06-06, commit d0443cf + fix)
 - **ลายเซ็น:** `ClientCompany.SignatureImage` (varbinary) + migration `AddClientCompanySignature`; endpoints `GET/POST(multipart ≤2MB)/DELETE /wht/signature` (`UpdateClientCompanySignatureCommand`/`GetClientCompanySignatureQuery`); UI ปุ่ม "ลายเซ็น" → `SignatureModal` (preview/upload/ลบ). render เหนือเส้น "ลงชื่อ" (เยื้องซ้าย). **auto-trim** ขอบโปร่งใส(α≤24)/พื้นขาว(RGB≥240) ตอน upload ด้วย **SixLabors.ImageSharp 2.1.3** (`ISignatureImageProcessor`/`SignatureImageProcessor`) — เช่น 600×400→178×105
 - **refine layout (ตามผู้ใช้ทบทวนกับไฟล์แนบ):** checkbox 4(ข) เหลือเฉพาะ (1.1)–(1.4); ตารางใช้เส้นแบ่งคอลัมน์แนวตั้งอย่างเดียว (ไม่มีเส้นแนวนอน); header ลำดับที่(ซ้าย)/เลขที่(ขวา) บรรทัดเดียว + "ในแบบ แบบยื่น {form}" + ฉบับที่1 กึ่งกลางตัวหนา; กล่องคู่สัญญา title(ซ้าย)/เลขผู้เสียภาษี(ขวา) + ชื่อ(ซ้าย)/สำนักงานใหญ่(ขวา) เป็นข้อความ (ไม่มี checkbox สาขา); คอลัมน์ ratio 19:2.4:3.3:3.0; ข้อ 5 (เตรส) ประเภทที่ระบุขึ้นบรรทัดใหม่ + ข้อมูล(วันที่/เงิน/ภาษี)ชิดล่างตรงบรรทัด 2
-- **bugfix (2026-06-06):** ลายเซ็นกว้างมาก (เช่น 1400×120) ทำ `FitHeight()` ขยายล้นเซลล์ → `DocumentLayoutException` (PDF 500). แก้เป็น **`FitArea()`** (พอดีทั้งกว้าง+สูง) — verify: wide 1400×120 render ผ่าน, normal ไม่เปลี่ยน *(แก้แล้วรอ commit)*
+- **bugfix (2026-06-06):** ลายเซ็นกว้างมาก (เช่น 1400×120) ทำ `FitHeight()` ขยายล้นเซลล์ → `DocumentLayoutException` (PDF 500). แก้เป็น **`FitArea()`** (พอดีทั้งกว้าง+สูง) — verify: wide 1400×120 render ผ่าน, normal ไม่เปลี่ยน
 
 ### ✅ AR / ลูกหนี้การค้า — เสร็จ (2026-06-05, โมดูล #4)
 นำเข้าลูกค้า + ใบแจ้งหนี้ลูกหนี้จาก Express → รายงานอายุหนี้ (aging) + ใบแจ้งหนี้ + รายชื่อลูกค้า
@@ -260,15 +260,15 @@ Utility กลางฝั่ง frontend + ปุ่ม `ExportMenu` ใช้�
 - **Verify (JSP CONNX):** 19 รายการมียอด, **มูลค่ารวม 11,813.09 ตรง STMAS เป๊ะ**; กลุ่ม FG; ผังบัญชีเป็นอังกฤษ (บริษัทบริการ ไม่มีบัญชีสินค้าคงเหลือใน GL) → GL=0, ผลต่าง 11,813.09 (เคสจริง: สินค้ามีแต่ไม่มีบัญชี → ต้องปรับปรุง); UI 2 แท็บ + คงเหลือติดลบสีแดง ผ่าน Preview ไม่มี console error
 - **ขอบเขต v1:** valuation snapshot จาก TOTVAL ของ Express (ยังไม่ทำ FIFO costing เอง — Express คำนวณมูลค่าให้แล้ว); ผลต่าง FG↔TB แสดงให้บันทึก adjustment เอง
 
-### 🟡 Bank / สมุดเงินฝากธนาคาร — เสร็จ (2026-06-05; โมดูล #7 ส่วนสมุดเงินฝาก)
-นำเข้าบัญชีธนาคาร + รายการเดินบัญชีจาก Express → สมุดเงินฝาก (running balance). กระทบยอดกับ statement จริงยังรอไฟล์ธนาคารภายนอก
+### ✅ Bank / สมุดเงินฝากธนาคาร — เสร็จ (2026-06-05; โมดูล #7 ส่วนสมุดเงินฝาก)
+นำเข้าบัญชีธนาคาร + รายการเดินบัญชีจาก Express → สมุดเงินฝาก (running balance). ส่วนกระทบยอดกับ statement จริง (เต็มรูป) ทำเสร็จแล้ว — ดูหัวข้อ "Bank Reconciliation เต็มรูป" ด้านล่าง
 
 - **Express:** `BKMAS.DBF` (บัญชี: BNKACC/BNKNAM/BRANCH/BNKNUM/ACCNUM(GL)/BALFWD) + `BKTRN.DBF` (เดินบัญชี). **ทิศทาง: `JNLTRNTYP`='0'=เงินเข้า / '1'=เงินออก** (ยืนยันจาก sample: bP จ่ายเช็ค/BW ถอน/BT โอนออก=ออก; BD ฝาก/Bx โอนเข้า/bR รับ=เข้า)
 - **Domain:** `BankAccount` (master upsert) + `BankTransaction` (replace, IsDeposit). migration `AddBankAccountsAndTransactions`. `BankImporter` ใน StartExpressImport (audit `ImportBank`)
 - **CQRS/API:** `GetBankAccounts` (+ยอดคงเหลือปัจจุบัน = BALFWD+เคลื่อนไหวสุทธิ) · `GetBankBook` (สมุดเงินฝากต่อบัญชี/ปี: opening=BALFWD+net ก่อนปี, running balance ต่อรายการ, ฝาก/ถอน/คงเหลือ) · `GetBankYears`. `BankController` `/api/v1/bank/accounts,/book,/years`
 - **Frontend:** เมนู "ธนาคาร / สมุดเงินฝาก" `/bank-reconciliation` (เปลี่ยนจาก ComingSoon) 2 แท็บ (สมุดเงินฝาก + เลือกบัญชี/ปี + ยอดยกมา+running / บัญชีธนาคาร) + ExportMenu
 - **Verify (JSP CONNX):** 4 บัญชี, KASIKORN/SA R (acc 11) 331 รายการ; สมุดปี 2025 = 249 รายการ running balance สะสมถูกต้อง (ฝาก 403,455.37 ถอน 3,342,684.34); BALFWD ใน Express=0 → opening 0 (ยอดคงเหลือเป็นยอดเคลื่อนไหวสะสม); เงินเข้า/ออกแยกถูกตาม JNLTRNTYP; UI 2 แท็บ ผ่าน Preview ไม่มี console error
-- **ขอบเขต:** เป็น "สมุดเงินฝาก/cash book" จากฝั่งสมุดบัญชี (Express) — **ยังไม่ใช่ bank reconciliation เต็มรูป** (ต้องมีไฟล์ statement จากธนาคารมาจับคู่ matched/unmatched ซึ่งไม่อยู่ใน Express)
+- **ขอบเขต:** ส่วนนี้คือ "สมุดเงินฝาก/cash book" จากฝั่งสมุดบัญชี (Express). การกระทบยอดกับ statement ธนาคารจริง (อัปโหลด PDF/Excel → จับคู่ matched/unmatched → generate adjustment) = **bank reconciliation เต็มรูป ทำเสร็จแล้ว** (ดูหัวข้อ "Bank Reconciliation เต็มรูป" ด้านล่าง)
 
 ### ✅ CAP / งบแสดงการเปลี่ยนแปลงส่วนของผู้ถือหุ้น — เสร็จ (2026-06-05, req v11)
 ต่อยอด FinancialStatement engine — ไม่มี entity/migration ใหม่ (คำนวณจาก GL + StatementLines Section 'E')

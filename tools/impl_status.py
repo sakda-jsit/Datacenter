@@ -5,8 +5,8 @@ impl_status.py — ตรวจสถานะการพัฒนาจาก 
 
 ทำ 3 อย่าง:
   1) Inventory: ดึง backend controllers+endpoints, feature areas, migrations, frontend routes จากโค้ด
-  2) Drift check: เทียบกับตารางสถานะใน docs/12 — flag แถวที่ "อ้างว่ายังไม่เสร็จ (❌/⛔/🟡)"
-     แต่มี controller/feature/route ในโค้ดที่ชื่อตรงกัน (= น่าจะทำแล้วแต่ doc ไม่อัปเดต)
+  2) Drift check: เทียบกับ docs/12 — flag "แถวตารางสถานะ" หรือ "หัวข้อโมดูล (###)" ที่
+     "อ้างว่ายังไม่เสร็จ (❌/⛔/🟡)" แต่มี controller/feature/route ในโค้ดชื่อตรงกัน (= น่าจะทำแล้วแต่ doc ไม่อัปเดต)
   3) เขียน docs/_generated/impl-inventory.md (ground truth ให้คน/agent อ้างอิง)
 
 ใช้: python tools/impl_status.py          # รายงาน + เขียน inventory
@@ -75,8 +75,11 @@ def drift_check(ctrls, feats):
     flags = []
     for ln, line in enumerate(DOC12.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
         s = line.strip()
-        # เฉพาะ "แถวตารางสถานะ" (| col | col |) — ข้ามร้อยแก้ว/หมายเหตุ/ขอบเขต-อนาคต
-        if not (s.startswith("|") and s.count("|") >= 3):
+        # ตรวจ 2 แบบ: (1) "แถวตารางสถานะ" (| col | col |) และ (2) "หัวข้อโมดูล" (### ...)
+        # — ทั้งคู่เป็น marker ระดับโมดูล (1 บรรทัด = 1 โมดูล); ข้ามร้อยแก้ว/หมายเหตุ/ขอบเขต-อนาคต
+        is_table_row = s.startswith("|") and s.count("|") >= 3
+        is_module_header = s.startswith("###")
+        if not (is_table_row or is_module_header):
             continue
         if not any(m in line for m in NOT_DONE):
             continue
