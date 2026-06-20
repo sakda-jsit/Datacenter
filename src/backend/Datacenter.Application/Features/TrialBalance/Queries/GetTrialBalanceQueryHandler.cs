@@ -1,5 +1,4 @@
 using Datacenter.Application.Common.Exceptions;
-using Datacenter.Application.Common.Helpers;
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Features.TrialBalance.DTOs;
 using MediatR;
@@ -17,44 +16,44 @@ public class GetTrialBalanceQueryHandler(IApplicationDbContext db)
             .FirstOrDefaultAsync(x => x.Id == request.ClientCompanyId && x.IsActive, ct)
             ?? throw new NotFoundException("ClientCompany", request.ClientCompanyId);
 
-        var (periodStart, periodEnd, yearStart) = PeriodRangeHelper.Get(request.Year, request.MonthFrom, request.MonthTo);
-
         var accounts = await db.Accounts
             .AsNoTracking()
             .Where(a => a.ClientCompanyId == request.ClientCompanyId && a.IsActive)
             .OrderBy(a => a.AccountCode)
             .ToListAsync(ct);
 
-        var allLines = await db.JournalEntryLines
+        // กรองด้วยปีงบ (explicit) แล้วแยก ยอดยกมา (OPEN-Y) / เคลื่อนไหว (MOVE-Y) ด้วย SourceModule.
+        // begin = OPEN-Y (เดิม bug: ตัด OpeningBalance ทิ้งหมด → ยอดยกมาเป็น 0 เสมอ — แก้แล้ว)
+        var lines = await db.JournalEntryLines
             .AsNoTracking()
             .Where(l => l.JournalEntry.ClientCompanyId == request.ClientCompanyId
-                     && l.JournalEntry.JournalDate >= yearStart
-                     && l.JournalEntry.JournalDate < periodEnd
-                     // กัน OPEN-(Y+1) (ยอดยกมาปีถัดไป ลงวันที่ Y-12-31) เบิ้ลยอดเคลื่อนไหว/สิ้นงวด
-                     // — ดู FsJournalNets / fs-cumulative-double-count
-                     && l.JournalEntry.SourceModule != "OpeningBalance")
+                     && l.JournalEntry.FiscalYear == request.Year)
             .Select(l => new
             {
                 l.AccountId,
                 l.DebitAmount,
                 l.CreditAmount,
-                l.JournalEntry.JournalDate,
+                IsOpening = l.JournalEntry.SourceModule == "OpeningBalance",
             })
             .ToListAsync(ct);
 
+        // Express ลงยอดเคลื่อนไหวทั้งปีเป็นก้อนเดียวลงวันที่ 31/12 → ไม่มีความละเอียดรายเดือนจริง.
+        // มุมมองเต็มปี (หรือช่วงครอบ ธ.ค.) แสดงเคลื่อนไหว; ช่วงที่ไม่ถึง ธ.ค. = ยังไม่มีเคลื่อนไหว (0).
+        int mTo = request.MonthTo ?? 12;
+        bool includeMovement = (request.MonthFrom is null && request.MonthTo is null) || mTo >= 12;
+
+        var byAcc = lines.ToLookup(l => l.AccountId);
         var rows = new List<TrialBalanceRowDto>();
 
         foreach (var acc in accounts)
         {
-            var accLines = allLines.Where(l => l.AccountId == acc.Id).ToList();
+            var accLines = byAcc[acc.Id];
 
-            var beginLines = accLines.Where(l => l.JournalDate < periodStart).ToList();
-            decimal beginDebit  = beginLines.Sum(l => l.DebitAmount);
-            decimal beginCredit = beginLines.Sum(l => l.CreditAmount);
+            decimal beginDebit  = accLines.Where(l => l.IsOpening).Sum(l => l.DebitAmount);
+            decimal beginCredit = accLines.Where(l => l.IsOpening).Sum(l => l.CreditAmount);
 
-            var periodLines = accLines.Where(l => l.JournalDate >= periodStart).ToList();
-            decimal periodDebit  = periodLines.Sum(l => l.DebitAmount);
-            decimal periodCredit = periodLines.Sum(l => l.CreditAmount);
+            decimal periodDebit  = includeMovement ? accLines.Where(l => !l.IsOpening).Sum(l => l.DebitAmount)  : 0m;
+            decimal periodCredit = includeMovement ? accLines.Where(l => !l.IsOpening).Sum(l => l.CreditAmount) : 0m;
 
             decimal endDebit  = beginDebit  + periodDebit;
             decimal endCredit = beginCredit + periodCredit;

@@ -19,7 +19,9 @@ public class JournalEntryConfiguration : IEntityTypeConfiguration<JournalEntry>
             .HasForeignKey(x => x.ClientCompanyId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Primary query pattern: company + date range
+        // Primary query pattern: company + fiscal year (รายงานต่อปีงบ)
+        builder.HasIndex(x => new { x.ClientCompanyId, x.FiscalYear });
+        // คงไว้: partial-month date slice + idempotent delete by DocumentNo
         builder.HasIndex(x => new { x.ClientCompanyId, x.JournalDate });
         builder.HasIndex(x => new { x.ClientCompanyId, x.DocumentNo });
     }

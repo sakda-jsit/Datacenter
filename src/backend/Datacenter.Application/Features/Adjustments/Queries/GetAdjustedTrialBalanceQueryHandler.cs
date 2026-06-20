@@ -17,13 +17,8 @@ public class GetAdjustedTrialBalanceQueryHandler(IApplicationDbContext db)
             ?? throw new NotFoundException("ClientCompany", request.ClientCompanyId);
 
         // ยอดสะสมถึงสิ้นปีงบ (เหมือน FS/closing): begin = ยอดยกมา OPEN-Y, movement = ยอดเคลื่อนไหว MOVE-Y.
-        // ใช้ SourceModule + ช่วงปีแยก แทนการตัดด้วยวันที่อย่างเดียว เพราะ MOVE-Y (Y-12-31) กับ
-        // OPEN-(Y+1) (Y-12-31) ลงวันที่เท่ากัน — กรองวันที่ล้วนจะดึง OPEN-(Y+1) มาเบิ้ลใน movement
-        // (ดู FsJournalNets / fs-cumulative-double-count).
-        var openingFrom = new DateTime(request.FiscalYear - 1, 1, 1);
-        var yearStart   = new DateTime(request.FiscalYear, 1, 1);
-        var yearEnd     = new DateTime(request.FiscalYear + 1, 1, 1);
-
+        // กรองด้วย FiscalYear (explicit) แล้วแยก opening/movement ด้วย SourceModule — ไม่ต้องเดาจากวันที่
+        // อีก (OPEN-(Y+1) ลงวันที่เดียวกับ MOVE-Y; FiscalYear ตัดปัญหาเบิ้ล — ดู FsJournalNets).
         var accounts = await db.Accounts
             .AsNoTracking()
             .Where(a => a.ClientCompanyId == request.ClientCompanyId && a.IsActive)
@@ -34,12 +29,7 @@ public class GetAdjustedTrialBalanceQueryHandler(IApplicationDbContext db)
         var importedLines = await db.JournalEntryLines
             .AsNoTracking()
             .Where(l => l.JournalEntry.ClientCompanyId == request.ClientCompanyId
-                     && ((l.JournalEntry.SourceModule == "OpeningBalance"
-                            && l.JournalEntry.JournalDate >= openingFrom
-                            && l.JournalEntry.JournalDate < yearStart)
-                         || (l.JournalEntry.SourceModule != "OpeningBalance"
-                            && l.JournalEntry.JournalDate >= yearStart
-                            && l.JournalEntry.JournalDate < yearEnd)))
+                     && l.JournalEntry.FiscalYear == request.FiscalYear)
             .Select(l => new { l.AccountId, l.DebitAmount, l.CreditAmount,
                                IsOpening = l.JournalEntry.SourceModule == "OpeningBalance" })
             .ToListAsync(ct);

@@ -91,6 +91,7 @@ public static class ExpressPostingService
         {
             ClientCompanyId = companyId,
             DocumentNo = openDoc,
+            FiscalYear = fy,
             JournalDate = new DateTime(fy - 1, 12, 31),
             Description = $"ยอดยกมาต้นปี {fy} (นำเข้าจาก Express)",
             SourceModule = "OpeningBalance",
@@ -101,6 +102,7 @@ public static class ExpressPostingService
         {
             ClientCompanyId = companyId,
             DocumentNo = moveDoc,
+            FiscalYear = fy,
             JournalDate = new DateTime(fy, 12, 31),
             Description = $"ยอดเคลื่อนไหวสะสมปี {fy} (นำเข้าจาก Express)",
             SourceModule = "ImportBalance",
