@@ -133,6 +133,10 @@ Before writing code:
 6. Generate skeleton first.
 7. Implement one module at a time.
 
+> ⚠️ **อย่าเชื่อ docs/12-implementation-status.md ว่าอะไร "ยังไม่เสร็จ" โดยไม่ตรวจโค้ด** — doc นั้น stale บ่อย
+> (หลายฟีเจอร์ทำเสร็จแต่ไม่อัปเดต). ก่อนจะ"สร้าง" ฟีเจอร์ใหม่ ให้รัน `python tools/impl_status.py`
+> (ดึง inventory จากโค้ดจริง + flag doc drift) แล้ว grep หา controller/feature/migration ที่มีอยู่ก่อนเสมอ.
+
 # Communication Rules
 - ตอบกลับผู้ใช้เป็นภาษาไทยเสมอ
 - คำอธิบายเชิงธุรกิจ, architecture, requirement, workflow ให้ใช้ภาษาไทย

@@ -71,3 +71,6 @@ reference/vat/PP50_2018.pdf
 
 reference/vat/TAX_FORM_P500003056971.pdf
 reference/vat/pnd50-2568.pdf
+
+# generated docs (regenerate via tools/impl_status.py)
+docs/_generated/

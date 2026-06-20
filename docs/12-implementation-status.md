@@ -2,6 +2,12 @@
 
 สถานะการพัฒนา Phase 1 (อัปเดต: 2026-06-20)
 
+> ⚠️ **ตารางสถานะด้านล่างเป็นการสรุปด้วยมือและล้าสมัยได้ง่าย — code คือ source of truth.**
+> หลายฟีเจอร์ (ภ.พ.30 TXT / Attachment / Payroll P2 / field-audit / Report Package) เคยถูกทำเสร็จแต่ doc ไม่อัปเดต.
+> **ก่อนเชื่อว่าอะไร "ยังไม่เสร็จ" ให้รัน `python tools/impl_status.py`** — สคริปต์ดึง controllers/endpoints/features/migrations/routes
+> จากโค้ดจริง (เขียนลง `docs/_generated/impl-inventory.md`) + flag แถวในตารางนี้ที่อ้างว่ายังไม่เสร็จแต่มี feature ในโค้ด.
+> ใช้ `--check` ใน CI/pre-commit เพื่อ fail เมื่อ doc drift จากโค้ด.
+
 ## โมดูล (Phase 1)
 
 | # | โมดูล | สถานะ | หมายเหตุ |
