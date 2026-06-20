@@ -21,6 +21,7 @@ public interface IApplicationDbContext
     DbSet<FsExternalInput> FsExternalInputs { get; }
     DbSet<ComplianceTask> ComplianceTasks { get; }
     DbSet<ComplianceTaskTemplate> ComplianceTaskTemplates { get; }
+    DbSet<WorkTask> WorkTasks { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<AccountingPeriod> AccountingPeriods { get; }
     DbSet<AdjustmentEntry> AdjustmentEntries { get; }

@@ -33,6 +33,7 @@ import GeneralLedgerPage from '../features/general-ledger/pages/GeneralLedgerPag
 import Pnd50Page from '../features/tax-report/pages/Pnd50Page'
 import Cit50MappingPage from '../features/tax-report/pages/Cit50MappingPage'
 import ComplianceCalendarRoute from '../features/compliance-calendar/pages/ComplianceCalendarRoute'
+import TasksPage from '../features/tasks/pages/TasksPage'
 import ClosingPeriodPage from '../features/closing-period/pages/ClosingPeriodPage'
 import AuditLogPage from '../features/audit-log/pages/AuditLogPage'
 import DashboardPage from '../features/dashboard/pages/DashboardPage'
@@ -70,6 +71,7 @@ export default function AppRouter() {
           <Route path="pnd50" element={<Pnd50Page />} />
           <Route path="pnd50/cit50-mapping" element={<Cit50MappingPage />} />
           <Route path="compliance" element={<ComplianceCalendarRoute />} />
+          <Route path="tasks" element={<TasksPage />} />
           <Route path="closing-period" element={<ClosingPeriodPage />} />
           <Route path="report-packages" element={<ReportPackagesPage />} />
           <Route path="evidence" element={<EvidencePage />} />

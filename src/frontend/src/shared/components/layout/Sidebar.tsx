@@ -46,6 +46,7 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/dashboard', icon: 'overview', label: 'Dashboard', desc: 'ภาพรวมสำนักงาน' },
       { to: '/compliance', icon: 'calendar', label: 'ปฏิทินงาน', desc: 'ภ.พ.30, ภ.ง.ด., SSO' },
+      { to: '/tasks', icon: 'fileText', label: 'งาน / มอบหมายงาน', desc: 'งานทั่วไป + ข้ามบริษัท' },
     ],
   },
   {
