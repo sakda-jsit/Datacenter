@@ -1,6 +1,6 @@
 # Implementation Status
 
-สถานะการพัฒนา Phase 1 (อัปเดต: 2026-06-02)
+สถานะการพัฒนา Phase 1 (อัปเดต: 2026-06-20)
 
 ## โมดูล (Phase 1)
 
@@ -11,8 +11,8 @@
 | 3 | VAT Management | ✅ เสร็จ (2026-06-05) | นำเข้า ISVAT.DBF + รายงาน ภ.พ.30 รายเดือน + รายละเอียดภาษีซื้อ/ขาย — ดูหัวข้อด้านล่าง |
 | 4 | AR Management | ✅ เสร็จ (2026-06-05) | นำเข้า ARMAS/ARTRN → ลูกค้า + ใบแจ้งหนี้ + รายงานอายุหนี้ (aging) — ดูหัวข้อด้านล่าง |
 | 5 | AP Management | ✅ เสร็จ (2026-06-05) | นำเข้า APMAS/APTRN → ผู้ขาย + ใบตั้งหนี้ + รายงานอายุหนี้เจ้าหนี้ — ดูหัวข้อด้านล่าง |
-| 6 | Payroll | ⛔ รอสเปก DBF | ต้องการข้อมูลเงินเดือน + สูตรภาษี/ประกันสังคม |
-| 7 | Bank / สมุดเงินฝาก | 🟡 สมุดเงินฝากเสร็จ | นำเข้า BKMAS/BKTRN → สมุดเงินฝาก + ยอดสะสม (ดูหัวข้อด้านล่าง); กระทบยอดกับ statement จริงยังรอไฟล์ธนาคาร |
+| 6 | Payroll | ✅ เสร็จ (P1+P2, มิ.ย.2026) | Express ไม่มี DBF เงินเดือน → ทะเบียนพนักงาน+เอกสาร PDPA + import Excel + คำนวณ ปกส./ภาษี (PayrollCalculator) + PayrollRun + ภ.ง.ด.1/1ก + ปกส./กท.20 + 50ทวิ + Excel + post GL (docs/23) |
+| 7 | Bank / สมุดเงินฝาก | ✅ เสร็จ (2026-06-08) | สมุดเงินฝาก + กระทบยอด statement (RPT-015/016): parser SCB/KBANK/TTB + Excel/CSV → จับคู่ BKTRN; เหลือ parser GSB/KTB/BBL + จับคู่หลายต่อหนึ่ง |
 | 8 | Trial Balance | ✅ เสร็จ | อ่านจาก Account + JournalEntry (ต้อง post ก่อน) |
 | 9 | General Ledger | ✅ เสร็จ | running balance ต่อบัญชี |
 | 10 | Financial Statement | ✅ เสร็จ | งบฐานะการเงิน + กำไรขาดทุน (ต้องตั้ง mapping บัญชี→บรรทัดงบ) |
@@ -22,7 +22,7 @@
 | 14 | Audit Log | ✅ เสร็จ | viewer + ตัวกรอง (paginated) |
 | 15 | Dashboard & KPI | ✅ เสร็จ (operational) | นับลูกค้า/งาน compliance/import — ยังไม่รวม KPI การเงิน |
 
-**เสร็จ 15/15 + ภ.ง.ด.50 + ภ.พ.30 + ภ.ง.ด.3/53** — ครบ Phase-1 ที่ทำได้จาก Express DBF. ที่เหลือ (Payroll, Bank Reconciliation) รอ DBF เงินเดือน / bank statement
+**เสร็จ 15/15 + ภ.ง.ด.50 + ภ.พ.30 + ภ.ง.ด.3/53 + Payroll (P1+P2) + Attachment/Evidence + Field-audit + Audit export** — ครบ Phase-1 + ส่วนใหญ่ของ docs/18,23. ที่เหลือ (optional/อนาคต): bank-statement parser GSB/KTB/BBL + จับคู่หลายต่อหนึ่ง, Report Package version-control (docs/18 §Report Package), ภ.ง.ด.50 minor (ขาดทุนสะสมแยกอายุ 5 ปี / FA disposal journal / DBD NPAE code-map)
 
 ## Data Pipeline
 ```
@@ -94,8 +94,8 @@ Requirement v11 เพิ่มขอบเขตจาก workbook ปิดง
 | TAX engine (เต็มรูป) | ✅ เสร็จ (2026-06-14) | ไม่ | คำนวณภาษีเงินได้นิติบุคคลจากกำไรบัญชี + บวกกลับ/หักออก + ขาดทุนสะสม + อัตรา SME ขั้นบันได → mirror X4 ลงงบ — ดูหัวข้อด้านล่าง |
 | PP30 auto จาก VAT | ✅ เสร็จ (2026-06-05) | ไม่ (ISVAT) | นำเข้า ISVAT.DBF → รายงาน ภ.พ.30 รายเดือน — ดูหัวข้อด้านล่าง |
 | PND.3/53 จาก ISTAX | ✅ เสร็จ (2026-06-05) | ไม่ (ISTAX) | นำเข้า ISTAX.DBF → รายงาน ภ.ง.ด.3/53 รายเดือน + รายละเอียด — ดูหัวข้อด้านล่าง (ไม่ต้องพึ่ง PDF) |
-| Field-level audit ทุก field | 🟡 มี Audit Log พื้นฐาน | ไม่ | ยังไม่ field-level (docs/18) |
-| Attachment / Evidence | ❌ ยังไม่เริ่ม | ไม่ | docs/18 |
+| Field-level audit ทุก field | ✅ เสร็จ (2026-06-07) | ไม่ | FieldAuditSaveChangesInterceptor + AuditableEntityRegistry (diff ราย field อัตโนมัติ) (docs/18) |
+| Attachment / Evidence | ✅ เสร็จ (2026-06-07) | ไม่ | Attachment entity (blob+SHA256, polymorphic) + AttachmentsController + EvidencePage /evidence + completeness checklist (docs/18) |
 | Audit log export | ✅ เสร็จ (2026-06-07) | ไม่ | export **ทั้งชุดตามตัวกรอง** (Excel/CSV/PDF) ผ่าน /audit-log/export (cap 50k) + ตัวกรอง Action/EntityName (/filter-options) + แสดงจำนวนรวม |
 | Report package (draft/review/final/lock + version) | ✅ เสร็จ (2026-06-05) | ไม่ | ReportPackage + workflow + snapshot ชื่อบริษัท/ยอดงบ ตอน finalize — ดูหัวข้อด้านล่าง |
 | Snapshot อัตลักษณ์บริษัทตอนล็อกงบ | ✅ เสร็จ (ใน Report Package) | ไม่ | snapshot LegalName/TaxId/Branch/Address + ยอดงบต่อ version (แก้ deferred จากงาน LegalName) |
