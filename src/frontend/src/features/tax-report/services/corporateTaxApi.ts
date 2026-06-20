@@ -51,15 +51,16 @@ export const corporateTaxApi = {
       .get<SignerAssignment[]>(`${BASE}/signer-assignments`, { params })
       .then((r) => r.data),
 
-  // แมพบัญชี → บรรทัด CIT50 (รายการ 8)
-  getCit50Mapping: (clientCompanyId: number, fiscalYear: number) =>
+  // แมพบัญชี → บรรทัด CIT50 schedule (4=ต้นทุนผลิต, 5=รายได้อื่น, 6=รายจ่ายอื่น, 8=ขายและบริหาร)
+  getCit50Mapping: (clientCompanyId: number, fiscalYear: number, scheduleNo = 8) =>
     apiClient
-      .get<Cit50MappingView>(`${BASE}/cit50-mapping`, { params: { clientCompanyId, fiscalYear } })
+      .get<Cit50MappingView>(`${BASE}/cit50-mapping`, { params: { clientCompanyId, fiscalYear, scheduleNo } })
       .then((r) => r.data),
 
-  saveCit50Mapping: (clientCompanyId: number, items: Cit50MappingItem[]) =>
+  // scope = prefix ของแท็บที่บันทึก (R4_/R5_/R6_/R8/BS_) — ล้าง mapping เฉพาะ scope นั้น
+  saveCit50Mapping: (clientCompanyId: number, items: Cit50MappingItem[], scope?: string) =>
     apiClient
-      .put(`${BASE}/cit50-mapping`, items, { params: { clientCompanyId } })
+      .put(`${BASE}/cit50-mapping`, items, { params: { clientCompanyId, scope } })
       .then((r) => r.data),
 
   // แมพบัญชี → บรรทัดงบดุล ภ.ง.ด.50 (รายการ 9) — บันทึกผ่าน saveCit50Mapping เดิม

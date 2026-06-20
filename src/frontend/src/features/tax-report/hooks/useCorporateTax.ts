@@ -38,10 +38,10 @@ export function useCompanySigners(companyId: number, year: number, enabled = tru
   })
 }
 
-export function useCit50Mapping(companyId: number, year: number, enabled = true) {
+export function useCit50Mapping(companyId: number, year: number, scheduleNo = 8, enabled = true) {
   return useQuery({
-    queryKey: [KEY, 'cit50-mapping', companyId, year],
-    queryFn: () => corporateTaxApi.getCit50Mapping(companyId, year),
+    queryKey: [KEY, 'cit50-mapping', companyId, year, scheduleNo],
+    queryFn: () => corporateTaxApi.getCit50Mapping(companyId, year, scheduleNo),
     enabled: enabled && companyId > 0,
   })
 }
@@ -57,8 +57,8 @@ export function useCit50BsMapping(companyId: number, year: number, enabled = tru
 export function useSaveCit50Mapping() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (vars: { companyId: number; items: Cit50MappingItem[] }) =>
-      corporateTaxApi.saveCit50Mapping(vars.companyId, vars.items),
+    mutationFn: (vars: { companyId: number; items: Cit50MappingItem[]; scope?: string }) =>
+      corporateTaxApi.saveCit50Mapping(vars.companyId, vars.items, vars.scope),
     onSuccess: (_res, vars) => {
       qc.invalidateQueries({ queryKey: [KEY, 'cit50-mapping', vars.companyId] })
       qc.invalidateQueries({ queryKey: [KEY, 'cit50-bs-mapping', vars.companyId] })

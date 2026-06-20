@@ -10,26 +10,65 @@ function fmt(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-type Tab = 'sga' | 'bs'
+type TabDef = {
+  key: string
+  label: string
+  sched: number | null // null = งบดุล (BS)
+  scope: string
+  defaultLabel: string
+  help: string
+}
+
+const TABS: TabDef[] = [
+  {
+    key: 'r4', label: 'รายการ 4 (ต้นทุนผลิต)', sched: 4, scope: 'R4_',
+    defaultLabel: '— ไม่ลงรายการนี้ —',
+    help: 'แมพบัญชีต้นทุนการผลิต → บรรทัดในรายการที่ 4 — บัญชีวัตถุดิบ/งานระหว่างทำใช้สำหรับยอดต้น/ปลายงวด, ' +
+      'บัญชีซื้อ→ต้นทุนวัตถุดิบใช้ไป, เงินเดือนฝ่ายผลิต/ค่าเสื่อมการผลิต ฯลฯ. บัญชีที่ไม่เลือกจะไม่เข้ารายการ 4. ' +
+      'ยอดซื้อ/ผลรวม/ต้นทุนผลิต คำนวณให้อัตโนมัติ',
+  },
+  {
+    key: 'r8', label: 'รายการ 7/8 (ขาย/บริหาร)', sched: 8, scope: 'R8',
+    defaultLabel: '— รายจ่ายอื่น (ค่าเริ่มต้น) —',
+    help: 'แมพบัญชีค่าใช้จ่ายขายและบริหาร → บรรทัดรายการที่ 8. บัญชีที่ไม่เลือกจะลง "รายจ่ายอื่น" อัตโนมัติ ' +
+      '(บัญชีที่แมพไปรายการ 4/6 จะไม่แสดงที่นี่)',
+  },
+  {
+    key: 'r5', label: 'รายการ 5 (รายได้อื่น)', sched: 5, scope: 'R5_',
+    defaultLabel: '— รายได้อื่น (ค่าเริ่มต้น) —',
+    help: 'แมพบัญชีรายได้อื่น (นอกจากรายได้หลัก) → บรรทัดรายการที่ 5',
+  },
+  {
+    key: 'r6', label: 'รายการ 6 (รายจ่ายอื่น)', sched: 6, scope: 'R6_',
+    defaultLabel: '— รายจ่ายอื่น (ค่าเริ่มต้น) —',
+    help: 'แมพรายจ่ายอื่น/ต้นทุนทางการเงิน → บรรทัดรายการที่ 6',
+  },
+  {
+    key: 'bs', label: 'งบดุล (รายการ 9)', sched: null, scope: 'BS_',
+    defaultLabel: '— ตามผังบัญชี (ค่าเริ่มต้น) —',
+    help: 'แมพบัญชีสินทรัพย์/หนี้สิน → บรรทัดงบดุลรายการที่ 9 (เช่น แยกที่ดิน+อาคารจากทรัพย์สินอื่น). ' +
+      'ยอดรวมไม่เปลี่ยน เปลี่ยนแค่บรรทัดที่ลง',
+  },
+]
 
 export default function Cit50MappingPage() {
   const currentYear = new Date().getFullYear()
   const { companyId } = useCurrentCompany()
   const [year, setYear] = useState(currentYear)
   const [queried, setQueried] = useState(false)
-  const [tab, setTab] = useState<Tab>('sga')
+  const [tabKey, setTabKey] = useState('r4')
+  const tab = TABS.find((t) => t.key === tabKey)!
 
-  const sga = useCit50Mapping(companyId, year, queried && tab === 'sga')
-  const bs = useCit50BsMapping(companyId, year, queried && tab === 'bs')
-  const active = tab === 'sga' ? sga : bs
+  const sched = useCit50Mapping(companyId, year, tab.sched ?? 8, queried && tab.sched !== null)
+  const bs = useCit50BsMapping(companyId, year, queried && tab.sched === null)
+  const active = tab.sched === null ? bs : sched
   const { data, isLoading, isError } = active
   const save = useSaveCit50Mapping()
 
-  // edits: accountCode -> lineCode ('' = ไม่ระบุ → ใช้ค่าเริ่มต้น)
   const [edits, setEdits] = useState<Record<string, string>>({})
   useEffect(() => { setEdits({}) }, [data])
   useEffect(() => { setQueried(false) }, [companyId])
-  useEffect(() => { setEdits({}) }, [tab])
+  useEffect(() => { setEdits({}) }, [tabKey])
 
   const lines = (data?.lines ?? []).filter((l) => !l.isTotal)
   function lineOf(accountCode: string, orig?: string | null) {
@@ -43,7 +82,7 @@ export default function Cit50MappingPage() {
       accountName: a.accountName,
       cit50LineCode: lineOf(a.accountCode, a.cit50LineCode) || null,
     }))
-    await save.mutateAsync({ companyId, items })
+    await save.mutateAsync({ companyId, items, scope: tab.scope })
     setEdits({})
   }
 
@@ -51,19 +90,15 @@ export default function Cit50MappingPage() {
     ? data.accounts.some((a) => edits[a.accountCode] !== undefined && edits[a.accountCode] !== (a.cit50LineCode ?? ''))
     : false
 
-  const isBs = tab === 'bs'
-  const defaultLabel = isBs ? '— ตามผังบัญชี (ค่าเริ่มต้น) —' : '— รายจ่ายอื่น (ค่าเริ่มต้น) —'
-  const colHeader = isBs ? 'บรรทัดงบดุล ภ.ง.ด.50 (รายการ 9)' : 'บรรทัด ภ.ง.ด.50 (รายการ 8)'
-
   return (
     <div>
       <PageHeader title="แมพบัญชี → ภ.ง.ด.50" />
 
-      <div className="mb-4 flex gap-1 border-b border-gray-200">
-        {([['sga', 'รายการ 8 (รายจ่ายขาย/บริหาร)'], ['bs', 'งบดุล (รายการ 9)']] as [Tab, string][]).map(([t, label]) => (
-          <button key={t} onClick={() => { setTab(t); setQueried(false) }}
-            className={`px-4 py-2 text-sm font-medium ${tab === t ? 'border-b-2 border-slate-700 text-slate-800' : 'text-gray-500 hover:text-gray-700'}`}>
-            {label}
+      <div className="mb-4 flex flex-wrap gap-1 border-b border-gray-200">
+        {TABS.map((t) => (
+          <button key={t.key} onClick={() => { setTabKey(t.key); setQueried(false) }}
+            className={`px-3 py-2 text-sm font-medium ${tabKey === t.key ? 'border-b-2 border-slate-700 text-slate-800' : 'text-gray-500 hover:text-gray-700'}`}>
+            {t.label}
           </button>
         ))}
       </div>
@@ -82,16 +117,7 @@ export default function Cit50MappingPage() {
       </Card>
 
       <Card className="mb-4 p-4">
-        <p className="text-sm text-gray-500">
-          {isBs ? (
-            <>แมพบัญชีสินทรัพย์/หนี้สิน → บรรทัดงบดุลในรายการที่ 9 ของ ภ.ง.ด.50 — ฟอร์มแยกบรรทัดละเอียดกว่างบการเงิน
-            (เช่น <b>ที่ดินและอาคาร</b> แยกจาก <b>ทรัพย์สินอื่นซึ่งหักค่าเสื่อม</b> = อุปกรณ์/ยานพาหนะ/เครื่องจักร).
-            บัญชีที่ไม่เลือกจะลงตามผังบัญชีเดิม — <b>ยอดรวมสินทรัพย์/หนี้สินไม่เปลี่ยน</b> เปลี่ยนแค่บรรทัดที่ลง</>
-          ) : (
-            <>แมพบัญชีค่าใช้จ่ายขายและบริหาร → บรรทัดในรายการที่ 8 ของ ภ.ง.ด.50 (เช่น เงินเดือน→รายจ่ายเกี่ยวกับพนักงาน,
-            ค่าเสื่อม→ค่าสึกหรอฯ). บัญชีที่ไม่เลือก จะลง "รายจ่ายอื่น (1.-29.)" อัตโนมัติ — ยอดรวมจะตรงเสมอ</>
-          )}
-        </p>
+        <p className="text-sm text-gray-500">{tab.help}</p>
       </Card>
 
       {!queried ? (
@@ -106,7 +132,7 @@ export default function Cit50MappingPage() {
               <tr>
                 <th className="px-3 py-2 text-left">บัญชี</th>
                 <th className="px-3 py-2 text-right">ยอดปีนี้</th>
-                <th className="px-3 py-2 text-left">{colHeader}</th>
+                <th className="px-3 py-2 text-left">{tab.label}</th>
               </tr>
             </thead>
             <tbody>
@@ -122,7 +148,7 @@ export default function Cit50MappingPage() {
                     <td className="px-3 py-1.5">
                       <select value={val} onChange={(e) => setEdits((p) => ({ ...p, [a.accountCode]: e.target.value }))}
                         className="w-80 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400">
-                        <option value="">{defaultLabel}</option>
+                        <option value="">{tab.defaultLabel}</option>
                         {lines.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
                       </select>
                     </td>
