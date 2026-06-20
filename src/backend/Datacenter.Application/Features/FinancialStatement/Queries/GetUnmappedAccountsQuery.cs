@@ -36,17 +36,10 @@ public class GetUnmappedAccountsQueryHandler(IApplicationDbContext db, ICompanyA
             .Where(a => a.ClientCompanyId == request.ClientCompanyId)
             .ToDictionaryAsync(a => a.AccountCode, a => a.AccountName, ct);
 
-        // ยอดสะสม (debit−credit) ถึงสิ้นปีงบ — ฐานเดียวกับงบ
-        var toExcl = new DateTime(request.FiscalYear + 1, 1, 1);
-        var lines = await db.JournalEntryLines.AsNoTracking()
-            .Where(l => l.JournalEntry.ClientCompanyId == request.ClientCompanyId
-                     && l.JournalEntry.JournalDate < toExcl)
-            .Select(l => new { l.Account.AccountCode, l.DebitAmount, l.CreditAmount })
-            .ToListAsync(ct);
-
-        var nets = lines
-            .GroupBy(l => l.AccountCode)
-            .ToDictionary(g => g.Key, g => g.Sum(l => l.DebitAmount - l.CreditAmount));
+        // ยอดสะสม (debit−credit) ถึงสิ้นปีงบ = OPEN-Y + MOVE-Y — ฐานเดียวกับงบ
+        // (กัน OPEN-(Y+1) เบิ้ล — ดู FsJournalNets / fs-cumulative-double-count)
+        var nets = await Services.FsJournalNets.CumulativeAsync(
+            db, request.ClientCompanyId, request.FiscalYear, ct);
 
         var items = nets
             .Where(kv => !mappedSet.Contains(kv.Key) && Math.Abs(kv.Value) > 0.01m)

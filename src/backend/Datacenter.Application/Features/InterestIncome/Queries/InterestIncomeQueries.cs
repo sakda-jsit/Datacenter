@@ -1,6 +1,7 @@
 using Datacenter.Application.Common.Exceptions;
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Common.Security;
+using Datacenter.Application.Features.FinancialStatement.Services;
 using Datacenter.Application.Features.InterestIncome.DTOs;
 using Datacenter.Application.Features.InterestIncome.Services;
 using Datacenter.Domain.Entities;
@@ -89,15 +90,15 @@ public class GetInterestWorkpaperQueryHandler(IApplicationDbContext db)
         var accIds = interestByAcc.Keys.ToList();
         if (accIds.Count == 0) return [];
 
-        var yearStart = new DateTime(fiscalYear, 1, 1);
-        var yearEndExclusive = new DateTime(fiscalYear, 12, 31).AddDays(1);
+        // ยอดรายได้ดอกเบี้ยที่เคลื่อนไหวในปี = MOVE-Y (คงความหมายเดิม "movement ในปี" แต่กัน
+        // OPEN-(Y+1) ที่ลงวันที่ Y-12-31 เบิ้ล — ดู FsJournalNets)
+        var moveEntryIds = (await FsJournalNets.FiscalYearEntryIdsAsync(db, clientCompanyId, fiscalYear, ct))
+            .Except(await FsJournalNets.OpeningEntryIdsAsync(db, clientCompanyId, fiscalYear, ct)).ToList();
         var accounts = await db.Accounts.AsNoTracking()
             .Where(a => accIds.Contains(a.Id)).ToDictionaryAsync(a => a.Id, ct);
 
         var glNet = await db.JournalEntryLines.AsNoTracking()
-            .Where(l => l.JournalEntry.ClientCompanyId == clientCompanyId
-                     && l.JournalEntry.JournalDate >= yearStart
-                     && l.JournalEntry.JournalDate < yearEndExclusive
+            .Where(l => moveEntryIds.Contains(l.JournalEntryId)
                      && accIds.Contains(l.AccountId))
             .GroupBy(l => l.AccountId)
             .Select(g => new { AccountId = g.Key, Debit = g.Sum(x => x.DebitAmount), Credit = g.Sum(x => x.CreditAmount) })

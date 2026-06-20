@@ -32,12 +32,11 @@ public class GetNotesToFsQueryHandler(IApplicationDbContext db)
             .Where(a => a.ClientCompanyId == request.ClientCompanyId && a.IsActive)
             .ToDictionaryAsync(a => a.AccountCode, ct);
 
-        // ── ยอดบัญชีสะสมถึงสิ้นปี (cumulative) — ฐานเดียวกับ GetProfitLossQueryHandler ──
-        // ทั้งงบฐานะและงบกำไรขาดทุนใช้ยอดสะสมถึงสิ้นปี เพื่อให้หมายเหตุ "ลงตรง" กับงบที่แสดง.
-        var epoch = new DateTime(2000, 1, 1);
-        var nCurrent  = await NetsAsync(request.ClientCompanyId, epoch, YearEndExcl(year),      ct);
-        var nPrior    = await NetsAsync(request.ClientCompanyId, epoch, YearEndExcl(prior),     ct);
-        var nTwoPrior = await NetsAsync(request.ClientCompanyId, epoch, YearEndExcl(prior - 1), ct);
+        // ── ยอดบัญชีสะสมถึงสิ้นปี (OPEN-Y + MOVE-Y) — ฐานเดียวกับ GetProfitLoss/GetBalanceSheet ──
+        // ใช้ FsJournalNets เพื่อไม่ดึง opening ของปีถัดไปมาเบิ้ล (ดู FsJournalNets / fs-cumulative-double-count).
+        var nCurrent  = await FsJournalNets.CumulativeAsync(db, request.ClientCompanyId, year,      ct);
+        var nPrior    = await FsJournalNets.CumulativeAsync(db, request.ClientCompanyId, prior,     ct);
+        var nTwoPrior = await FsJournalNets.CumulativeAsync(db, request.ClientCompanyId, prior - 1, ct);
 
         var schedules = NotesEngine.BuildSchedules(
             allLines, mappings, accounts, nCurrent, nPrior);
@@ -57,24 +56,6 @@ public class GetNotesToFsQueryHandler(IApplicationDbContext db)
             year, prior,
             $"สำหรับปีสิ้นสุดวันที่ 31 ธันวาคม {yearTh}",
             narratives, schedules, movements, costOfSales);
-    }
-
-    private static DateTime YearEndExcl(int y)  => new(y + 1, 1, 1);
-
-    private async Task<Dictionary<string, decimal>> NetsAsync(
-        int clientCompanyId, DateTime from, DateTime toExcl, CancellationToken ct)
-    {
-        var lines = await db.JournalEntryLines.AsNoTracking()
-            .Where(l =>
-                l.JournalEntry.ClientCompanyId == clientCompanyId &&
-                l.JournalEntry.JournalDate >= from &&
-                l.JournalEntry.JournalDate < toExcl)
-            .Select(l => new { l.Account.AccountCode, l.DebitAmount, l.CreditAmount })
-            .ToListAsync(ct);
-
-        return lines
-            .GroupBy(l => l.AccountCode)
-            .ToDictionary(g => g.Key, g => g.Sum(l => l.DebitAmount - l.CreditAmount));
     }
 
     // ── Movement tables (PP&E / intangible) จาก FA register ──────────────────────

@@ -2,6 +2,7 @@ using Datacenter.Application.Common.Exceptions;
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Common.Security;
 using Datacenter.Application.Features.CashCount.DTOs;
+using Datacenter.Application.Features.FinancialStatement.Services;
 using Datacenter.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -95,11 +96,11 @@ public class GetCashCountWorkpaperQueryHandler(IApplicationDbContext db)
     {
         if (countedByAcc.Count == 0) return [];
         var accIds = countedByAcc.Keys.ToList();
-        var yearEndExclusive = new DateTime(fiscalYear, 12, 31).AddDays(1);
+        // OPEN-Y + MOVE-Y (กัน OPEN-(Y+1) เบิ้ล — ดู FsJournalNets)
+        var fyEntryIds = await FsJournalNets.FiscalYearEntryIdsAsync(db, clientCompanyId, fiscalYear, ct);
 
         var glNet = await db.JournalEntryLines.AsNoTracking()
-            .Where(l => l.JournalEntry.ClientCompanyId == clientCompanyId
-                     && l.JournalEntry.JournalDate < yearEndExclusive
+            .Where(l => fyEntryIds.Contains(l.JournalEntryId)
                      && accIds.Contains(l.AccountId))
             .GroupBy(l => l.AccountId)
             .Select(g => new { AccountId = g.Key, Debit = g.Sum(x => x.DebitAmount), Credit = g.Sum(x => x.CreditAmount) })

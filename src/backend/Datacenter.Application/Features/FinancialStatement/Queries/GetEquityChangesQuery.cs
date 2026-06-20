@@ -29,11 +29,11 @@ public class GetEquityChangesQueryHandler(IApplicationDbContext db)
             .Where(a => a.ClientCompanyId == request.ClientCompanyId && a.IsActive)
             .ToDictionaryAsync(a => a.AccountCode, ct);
 
-        var yearStart = new DateTime(request.FiscalYear, 1, 1);          // ต้นปี (exclusive ขอบบนของยอดต้นปี)
-        var yearEnd = new DateTime(request.FiscalYear + 1, 1, 1);        // สิ้นปี (exclusive)
-
-        var openingNets = await GetAccountNetsAsync(db, request.ClientCompanyId, yearStart, ct);   // สะสมถึงสิ้นปีก่อน
-        var closingNets = await GetAccountNetsAsync(db, request.ClientCompanyId, yearEnd, ct);      // สะสมถึงสิ้นปีนี้
+        // ยอดต้นปี = ยอดยกมา OPEN-Y; ยอดปลายปี = OPEN-Y + MOVE-Y (ฐานเดียวกับงบดุล กันเบิ้ล
+        // opening ปีถัดไป — ดู FsJournalNets / fs-cumulative-double-count). closing − opening = MOVE-Y
+        // ให้ statement of changes articulate กับงบดุลพอดี.
+        var openingNets = await FsJournalNets.OpeningAsync(db, request.ClientCompanyId, request.FiscalYear, ct);
+        var closingNets = await FsJournalNets.CumulativeAsync(db, request.ClientCompanyId, request.FiscalYear, ct);
 
         // กำไรสุทธิปีนี้ (ฐานเดียวกับงบดุล/งบกำไรขาดทุน)
         var taxInputs = await db.FsExternalInputs.AsNoTracking()
@@ -76,16 +76,5 @@ public class GetEquityChangesQueryHandler(IApplicationDbContext db)
 
         decimal bsEquity = components.Sum(c => c.Closing);
         return new EquityChangesDto(client.Id, client.LegalName, request.FiscalYear, components, Math.Round(bsEquity, 2));
-    }
-
-    private static async Task<Dictionary<string, decimal>> GetAccountNetsAsync(
-        IApplicationDbContext db, int clientCompanyId, DateTime toExclusive, CancellationToken ct)
-    {
-        var lines = await db.JournalEntryLines.AsNoTracking()
-            .Where(l => l.JournalEntry.ClientCompanyId == clientCompanyId && l.JournalEntry.JournalDate < toExclusive)
-            .Select(l => new { l.Account.AccountCode, l.DebitAmount, l.CreditAmount })
-            .ToListAsync(ct);
-        return lines.GroupBy(l => l.AccountCode)
-            .ToDictionary(g => g.Key, g => g.Sum(l => l.DebitAmount - l.CreditAmount));
     }
 }

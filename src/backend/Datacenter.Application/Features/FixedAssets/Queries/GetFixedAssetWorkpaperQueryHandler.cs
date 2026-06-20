@@ -1,5 +1,6 @@
 using Datacenter.Application.Common.Exceptions;
 using Datacenter.Application.Common.Interfaces;
+using Datacenter.Application.Features.FinancialStatement.Services;
 using Datacenter.Application.Features.FixedAssets.DTOs;
 using Datacenter.Application.Features.FixedAssets.Services;
 using Datacenter.Domain.Entities;
@@ -101,30 +102,29 @@ public class GetFixedAssetWorkpaperQueryHandler(IApplicationDbContext db)
         var allAccIds = accumByAcc.Keys.Concat(expenseByAcc.Keys).Distinct().ToList();
         if (allAccIds.Count == 0) return [];
 
-        var yearStart = new DateTime(fiscalYear, 1, 1);
-        var yearEndExclusive = new DateTime(fiscalYear, 12, 31).AddDays(1);
+        // OPEN-Y + MOVE-Y และ MOVE-Y แยก (กัน OPEN-(Y+1) เบิ้ล — ดู FsJournalNets)
+        var fyEntryIds   = await FsJournalNets.FiscalYearEntryIdsAsync(db, clientCompanyId, fiscalYear, ct);
+        var moveEntryIds = fyEntryIds.Except(
+            await FsJournalNets.OpeningEntryIdsAsync(db, clientCompanyId, fiscalYear, ct)).ToList();
 
         var accounts = await db.Accounts
             .AsNoTracking()
             .Where(a => allAccIds.Contains(a.Id))
             .ToDictionaryAsync(a => a.Id, ct);
 
-        // accum dep: สะสมถึงสิ้นปี
+        // accum dep: สะสมถึงสิ้นปี = OPEN-Y + MOVE-Y
         var glCumulative = await db.JournalEntryLines
             .AsNoTracking()
-            .Where(l => l.JournalEntry.ClientCompanyId == clientCompanyId
-                     && l.JournalEntry.JournalDate < yearEndExclusive
+            .Where(l => fyEntryIds.Contains(l.JournalEntryId)
                      && accumByAcc.Keys.Contains(l.AccountId))
             .GroupBy(l => l.AccountId)
             .Select(g => new { AccountId = g.Key, Debit = g.Sum(x => x.DebitAmount), Credit = g.Sum(x => x.CreditAmount) })
             .ToDictionaryAsync(x => x.AccountId, ct);
 
-        // dep expense: movement ในปีงบ
+        // dep expense: movement ในปีงบ = MOVE-Y
         var glMovement = await db.JournalEntryLines
             .AsNoTracking()
-            .Where(l => l.JournalEntry.ClientCompanyId == clientCompanyId
-                     && l.JournalEntry.JournalDate >= yearStart
-                     && l.JournalEntry.JournalDate < yearEndExclusive
+            .Where(l => moveEntryIds.Contains(l.JournalEntryId)
                      && expenseByAcc.Keys.Contains(l.AccountId))
             .GroupBy(l => l.AccountId)
             .Select(g => new { AccountId = g.Key, Debit = g.Sum(x => x.DebitAmount), Credit = g.Sum(x => x.CreditAmount) })

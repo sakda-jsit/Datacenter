@@ -40,7 +40,10 @@ public class GetGeneralLedgerQueryHandler(IApplicationDbContext db)
             .Where(l => accountIds.Contains(l.AccountId)
                      && l.JournalEntry.ClientCompanyId == request.ClientCompanyId
                      && l.JournalEntry.JournalDate >= yearStart
-                     && l.JournalEntry.JournalDate < periodEnd)
+                     && l.JournalEntry.JournalDate < periodEnd
+                     // กัน OPEN-(Y+1) (ยอดยกมาปีถัดไป ลงวันที่ Y-12-31) โผล่เป็นรายการเคลื่อนไหว
+                     // และเบิ้ลยอดสิ้นงวด — ดู FsJournalNets / fs-cumulative-double-count
+                     && l.JournalEntry.SourceModule != "OpeningBalance")
             .Select(l => new
             {
                 l.AccountId,

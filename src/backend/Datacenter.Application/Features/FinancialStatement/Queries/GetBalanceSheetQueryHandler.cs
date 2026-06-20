@@ -28,15 +28,18 @@ public class GetBalanceSheetQueryHandler(IApplicationDbContext db)
             .Where(a => a.ClientCompanyId == request.ClientCompanyId && a.IsActive)
             .ToDictionaryAsync(a => a.AccountCode, ct);
 
-        // Full-year date range
-        var yearEnd       = new DateTime(request.FiscalYear + 1, 1, 1); // exclusive
-
         // Balance-sheet accounts (assets/liabilities/equity) need the CUMULATIVE balance
-        // through the end of the fiscal year — opening carried-forward + in-year movement —
-        // not just the year's movement. The opening journal entry is dated prior-year 12-31,
-        // so a year-only range would exclude it and show only the current year's activity.
-        var cumulativeNets = await GetAccountNetsAsync(db, request.ClientCompanyId,
-            new DateTime(2000, 1, 1), yearEnd, ct);
+        // through the end of the fiscal year — opening carried-forward + in-year movement.
+        // The Express importer (ExpressPostingService) posts, per fiscal year Y, an opening
+        // snapshot OPEN-Y (SourceModule "OpeningBalance", dated (Y-1)-12-31, = the full
+        // brought-forward trial balance) plus a movement entry MOVE-Y (dated Y-12-31), where
+        // closing(Y) = OPEN-Y + MOVE-Y. The year-end balance is therefore EXACTLY that year's
+        // opening snapshot plus that year's movement — NOT the sum of every entry since
+        // inception, which re-adds each later year's full opening snapshot (e.g. OPEN-(Y+1),
+        // which is itself a restated closing balance) and inflates the balance sheet ≈2× once
+        // a company has two years of data posted.
+        var cumulativeNets = await FsJournalNets.CumulativeAsync(db, request.ClientCompanyId,
+            request.FiscalYear, ct);
 
         // Net of the retained-earnings account(s) at fiscal year-end, EXCLUDING the current
         // year's profit (which is added separately via netProfit below). This is the cumulative
@@ -71,22 +74,4 @@ public class GetBalanceSheetQueryHandler(IApplicationDbContext db)
             reOpeningNet, plResult.NetProfit, externalTax, whtApplied);
     }
 
-    private static async Task<Dictionary<string, decimal>> GetAccountNetsAsync(
-        IApplicationDbContext db, int clientCompanyId,
-        DateTime from, DateTime to, CancellationToken ct)
-    {
-        var lines = await db.JournalEntryLines.AsNoTracking()
-            .Where(l =>
-                l.JournalEntry.ClientCompanyId == clientCompanyId &&
-                l.JournalEntry.JournalDate >= from &&
-                l.JournalEntry.JournalDate < to)
-            .Select(l => new { l.Account.AccountCode, l.DebitAmount, l.CreditAmount })
-            .ToListAsync(ct);
-
-        return lines
-            .GroupBy(l => l.AccountCode)
-            .ToDictionary(
-                g => g.Key,
-                g => g.Sum(l => l.DebitAmount - l.CreditAmount));
-    }
 }

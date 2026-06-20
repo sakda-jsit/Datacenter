@@ -16,9 +16,13 @@ public class GetAdjustedTrialBalanceQueryHandler(IApplicationDbContext db)
             .FirstOrDefaultAsync(x => x.Id == request.ClientCompanyId && x.IsActive, ct)
             ?? throw new NotFoundException("ClientCompany", request.ClientCompanyId);
 
-        // ยอดสะสมถึงสิ้นปีงบ (เหมือน FS/closing): begin = ก่อนต้นปี, movement = ภายในปี
-        var yearStart = new DateTime(request.FiscalYear, 1, 1);
-        var yearEnd   = new DateTime(request.FiscalYear, 12, 31).AddDays(1);
+        // ยอดสะสมถึงสิ้นปีงบ (เหมือน FS/closing): begin = ยอดยกมา OPEN-Y, movement = ยอดเคลื่อนไหว MOVE-Y.
+        // ใช้ SourceModule + ช่วงปีแยก แทนการตัดด้วยวันที่อย่างเดียว เพราะ MOVE-Y (Y-12-31) กับ
+        // OPEN-(Y+1) (Y-12-31) ลงวันที่เท่ากัน — กรองวันที่ล้วนจะดึง OPEN-(Y+1) มาเบิ้ลใน movement
+        // (ดู FsJournalNets / fs-cumulative-double-count).
+        var openingFrom = new DateTime(request.FiscalYear - 1, 1, 1);
+        var yearStart   = new DateTime(request.FiscalYear, 1, 1);
+        var yearEnd     = new DateTime(request.FiscalYear + 1, 1, 1);
 
         var accounts = await db.Accounts
             .AsNoTracking()
@@ -26,12 +30,18 @@ public class GetAdjustedTrialBalanceQueryHandler(IApplicationDbContext db)
             .OrderBy(a => a.AccountCode)
             .ToListAsync(ct);
 
-        // ยอดนำเข้าจาก journal (cumulative ถึงสิ้นปีงบ)
+        // ยอดนำเข้าจาก journal = OPEN-Y (ยอดยกมา) + MOVE-Y (เคลื่อนไหวปีนี้); IsOpening = ยอดยกมา
         var importedLines = await db.JournalEntryLines
             .AsNoTracking()
             .Where(l => l.JournalEntry.ClientCompanyId == request.ClientCompanyId
-                     && l.JournalEntry.JournalDate < yearEnd)
-            .Select(l => new { l.AccountId, l.DebitAmount, l.CreditAmount, l.JournalEntry.JournalDate })
+                     && ((l.JournalEntry.SourceModule == "OpeningBalance"
+                            && l.JournalEntry.JournalDate >= openingFrom
+                            && l.JournalEntry.JournalDate < yearStart)
+                         || (l.JournalEntry.SourceModule != "OpeningBalance"
+                            && l.JournalEntry.JournalDate >= yearStart
+                            && l.JournalEntry.JournalDate < yearEnd)))
+            .Select(l => new { l.AccountId, l.DebitAmount, l.CreditAmount,
+                               IsOpening = l.JournalEntry.SourceModule == "OpeningBalance" })
             .ToListAsync(ct);
 
         // รายการปรับปรุงของปีงบนี้
@@ -51,10 +61,10 @@ public class GetAdjustedTrialBalanceQueryHandler(IApplicationDbContext db)
         {
             var imp = importedByAcc[acc.Id].ToList();
 
-            var beginDebit  = imp.Where(l => l.JournalDate < yearStart).Sum(l => l.DebitAmount);
-            var beginCredit = imp.Where(l => l.JournalDate < yearStart).Sum(l => l.CreditAmount);
-            var movDebit    = imp.Where(l => l.JournalDate >= yearStart).Sum(l => l.DebitAmount);
-            var movCredit   = imp.Where(l => l.JournalDate >= yearStart).Sum(l => l.CreditAmount);
+            var beginDebit  = imp.Where(l => l.IsOpening).Sum(l => l.DebitAmount);
+            var beginCredit = imp.Where(l => l.IsOpening).Sum(l => l.CreditAmount);
+            var movDebit    = imp.Where(l => !l.IsOpening).Sum(l => l.DebitAmount);
+            var movCredit   = imp.Where(l => !l.IsOpening).Sum(l => l.CreditAmount);
 
             var adj = adjByAcc[acc.Id].ToList();
             var adjDebit  = adj.Sum(l => l.DebitAmount);

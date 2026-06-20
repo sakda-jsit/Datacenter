@@ -1,5 +1,6 @@
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Common.Security;
+using Datacenter.Application.Features.FinancialStatement.Services;
 using Datacenter.Application.Features.Stock.DTOs;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -43,7 +44,8 @@ public class GetStockValuationQueryHandler(IApplicationDbContext db)
             .ToList();
 
         // บัญชีสินค้าคงเหลือใน GL (ชื่อมีคำว่า "สินค้าคงเหลือ") — ยอดสะสมถึงสิ้นปีงบ (สินทรัพย์: debit − credit)
-        var yearEndExclusive = new DateTime(request.FiscalYear, 12, 31).AddDays(1);
+        // OPEN-Y + MOVE-Y (กัน OPEN-(Y+1) เบิ้ล — ดู FsJournalNets)
+        var fyEntryIds = await FsJournalNets.FiscalYearEntryIdsAsync(db, request.ClientCompanyId, request.FiscalYear, ct);
         // รองรับทั้งผังบัญชีไทย ("สินค้าคงเหลือ") และอังกฤษ ("Inventory")
         var invAccounts = await db.Accounts
             .AsNoTracking()
@@ -58,8 +60,7 @@ public class GetStockValuationQueryHandler(IApplicationDbContext db)
             var ids = invAccounts.Select(a => a.Id).ToList();
             var bal = await db.JournalEntryLines
                 .AsNoTracking()
-                .Where(l => l.JournalEntry.ClientCompanyId == request.ClientCompanyId
-                         && l.JournalEntry.JournalDate < yearEndExclusive
+                .Where(l => fyEntryIds.Contains(l.JournalEntryId)
                          && ids.Contains(l.AccountId))
                 .GroupBy(l => l.AccountId)
                 .Select(g => new { AccountId = g.Key, Debit = g.Sum(x => x.DebitAmount), Credit = g.Sum(x => x.CreditAmount) })

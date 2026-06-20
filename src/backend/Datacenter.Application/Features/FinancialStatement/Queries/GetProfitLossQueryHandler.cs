@@ -31,28 +31,36 @@ public class GetProfitLossQueryHandler(IApplicationDbContext db)
         var (periodStart, periodEnd, _) = PeriodRangeHelper.Get(
             request.FiscalYear, request.MonthFrom, request.MonthTo);
 
-        // Express exports annual figures with the year's movement lumped at year-end and the
-        // prior-year P&L carried into the opening (OPEN-{fy}) entry. The closing mechanism
-        // resets P&L accounts each year, so the net balance accumulated through fiscal-year-end
-        // (= Express curEnd) IS that year's correct income/expense total. For the annual report
-        // we therefore sum everything up to year-end rather than only the in-year movement
-        // (which would exclude the prior-year offset and understate income/expense).
+        // Express exports annual figures as an opening snapshot OPEN-{fy} (the brought-forward
+        // trial balance, dated (fy-1)-12-31) plus the year's movement MOVE-{fy} (dated fy-12-31),
+        // where the fiscal-year total = OPEN-{fy} + MOVE-{fy}. For the annual report we therefore
+        // take exactly that year's opening snapshot + that year's movement — sharing the balance
+        // sheet's selection logic so that a later year's restated opening (OPEN-{fy+1}, dated
+        // within this period) is NOT re-added, which would otherwise inflate income/expense.
         // A specific month range stays a best-effort in-period slice (see known limitation:
         // monthly figures are not accurate because movement is lumped at year-end).
         bool isAnnual = request.MonthFrom is null && request.MonthTo is null;
-        var fromDate = isAnnual ? new DateTime(2000, 1, 1) : periodStart;
 
-        var periodNets = await db.JournalEntryLines.AsNoTracking()
-            .Where(l =>
-                l.JournalEntry.ClientCompanyId == request.ClientCompanyId &&
-                l.JournalEntry.JournalDate >= fromDate &&
-                l.JournalEntry.JournalDate < periodEnd)
-            .Select(l => new { l.Account.AccountCode, l.DebitAmount, l.CreditAmount })
-            .ToListAsync(ct);
+        Dictionary<string, decimal> accountNets;
+        if (isAnnual)
+        {
+            accountNets = await FsJournalNets.CumulativeAsync(
+                db, request.ClientCompanyId, request.FiscalYear, ct);
+        }
+        else
+        {
+            var periodNets = await db.JournalEntryLines.AsNoTracking()
+                .Where(l =>
+                    l.JournalEntry.ClientCompanyId == request.ClientCompanyId &&
+                    l.JournalEntry.JournalDate >= periodStart &&
+                    l.JournalEntry.JournalDate < periodEnd)
+                .Select(l => new { l.Account.AccountCode, l.DebitAmount, l.CreditAmount })
+                .ToListAsync(ct);
 
-        var accountNets = periodNets
-            .GroupBy(l => l.AccountCode)
-            .ToDictionary(g => g.Key, g => g.Sum(l => l.DebitAmount - l.CreditAmount));
+            accountNets = periodNets
+                .GroupBy(l => l.AccountCode)
+                .ToDictionary(g => g.Key, g => g.Sum(l => l.DebitAmount - l.CreditAmount));
+        }
 
         var x4Input = await db.FsExternalInputs.AsNoTracking()
             .FirstOrDefaultAsync(x =>

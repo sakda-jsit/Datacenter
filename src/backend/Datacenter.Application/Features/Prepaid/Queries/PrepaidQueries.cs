@@ -1,6 +1,7 @@
 using Datacenter.Application.Common.Exceptions;
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Common.Security;
+using Datacenter.Application.Features.FinancialStatement.Services;
 using Datacenter.Application.Features.Prepaid.DTOs;
 using Datacenter.Application.Features.Prepaid.Services;
 using Datacenter.Domain.Entities;
@@ -89,13 +90,13 @@ public class GetPrepaidWorkpaperQueryHandler(IApplicationDbContext db)
         var accIds = remainingByAcc.Keys.ToList();
         if (accIds.Count == 0) return [];
 
-        var yearEndExclusive = new DateTime(fiscalYear, 12, 31).AddDays(1);
+        // ยอดสะสมปลายปี = OPEN-Y + MOVE-Y (กัน OPEN-(Y+1) เบิ้ล — ดู FsJournalNets)
+        var fyEntryIds = await FsJournalNets.FiscalYearEntryIdsAsync(db, clientCompanyId, fiscalYear, ct);
         var accounts = await db.Accounts.AsNoTracking()
             .Where(a => accIds.Contains(a.Id)).ToDictionaryAsync(a => a.Id, ct);
 
         var glNet = await db.JournalEntryLines.AsNoTracking()
-            .Where(l => l.JournalEntry.ClientCompanyId == clientCompanyId
-                     && l.JournalEntry.JournalDate < yearEndExclusive
+            .Where(l => fyEntryIds.Contains(l.JournalEntryId)
                      && accIds.Contains(l.AccountId))
             .GroupBy(l => l.AccountId)
             .Select(g => new { AccountId = g.Key, Debit = g.Sum(x => x.DebitAmount), Credit = g.Sum(x => x.CreditAmount) })

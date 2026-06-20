@@ -1,5 +1,6 @@
 using Datacenter.Application.Common.Exceptions;
 using Datacenter.Application.Common.Interfaces;
+using Datacenter.Application.Features.FinancialStatement.Services;
 using Datacenter.Application.Features.Leasing.DTOs;
 using Datacenter.Application.Features.Leasing.Services;
 using MediatR;
@@ -67,7 +68,8 @@ public class GetLeaseWorkpaperQueryHandler(IApplicationDbContext db)
             .ToList();
         if (allAccIds.Count == 0) return [];
 
-        var yearEndExclusive = new DateTime(fiscalYear, 12, 31).AddDays(1);
+        // OPEN-Y + MOVE-Y (กัน OPEN-(Y+1) เบิ้ล — ดู FsJournalNets)
+        var fyEntryIds = await FsJournalNets.FiscalYearEntryIdsAsync(db, clientCompanyId, fiscalYear, ct);
 
         var accounts = await db.Accounts
             .AsNoTracking()
@@ -76,8 +78,7 @@ public class GetLeaseWorkpaperQueryHandler(IApplicationDbContext db)
 
         var glNet = await db.JournalEntryLines
             .AsNoTracking()
-            .Where(l => l.JournalEntry.ClientCompanyId == clientCompanyId
-                     && l.JournalEntry.JournalDate < yearEndExclusive
+            .Where(l => fyEntryIds.Contains(l.JournalEntryId)
                      && allAccIds.Contains(l.AccountId))
             .GroupBy(l => l.AccountId)
             .Select(g => new { AccountId = g.Key, Debit = g.Sum(x => x.DebitAmount), Credit = g.Sum(x => x.CreditAmount) })

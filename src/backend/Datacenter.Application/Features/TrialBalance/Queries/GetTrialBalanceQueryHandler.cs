@@ -29,7 +29,10 @@ public class GetTrialBalanceQueryHandler(IApplicationDbContext db)
             .AsNoTracking()
             .Where(l => l.JournalEntry.ClientCompanyId == request.ClientCompanyId
                      && l.JournalEntry.JournalDate >= yearStart
-                     && l.JournalEntry.JournalDate < periodEnd)
+                     && l.JournalEntry.JournalDate < periodEnd
+                     // กัน OPEN-(Y+1) (ยอดยกมาปีถัดไป ลงวันที่ Y-12-31) เบิ้ลยอดเคลื่อนไหว/สิ้นงวด
+                     // — ดู FsJournalNets / fs-cumulative-double-count
+                     && l.JournalEntry.SourceModule != "OpeningBalance")
             .Select(l => new
             {
                 l.AccountId,

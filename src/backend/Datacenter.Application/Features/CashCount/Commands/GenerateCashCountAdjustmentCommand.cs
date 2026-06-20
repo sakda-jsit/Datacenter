@@ -2,6 +2,7 @@ using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Common.Security;
 using Datacenter.Application.Features.Adjustments.Commands;
 using Datacenter.Application.Features.Adjustments.DTOs;
+using Datacenter.Application.Features.FinancialStatement.Services;
 using Datacenter.Domain.Enums;
 using Datacenter.Domain.Exceptions;
 using MediatR;
@@ -42,12 +43,11 @@ public class GenerateCashCountAdjustmentCommandHandler(IApplicationDbContext db,
         foreach (var s in sheets)
             countedByAcc[s.CashAccountId] = countedByAcc.GetValueOrDefault(s.CashAccountId) + CashCountMapper.CountedTotal(s);
 
-        // ยอด GL สะสมถึงสิ้นปีงบ (debit − credit) ของบัญชีเงินสด
+        // ยอด GL สะสมถึงสิ้นปีงบ = OPEN-Y + MOVE-Y (กัน OPEN-(Y+1) เบิ้ล — ดู FsJournalNets)
         var accIds = countedByAcc.Keys.ToList();
-        var yearEndExclusive = new DateTime(request.FiscalYear, 12, 31).AddDays(1);
+        var fyEntryIds = await FsJournalNets.FiscalYearEntryIdsAsync(db, request.ClientCompanyId, request.FiscalYear, ct);
         var glNet = await db.JournalEntryLines.AsNoTracking()
-            .Where(l => l.JournalEntry.ClientCompanyId == request.ClientCompanyId
-                     && l.JournalEntry.JournalDate < yearEndExclusive
+            .Where(l => fyEntryIds.Contains(l.JournalEntryId)
                      && accIds.Contains(l.AccountId))
             .GroupBy(l => l.AccountId)
             .Select(g => new { AccountId = g.Key, Debit = g.Sum(x => x.DebitAmount), Credit = g.Sum(x => x.CreditAmount) })

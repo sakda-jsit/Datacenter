@@ -1,6 +1,7 @@
 using Datacenter.Application.Common.Exceptions;
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Common.Security;
+using Datacenter.Application.Features.FinancialStatement.Services;
 using Datacenter.Application.Features.SubsequentPayment.DTOs;
 using Datacenter.Domain.Enums;
 using MediatR;
@@ -47,11 +48,11 @@ public class GetSubsequentPaymentCheckQueryHandler(
 
         var liabIds = liabilityAccounts.Select(a => a.Id).ToList();
 
-        // 2) ยอดค้างจ่าย ณ สิ้นปีปิดงบ (เครดิต-เป็นบวก) จาก GL ที่นำเข้าแล้ว — สะสมถึงสิ้นปีงบ
-        var yearEndExclusive = new DateTime(fy, 12, 31).AddDays(1);
+        // 2) ยอดค้างจ่าย ณ สิ้นปีปิดงบ (เครดิต-เป็นบวก) จาก GL = OPEN-Y + MOVE-Y
+        //    (กัน OPEN-(Y+1) เบิ้ล — ดู FsJournalNets / fs-cumulative-double-count)
+        var fyEntryIds = await FsJournalNets.FiscalYearEntryIdsAsync(db, request.ClientCompanyId, fy, ct);
         var glNet = await db.JournalEntryLines.AsNoTracking()
-            .Where(l => l.JournalEntry.ClientCompanyId == request.ClientCompanyId
-                     && l.JournalEntry.JournalDate < yearEndExclusive
+            .Where(l => fyEntryIds.Contains(l.JournalEntryId)
                      && liabIds.Contains(l.AccountId))
             .GroupBy(l => l.AccountId)
             .Select(g => new { AccountId = g.Key, Debit = g.Sum(x => x.DebitAmount), Credit = g.Sum(x => x.CreditAmount) })
