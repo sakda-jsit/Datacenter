@@ -2,6 +2,8 @@ using Datacenter.Domain.Enums;
 
 namespace Datacenter.Application.Features.Tasks.DTOs;
 
+public record WorkTaskItemDto(int Id, string Text, bool IsDone, int SortOrder);
+
 /// <summary>งานทั่วไป (ad-hoc) ต่อบริษัท</summary>
 public record WorkTaskDto(
     int Id,
@@ -20,6 +22,12 @@ public record WorkTaskDto(
     DateTime? CompletedAt,
     string? CompletedByUserName,
     bool IsOverdue,
+    int RecurrenceType,
+    string RecurrenceName,
+    int RecurrenceInterval,
+    IReadOnlyList<WorkTaskItemDto> Items,
+    int DoneCount,
+    int TotalCount,
     DateTime CreatedAt,
     string? CreatedBy);
 
@@ -40,13 +48,10 @@ public record WorkItemDto(
     bool IsOverdue,
     int? DaysToDue);
 
-public record WorkTaskInput(
-    string Title,
-    string? Description,
-    string? Category,
-    WorkTaskPriority Priority,
-    DateTime? DueDate,
-    int? AssignedUserId);
+public record WorkTaskItemInput(string Text, bool IsDone);
+
+/// <summary>สรุปผลส่งอีเมลเตือนงาน</summary>
+public record TaskReminderResultDto(int Sent, int Skipped, int Failed, IReadOnlyList<string> Messages);
 
 public static class WorkTaskNames
 {
@@ -65,5 +70,15 @@ public static class WorkTaskNames
         WorkTaskPriority.Normal => "ปกติ",
         WorkTaskPriority.High => "สูง",
         _ => p.ToString(),
+    };
+
+    public static string RecurrenceName(WorkTaskRecurrence r) => r switch
+    {
+        WorkTaskRecurrence.None => "ไม่ซ้ำ",
+        WorkTaskRecurrence.Daily => "รายวัน",
+        WorkTaskRecurrence.Weekly => "รายสัปดาห์",
+        WorkTaskRecurrence.Monthly => "รายเดือน",
+        WorkTaskRecurrence.Yearly => "รายปี",
+        _ => r.ToString(),
     };
 }

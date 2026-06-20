@@ -17,6 +17,12 @@ public class WorkTaskConfiguration : IEntityTypeConfiguration<WorkTask>
         builder.Property(t => t.Category).HasMaxLength(100);
         builder.Property(t => t.Status).HasConversion<int>();
         builder.Property(t => t.Priority).HasConversion<int>();
+        builder.Property(t => t.RecurrenceType).HasConversion<int>();
+
+        builder.HasMany(t => t.Items)
+               .WithOne(i => i.WorkTask)
+               .HasForeignKey(i => i.WorkTaskId)
+               .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(t => t.ClientCompany)
                .WithMany()

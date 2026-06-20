@@ -48,6 +48,16 @@ public class TasksController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Assign(int id, [FromBody] AssignRequest body, CancellationToken ct)
         => Ok(await mediator.Send(new AssignWorkTaskCommand(id, body.UserId), ct));
 
+    public record ToggleItemRequest(bool IsDone);
+    [HttpPatch("{id:int}/items/{itemId:int}")]
+    public async Task<IActionResult> ToggleItem(int id, int itemId, [FromBody] ToggleItemRequest body, CancellationToken ct)
+        => Ok(await mediator.Send(new ToggleWorkTaskItemCommand(id, itemId, body.IsDone), ct));
+
+    /// <summary>ส่งอีเมลเตือนผู้รับผิดชอบ (งานค้าง/ใกล้ครบกำหนด) — Admin เท่านั้น</summary>
+    [HttpPost("send-reminders")]
+    public async Task<IActionResult> SendReminders([FromQuery] int daysAhead = 3, CancellationToken ct = default)
+        => Ok(await mediator.Send(new SendTaskRemindersCommand(daysAhead), ct));
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {

@@ -16,7 +16,10 @@ public record CreateWorkTaskCommand(
     string? Category,
     WorkTaskPriority Priority,
     DateTime? DueDate,
-    int? AssignedUserId)
+    int? AssignedUserId,
+    WorkTaskRecurrence RecurrenceType = WorkTaskRecurrence.None,
+    int RecurrenceInterval = 1,
+    IReadOnlyList<WorkTaskItemInput>? Items = null)
     : IRequest<WorkTaskDto>, IRequireCompanyAccess;
 
 public class CreateWorkTaskCommandValidator : AbstractValidator<CreateWorkTaskCommand>
@@ -44,8 +47,14 @@ public class CreateWorkTaskCommandHandler(IApplicationDbContext db, ICurrentUser
             DueDate = request.DueDate,
             AssignedUserId = request.AssignedUserId,
             Status = WorkTaskStatus.Open,
+            RecurrenceType = request.RecurrenceType,
+            RecurrenceInterval = request.RecurrenceInterval < 1 ? 1 : request.RecurrenceInterval,
             CreatedBy = currentUser.Username,
         };
+        int order = 0;
+        foreach (var it in (request.Items ?? []).Where(i => !string.IsNullOrWhiteSpace(i.Text)))
+            task.Items.Add(new WorkTaskItem { Text = it.Text.Trim(), IsDone = it.IsDone, SortOrder = order++, CreatedBy = currentUser.Username });
+
         db.WorkTasks.Add(task);
         await db.SaveChangesAsync(ct);
 
@@ -55,6 +64,7 @@ public class CreateWorkTaskCommandHandler(IApplicationDbContext db, ICurrentUser
 
         var saved = await db.WorkTasks.AsNoTracking()
             .Include(t => t.ClientCompany).Include(t => t.AssignedUser).Include(t => t.CompletedByUser)
+            .Include(t => t.Items)
             .FirstAsync(t => t.Id == task.Id, ct);
         return WorkTaskMapper.ToDto(saved, DateTime.UtcNow.Date);
     }

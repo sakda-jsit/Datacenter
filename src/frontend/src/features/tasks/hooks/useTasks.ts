@@ -67,6 +67,19 @@ export function useAssignTask() {
   })
 }
 
+export function useToggleTaskItem() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: ({ taskId, itemId, isDone }: { taskId: number; itemId: number; isDone: boolean }) =>
+      taskApi.toggleItem(taskId, itemId, isDone),
+    onSuccess: invalidate,
+  })
+}
+
+export function useSendReminders() {
+  return useMutation({ mutationFn: (daysAhead: number) => taskApi.sendReminders(daysAhead) })
+}
+
 export function useDeleteTask() {
   const invalidate = useInvalidate()
   return useMutation({ mutationFn: (id: number) => taskApi.remove(id), onSuccess: invalidate })

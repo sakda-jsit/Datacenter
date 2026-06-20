@@ -43,6 +43,9 @@ public static class DependencyInjection
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
         services.AddScoped<IEmailSender, SmtpEmailSender>();
 
+        // ส่งอีเมลเตือนงานอัตโนมัติวันละครั้ง (opt-in: TaskReminders:Enabled=true + ตั้งค่า SMTP)
+        services.AddHostedService<Services.Tasks.DailyTaskReminderService>();
+
         // หนังสือรับรองหัก ณ ที่จ่าย (QuestPDF) — license ฟรี Community + ฟอนต์ไทยจากระบบ
         QuestPDF.Settings.License = LicenseType.Community;
         var certFont = configuration["Wht:CertificateFont"] ?? "Tahoma";

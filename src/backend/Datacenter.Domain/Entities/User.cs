@@ -8,6 +8,8 @@ public class User : BaseEntity
     public string Username { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
+    /// <summary>อีเมล (สำหรับแจ้งเตือนงานที่มอบหมาย) — optional</summary>
+    public string? Email { get; set; }
     public UserRole Role { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime? LastLoginAt { get; set; }

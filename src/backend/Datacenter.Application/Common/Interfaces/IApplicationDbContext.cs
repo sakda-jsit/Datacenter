@@ -22,6 +22,7 @@ public interface IApplicationDbContext
     DbSet<ComplianceTask> ComplianceTasks { get; }
     DbSet<ComplianceTaskTemplate> ComplianceTaskTemplates { get; }
     DbSet<WorkTask> WorkTasks { get; }
+    DbSet<WorkTaskItem> WorkTaskItems { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<AccountingPeriod> AccountingPeriods { get; }
     DbSet<AdjustmentEntry> AdjustmentEntries { get; }

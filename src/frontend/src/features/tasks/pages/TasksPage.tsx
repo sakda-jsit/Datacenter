@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import Button from '../../../shared/components/ui/Button'
 import Card from '../../../shared/components/ui/Card'
 import PageHeader from '../../../shared/components/ui/PageHeader'
@@ -10,7 +10,8 @@ import { useAuth } from '../../../shared/hooks/useAuth'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import TaskFormModal from '../components/TaskFormModal'
 import {
-  useAssignableUsers, useAssignTask, useDeleteTask, useSetTaskStatus, useWorkboard, useWorkTasks,
+  useAssignableUsers, useAssignTask, useDeleteTask, useSendReminders, useSetTaskStatus,
+  useToggleTaskItem, useWorkboard, useWorkTasks,
 } from '../hooks/useTasks'
 import { PRIORITY_LABEL, STATUS_OPTIONS, STATUS_TONE } from '../types/task.types'
 import type { WorkItemDto, WorkTaskDto } from '../types/task.types'
@@ -46,8 +47,10 @@ function CompanyTasksTab() {
   const setStatus = useSetTaskStatus()
   const assign = useAssignTask()
   const del = useDeleteTask()
+  const toggleItem = useToggleTaskItem()
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<WorkTaskDto | null>(null)
+  const [expanded, setExpanded] = useState<number | null>(null)
 
   if (!companyId) return <Card><StateMessage centered>เลือกบริษัทที่ header ก่อน</StateMessage></Card>
 
@@ -115,10 +118,22 @@ function CompanyTasksTab() {
             </thead>
             <tbody>
               {tasks.map((t) => (
-                <tr key={t.id} className={`border-b border-gray-100 hover:bg-slate-50 ${t.isOverdue ? 'bg-red-50/50' : ''}`}>
+                <Fragment key={t.id}>
+                <tr className={`border-b border-gray-100 hover:bg-slate-50 ${t.isOverdue ? 'bg-red-50/50' : ''}`}>
                   <td className="px-4 py-2.5">
-                    <div className="font-medium text-slate-800">{t.title}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-slate-800">{t.title}</span>
+                      {t.recurrenceType !== 0 && (
+                        <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-700">🔁 {t.recurrenceName}</span>
+                      )}
+                    </div>
                     {t.description && <div className="text-xs text-gray-400">{t.description}</div>}
+                    {t.totalCount > 0 && (
+                      <button type="button" onClick={() => setExpanded((v) => (v === t.id ? null : t.id))}
+                        className="mt-0.5 text-xs text-sky-600 hover:underline">
+                        {expanded === t.id ? '▼' : '▶'} checklist {t.doneCount}/{t.totalCount}
+                      </button>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-gray-600">{t.category ?? '—'}</td>
                   <td className="px-4 py-2.5 text-gray-600">{PRIORITY_LABEL[t.priority]}</td>
@@ -149,6 +164,23 @@ function CompanyTasksTab() {
                     <Button type="button" variant="ghost" onClick={() => handleDelete(t)} className="px-2 py-1 text-xs text-red-500 hover:text-red-600">ลบ</Button>
                   </td>
                 </tr>
+                {expanded === t.id && t.totalCount > 0 && (
+                  <tr className="bg-slate-50/60">
+                    <td colSpan={7} className="px-6 py-3">
+                      <div className="space-y-1.5">
+                        {t.items.map((it) => (
+                          <label key={it.id} className="flex items-center gap-2 text-sm text-slate-700">
+                            <input type="checkbox" checked={it.isDone}
+                              onChange={(e) => toggleItem.mutate({ taskId: t.id, itemId: it.id, isDone: e.target.checked })}
+                              className="rounded" />
+                            <span className={it.isDone ? 'text-slate-400 line-through' : ''}>{it.text}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -163,7 +195,19 @@ function CompanyTasksTab() {
 // ── แท็บ 2: workboard ข้ามบริษัท ─────────────────────────────────────────────
 function WorkboardTab() {
   const { user } = useAuth()
+  const sendReminders = useSendReminders()
   const [mineOnly, setMineOnly] = useState(false)
+
+  async function handleSendReminders() {
+    if (!window.confirm('ส่งอีเมลเตือนงานค้าง/ใกล้ครบกำหนดให้ผู้รับผิดชอบ (ทุกบริษัท)?')) return
+    try {
+      const r = await sendReminders.mutateAsync(3)
+      alert(`ส่งสำเร็จ ${r.sent} · ข้าม ${r.skipped} · ล้มเหลว ${r.failed}\n${r.messages.join('\n')}`)
+    } catch (e) {
+      const msg = (e as { response?: { data?: { detail?: string; title?: string } } })?.response?.data
+      alert(msg?.detail ?? msg?.title ?? 'ส่งไม่สำเร็จ')
+    }
+  }
   const [openOnly, setOpenOnly] = useState(true)
   const [includeCompliance, setIncludeCompliance] = useState(true)
   const [dueBefore, setDueBefore] = useState('')
@@ -201,6 +245,11 @@ function WorkboardTab() {
         </div>
         <div className="flex items-center gap-2">
           <p className="text-xs text-gray-500">{items?.length ?? 0} รายการ</p>
+          {user?.role === 'Admin' && (
+            <Button type="button" variant="ghost" onClick={handleSendReminders} disabled={sendReminders.isPending} className="text-xs">
+              {sendReminders.isPending ? 'กำลังส่ง...' : '✉ ส่งอีเมลเตือน'}
+            </Button>
+          )}
           {items && items.length > 0 && (
             <ExportMenu
               meta={{ title: 'งานข้ามบริษัท', fileName: 'workboard' }}

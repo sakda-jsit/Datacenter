@@ -20,7 +20,13 @@ public class WorkTask : BaseEntity
     public DateTime? CompletedAt { get; set; }
     public int? CompletedByUserId { get; set; }
 
+    /// <summary>งานประจำ: เมื่อปิดงานนี้ (Done) จะ spawn งานถัดไปอัตโนมัติตามรอบ (None = ไม่ซ้ำ)</summary>
+    public WorkTaskRecurrence RecurrenceType { get; set; } = WorkTaskRecurrence.None;
+    /// <summary>ทุก N หน่วยของรอบ (เช่น Monthly × 3 = ทุกไตรมาส) — ต่ำสุด 1</summary>
+    public int RecurrenceInterval { get; set; } = 1;
+
     public ClientCompany ClientCompany { get; set; } = null!;
     public User? AssignedUser { get; set; }
     public User? CompletedByUser { get; set; }
+    public ICollection<WorkTaskItem> Items { get; set; } = [];
 }

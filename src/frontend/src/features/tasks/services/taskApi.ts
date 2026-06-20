@@ -2,6 +2,7 @@ import apiClient from '../../../shared/services/apiClient'
 import type {
   AssignableUserDto,
   CreateWorkTaskInput,
+  TaskReminderResult,
   UpdateWorkTaskInput,
   WorkboardParams,
   WorkItemDto,
@@ -33,6 +34,12 @@ export const taskApi = {
 
   assign: (id: number, userId: number | null) =>
     apiClient.patch<WorkTaskDto>(`/work-tasks/${id}/assign`, { userId }).then((r) => r.data),
+
+  toggleItem: (taskId: number, itemId: number, isDone: boolean) =>
+    apiClient.patch<WorkTaskDto>(`/work-tasks/${taskId}/items/${itemId}`, { isDone }).then((r) => r.data),
+
+  sendReminders: (daysAhead = 3) =>
+    apiClient.post<TaskReminderResult>(`/work-tasks/send-reminders`, null, { params: { daysAhead } }).then((r) => r.data),
 
   remove: (id: number) => apiClient.delete(`/work-tasks/${id}`).then((r) => r.data),
 }

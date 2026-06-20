@@ -35,6 +35,32 @@ export const PRIORITY_OPTIONS: { value: number; label: string }[] = [
   { value: 2, label: 'สูง' },
 ]
 
+/** ตรงกับ Domain.Enums.WorkTaskRecurrence */
+export const TaskRecurrence = { None: 0, Daily: 1, Weekly: 2, Monthly: 3, Yearly: 4 } as const
+
+export const RECURRENCE_LABEL: Record<number, string> = {
+  0: 'ไม่ซ้ำ', 1: 'รายวัน', 2: 'รายสัปดาห์', 3: 'รายเดือน', 4: 'รายปี',
+}
+export const RECURRENCE_OPTIONS: { value: number; label: string }[] = [
+  { value: 0, label: 'ไม่ซ้ำ (ครั้งเดียว)' },
+  { value: 1, label: 'รายวัน' },
+  { value: 2, label: 'รายสัปดาห์' },
+  { value: 3, label: 'รายเดือน' },
+  { value: 4, label: 'รายปี' },
+]
+
+export interface WorkTaskItemDto {
+  id: number
+  text: string
+  isDone: boolean
+  sortOrder: number
+}
+
+export interface WorkTaskItemInput {
+  text: string
+  isDone: boolean
+}
+
 export interface WorkTaskDto {
   id: number
   clientCompanyId: number
@@ -52,6 +78,12 @@ export interface WorkTaskDto {
   completedAt?: string | null
   completedByUserName?: string | null
   isOverdue: boolean
+  recurrenceType: number
+  recurrenceName: string
+  recurrenceInterval: number
+  items: WorkTaskItemDto[]
+  doneCount: number
+  totalCount: number
   createdAt: string
   createdBy?: string | null
 }
@@ -88,10 +120,20 @@ export interface CreateWorkTaskInput {
   priority: number
   dueDate?: string | null
   assignedUserId?: number | null
+  recurrenceType?: number
+  recurrenceInterval?: number
+  items?: WorkTaskItemInput[]
 }
 
 export interface UpdateWorkTaskInput extends Omit<CreateWorkTaskInput, 'clientCompanyId'> {
   id: number
+}
+
+export interface TaskReminderResult {
+  sent: number
+  skipped: number
+  failed: number
+  messages: string[]
 }
 
 export interface WorkboardParams {

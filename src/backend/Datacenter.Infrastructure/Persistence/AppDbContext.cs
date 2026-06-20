@@ -23,6 +23,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ComplianceTask> ComplianceTasks => Set<ComplianceTask>();
     public DbSet<ComplianceTaskTemplate> ComplianceTaskTemplates => Set<ComplianceTaskTemplate>();
     public DbSet<WorkTask> WorkTasks => Set<WorkTask>();
+    public DbSet<WorkTaskItem> WorkTaskItems => Set<WorkTaskItem>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<AccountingPeriod> AccountingPeriods => Set<AccountingPeriod>();
     public DbSet<AdjustmentEntry> AdjustmentEntries => Set<AdjustmentEntry>();

@@ -1,8 +1,13 @@
 import { useState } from 'react'
 import Button from '../../../shared/components/ui/Button'
 import { useAssignableUsers, useCreateTask, useUpdateTask } from '../hooks/useTasks'
-import { PRIORITY_OPTIONS } from '../types/task.types'
+import { PRIORITY_OPTIONS, RECURRENCE_OPTIONS } from '../types/task.types'
 import type { WorkTaskDto } from '../types/task.types'
+
+interface ChecklistRow {
+  text: string
+  isDone: boolean
+}
 
 interface Props {
   companyId: number
@@ -21,7 +26,16 @@ export default function TaskFormModal({ companyId, editing, onClose }: Props) {
   const [priority, setPriority] = useState<number>(editing?.priority ?? 1)
   const [dueDate, setDueDate] = useState(editing?.dueDate ? editing.dueDate.slice(0, 10) : '')
   const [assignedUserId, setAssignedUserId] = useState<number | ''>(editing?.assignedUserId ?? '')
+  const [recurrenceType, setRecurrenceType] = useState<number>(editing?.recurrenceType ?? 0)
+  const [recurrenceInterval, setRecurrenceInterval] = useState<number>(editing?.recurrenceInterval ?? 1)
+  const [items, setItems] = useState<ChecklistRow[]>(
+    editing?.items?.map((i) => ({ text: i.text, isDone: i.isDone })) ?? [],
+  )
   const [error, setError] = useState('')
+
+  function updateItem(idx: number, patch: Partial<ChecklistRow>) {
+    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -35,6 +49,9 @@ export default function TaskFormModal({ companyId, editing, onClose }: Props) {
       priority,
       dueDate: dueDate ? `${dueDate}T00:00:00` : null,
       assignedUserId: assignedUserId === '' ? null : Number(assignedUserId),
+      recurrenceType,
+      recurrenceInterval: recurrenceInterval < 1 ? 1 : recurrenceInterval,
+      items: items.filter((it) => it.text.trim()).map((it) => ({ text: it.text.trim(), isDone: it.isDone })),
     }
     try {
       if (editing) await update.mutateAsync({ id: editing.id, ...payload })
@@ -104,6 +121,56 @@ export default function TaskFormModal({ companyId, editing, onClose }: Props) {
                 <option value="">— ไม่ระบุ —</option>
                 {(users ?? []).map((u) => <option key={u.userId} value={u.userId}>{u.displayName}</option>)}
               </select>
+            </div>
+          </div>
+
+          {/* งานประจำ (recurring) */}
+          <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">ทำซ้ำ (งานประจำ)</label>
+              <select
+                value={recurrenceType} onChange={(e) => setRecurrenceType(Number(e.target.value))}
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              >
+                {RECURRENCE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            {recurrenceType !== 0 && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">ทุก ๆ (จำนวนรอบ)</label>
+                <input
+                  type="number" min={1} value={recurrenceInterval}
+                  onChange={(e) => setRecurrenceInterval(Number(e.target.value))}
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                />
+              </div>
+            )}
+          </div>
+          {recurrenceType !== 0 && (
+            <p className="mb-3 -mt-1 text-xs text-slate-400">เมื่อปิดงานนี้ ระบบจะสร้างงานถัดไปอัตโนมัติ (เลื่อนกำหนดส่งตามรอบ)</p>
+          )}
+
+          {/* checklist */}
+          <div className="mb-3">
+            <div className="mb-1 flex items-center justify-between">
+              <label className="block text-xs font-medium text-gray-600">รายการย่อย (checklist)</label>
+              <button type="button" onClick={() => setItems((p) => [...p, { text: '', isDone: false }])}
+                className="text-xs font-bold text-sky-600 hover:underline">+ เพิ่มรายการ</button>
+            </div>
+            {items.length === 0 && <p className="text-xs text-slate-400">— ไม่มีรายการย่อย —</p>}
+            <div className="space-y-1.5">
+              {items.map((it, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input type="checkbox" checked={it.isDone} onChange={(e) => updateItem(idx, { isDone: e.target.checked })} className="rounded" />
+                  <input
+                    type="text" value={it.text} placeholder={`ขั้นตอนที่ ${idx + 1}`}
+                    onChange={(e) => updateItem(idx, { text: e.target.value })}
+                    className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-slate-400"
+                  />
+                  <button type="button" onClick={() => setItems((p) => p.filter((_, i) => i !== idx))}
+                    className="text-slate-400 hover:text-red-500">×</button>
+                </div>
+              ))}
             </div>
           </div>
 

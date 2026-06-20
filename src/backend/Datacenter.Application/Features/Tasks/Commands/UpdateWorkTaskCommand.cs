@@ -2,6 +2,7 @@ using Datacenter.Application.Common.Exceptions;
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Common.Security;
 using Datacenter.Application.Features.Tasks.DTOs;
+using Datacenter.Domain.Entities;
 using Datacenter.Domain.Enums;
 using FluentValidation;
 using MediatR;
@@ -16,7 +17,10 @@ public record UpdateWorkTaskCommand(
     string? Category,
     WorkTaskPriority Priority,
     DateTime? DueDate,
-    int? AssignedUserId)
+    int? AssignedUserId,
+    WorkTaskRecurrence RecurrenceType = WorkTaskRecurrence.None,
+    int RecurrenceInterval = 1,
+    IReadOnlyList<WorkTaskItemInput>? Items = null)
     : IRequest<WorkTaskDto>;
 
 public class UpdateWorkTaskCommandValidator : AbstractValidator<UpdateWorkTaskCommand>
@@ -36,6 +40,7 @@ public class UpdateWorkTaskCommandHandler(IApplicationDbContext db, ICurrentUser
     {
         var task = await db.WorkTasks
             .Include(t => t.ClientCompany).Include(t => t.AssignedUser).Include(t => t.CompletedByUser)
+            .Include(t => t.Items)
             .FirstOrDefaultAsync(t => t.Id == request.Id, ct)
             ?? throw new NotFoundException("WorkTask", request.Id);
 
@@ -47,10 +52,27 @@ public class UpdateWorkTaskCommandHandler(IApplicationDbContext db, ICurrentUser
         task.Priority = request.Priority;
         task.DueDate = request.DueDate;
         task.AssignedUserId = request.AssignedUserId;
+        task.RecurrenceType = request.RecurrenceType;
+        task.RecurrenceInterval = request.RecurrenceInterval < 1 ? 1 : request.RecurrenceInterval;
         task.ModifiedBy = currentUser.Username;
         task.ModifiedAt = DateTime.UtcNow;
 
+        // checklist: replace-all (เหมือน adjustment lines) — ถ้าส่ง Items มา
+        if (request.Items is not null)
+        {
+            db.WorkTaskItems.RemoveRange(task.Items);
+            task.Items.Clear();
+            int order = 0;
+            foreach (var it in request.Items.Where(i => !string.IsNullOrWhiteSpace(i.Text)))
+                task.Items.Add(new WorkTaskItem { Text = it.Text.Trim(), IsDone = it.IsDone, SortOrder = order++, CreatedBy = currentUser.Username });
+        }
+
         await db.SaveChangesAsync(ct);
-        return WorkTaskMapper.ToDto(task, DateTime.UtcNow.Date);
+
+        var saved = await db.WorkTasks.AsNoTracking()
+            .Include(t => t.ClientCompany).Include(t => t.AssignedUser).Include(t => t.CompletedByUser)
+            .Include(t => t.Items)
+            .FirstAsync(t => t.Id == task.Id, ct);
+        return WorkTaskMapper.ToDto(saved, DateTime.UtcNow.Date);
     }
 }

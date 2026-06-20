@@ -18,6 +18,7 @@ public class GetWorkTasksQueryHandler(IApplicationDbContext db)
     {
         var q = db.WorkTasks.AsNoTracking()
             .Include(t => t.ClientCompany).Include(t => t.AssignedUser).Include(t => t.CompletedByUser)
+            .Include(t => t.Items)
             .Where(t => t.ClientCompanyId == request.ClientCompanyId);
 
         if (request.Status is { } s) q = q.Where(t => t.Status == s);
