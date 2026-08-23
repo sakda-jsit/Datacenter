@@ -91,4 +91,13 @@ public interface IExpressDbfAdapter
     Task<IReadOnlyList<ExpressGlJournalLineDto>> ReadGlJournalLinesAsync(
         string companyFolderPath, ISet<string> accountCodes,
         DateTime dateFromInclusive, DateTime dateToExclusive, CancellationToken ct = default);
+
+    /// <summary>
+    /// อ่านเอกสารเงินเดือน "บันทึกค่าใช้จ่ายอื่นๆ" (OE) จาก Express: APTRN(RECTYP='7') + GLJNLIT.
+    /// anchorAccounts = บัญชีค่าใช้จ่ายเงินเดือน/ค่าจ้าง (จาก PayrollAccountMapping) ใช้ระบุว่าเอกสารไหน
+    /// เป็นเงินเดือน — คืน "ทุกบรรทัด" ของเอกสารเหล่านั้น (รวมเครดิต ปกส./ภาษี/สุทธิ) พร้อม SUPCOD+ปี/เดือน.
+    /// คืนว่างถ้าไม่มี anchor/ไฟล์.
+    /// </summary>
+    Task<IReadOnlyList<ExpressPayrollOeLineDto>> ReadPayrollOeLinesAsync(
+        string companyFolderPath, ISet<string> anchorAccounts, CancellationToken ct = default);
 }

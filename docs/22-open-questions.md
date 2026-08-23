@@ -17,17 +17,21 @@
 4. รายงาน stock แสดงระดับ cost layer รายตัว หรือเฉพาะยอดสรุปต่อ item/warehouse?
 
 ### Tax
-5. PP.30 / PND ที่บล็อก DBF — โครงสร้างตาราง Input/Output VAT และ WHT จริงของ Express เป็นอย่างไร?
-   (ตัวบล็อกหลักของ VAT/PP30/AR/AP)
+5. ~~PP.30 / PND ที่บล็อก DBF — โครงสร้างตาราง Input/Output VAT และ WHT จริงของ Express เป็นอย่างไร?~~
+   **ปิดแล้ว (2026-06-05):** ถอดสเปกจาก DBF จริงครบ — ISVAT (ภ.พ.30), ISTAX (ภ.ง.ด.3/53),
+   ARMAS/ARTRN, APMAS/APTRN, BKMAS/BKTRN, STMAS, FAMAS และเงินเดือนจากเอกสาร OE (APTRN RECTYP=7 + GLJNLIT).
+   ดู docs/20 + หัวข้อแต่ละโมดูลใน docs/12 — โมดูล VAT/AR/AP/Bank/Stock/FA/Payroll ทำเสร็จหมดแล้ว
 
 ### Report Package
 6. รูปแบบไฟล์/field เฉพาะของแต่ละหน่วยงาน (ผู้สอบบัญชี/DBD/สรรพากร/ประกันสังคม) — ต้องยืนยันก่อนทำ export เฉพาะทาง
 7. ต้องมีรายงานสรุป mapping "สูตร Excel เดิม → business rule ใหม่" ส่งผู้สอบบัญชีหรือไม่?
 
 ### Adjustment
-8. Leasing/Loan working paper — field/สูตรที่ต้องคำนวณในหน้าจัดการ (จากไฟล์ `2025_JSPC_LEASING(1).xlsx`,
-   `2025_CRUVE_LOAN.xlsx`) ต้องขอตัวอย่างไฟล์จริงเพื่อถอด schedule logic
+8. ~~Leasing/Loan working paper — field/สูตรที่ต้องคำนวณในหน้าจัดการ~~
+   **ปิดแล้ว (2026-06-04):** ได้ไฟล์จริง `2025_JSPC_LEASING.xlsx` → ถอด schedule (effective interest) แล้ว,
+   โมดูลเช่าซื้อ/เงินกู้ + generate adjustment ทำเสร็จ verify ตรง sheet SUM (ดู docs/12)
 
 ## หมายเหตุ
-- ข้อ 5 เป็น blocker หลักของโมดูล VAT/PP30/AR/AP (docs/16, docs/17) — ควรเร่งขอสเปก DBF
-- ข้อ 8 จำเป็นก่อนเริ่มพัฒนาโมดูล Leasing/Loan (docs/13)
+- ~~ข้อ 5 เป็น blocker หลักของโมดูล VAT/PP30/AR/AP~~ / ~~ข้อ 8 จำเป็นก่อนเริ่มโมดูล Leasing/Loan~~ — **ปิดทั้งคู่แล้ว**
+- ที่ยังค้างจริง ณ 2026-08-23: ข้อ 2 (ผู้ sign-off parallel run), 3 (ค่าเสื่อมภาษี: auto adjustment หรือ working paper),
+  4 (ระดับรายละเอียดรายงาน stock), 6–7 (รูปแบบไฟล์ส่งหน่วยงาน / รายงาน mapping สูตร Excel เดิมสำหรับผู้สอบบัญชี)

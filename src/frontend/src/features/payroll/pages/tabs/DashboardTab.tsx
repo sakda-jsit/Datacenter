@@ -1,11 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
-import { usePayrollDashboard } from '../../hooks/usePayroll'
+import { usePayrollDashboard, usePayrollDataYears } from '../../hooks/usePayroll'
 import { MONTH_TH, type PayrollChecklistMonth } from '../../types/payroll.types'
 import FilingStatusModal from '../../components/FilingStatusModal'
-import ExpressPostingModal from '../../components/ExpressPostingModal'
 
 interface Props {
   companyId: number
@@ -16,7 +15,8 @@ function fmt(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-const STATUS_LABEL = ['ร่าง', 'บันทึกแล้ว', 'ปิดงวด']
+// สถานะตรวจ/ยืนยันงวด (ข้อมูล import จาก Express มาเป็น "ร่าง" → ตรวจแล้ว → ยืนยัน/ปิด)
+const STATUS_LABEL = ['ร่าง (ยังไม่ตรวจ)', 'ตรวจแล้ว', 'ยืนยัน/ปิด']
 
 function Check({ ok }: { ok: boolean }) {
   return <span className={ok ? 'text-emerald-600' : 'text-gray-300'}>{ok ? '✓' : '–'}</span>
@@ -43,12 +43,15 @@ function ReconCard({ title, ok, value, note }: { title: string; ok: boolean; val
 
 export default function DashboardTab({ companyId }: Props) {
   const thisYear = new Date().getFullYear()
+  const dataYears = usePayrollDataYears(companyId)
   const [year, setYear] = useState(thisYear)
   const [pnd1Month, setPnd1Month] = useState<number | null>(null)
-  const [expressMonth, setExpressMonth] = useState<number | null>(null)
   const qc = useQueryClient()
   const { data, isLoading, isError } = usePayrollDashboard(companyId, year)
-  const yearOptions = Array.from({ length: 6 }, (_, i) => thisYear - i)
+  const yearOptions = useMemo(() => {
+    const s = new Set<number>([...Array.from({ length: 6 }, (_, i) => thisYear - i), ...dataYears])
+    return [...s].sort((a, b) => b - a)
+  }, [thisYear, dataYears])
 
   // กระทบยอด #1 slip↔ระบบ: ผ่านถ้าทุกเดือน |diff| < 2 บาท
   const ssoOk = !!data && data.months.filter((m) => m.hasRun).every((m) => Math.abs(m.ssoCrossCheckDiff) < 2)
@@ -132,10 +135,6 @@ export default function DashboardTab({ companyId }: Props) {
               {' · '}<span className="text-gray-500">ได้ใบเสร็จ</span> <span className="font-semibold">{data.months.filter((m) => m.ssoReceiptReceived).length} เดือน</span>
             </div>
             <div>
-              <span className="text-gray-500">คีย์ Express (เงินเดือน):</span>{' '}
-              <span className="font-semibold">{data.months.filter((m) => m.expressPosted).length}/{data.monthsWithRun} เดือน</span>
-            </div>
-            <div>
               <span className="text-gray-500">ภ.ง.ด.1ก:</span> <span className="font-semibold">{data.pnd1kPersonCount} ราย</span> · ภาษี {fmt(data.pnd1kTotalTax)}
               {' '}<FiledBadge filed={data.pnd1kFiled} receipt={data.pnd1kReceipt} />
             </div>
@@ -158,11 +157,9 @@ export default function DashboardTab({ companyId }: Props) {
                   <th className="px-3 py-2 text-right font-medium">ปกส. (ลจ.)</th>
                   <th className="px-3 py-2 text-right font-medium">ภาษี</th>
                   <th className="px-3 py-2 text-center font-medium">slip↔ระบบ</th>
-                  <th className="px-3 py-2 text-center font-medium">ลงบัญชีดุล</th>
                   <th className="px-3 py-2 text-center font-medium">ยื่น ปกส.</th>
                   <th className="px-3 py-2 text-center font-medium">ใบเสร็จ</th>
                   <th className="px-3 py-2 text-center font-medium">ภ.ง.ด.1</th>
-                  <th className="px-3 py-2 text-center font-medium">ลง Express</th>
                   <th className="px-3 py-2 text-right font-medium">ส่วนต่าง GL</th>
                 </tr>
               </thead>
@@ -186,7 +183,6 @@ export default function DashboardTab({ companyId }: Props) {
                     <td className="px-3 py-1.5 text-center font-mono">
                       {m.hasRun ? (Math.abs(m.ssoCrossCheckDiff) < 2 ? <Check ok /> : <span className="text-amber-600">{fmt(m.ssoCrossCheckDiff)}</span>) : '-'}
                     </td>
-                    <td className="px-3 py-1.5 text-center"><Check ok={m.postingBalanced} /></td>
                     <td className="px-3 py-1.5 text-center"><Check ok={m.ssoFiled} /></td>
                     <td className="px-3 py-1.5 text-center">
                       {m.ssoReceiptReceived
@@ -199,14 +195,6 @@ export default function DashboardTab({ companyId }: Props) {
                           className="text-xs underline decoration-dotted underline-offset-2 hover:text-sky-600"
                           title={m.tax > 0 ? 'มีภาษีหัก — ต้องยื่น ภ.ง.ด.1' : 'ไม่มีภาษีหัก'}>
                           {m.pnd1Filed ? <span className="text-emerald-600">✓</span> : (m.tax > 0 ? <span className="text-amber-600">ต้องยื่น</span> : <span className="text-gray-300">–</span>)}
-                        </button>
-                      ) : '-'}
-                    </td>
-                    <td className="px-3 py-1.5 text-center">
-                      {m.hasRun ? (
-                        <button type="button" onClick={() => setExpressMonth(m.month)}
-                          className="text-xs underline decoration-dotted underline-offset-2 hover:text-sky-600" title="บันทึกการคีย์ลง Express">
-                          {m.expressPosted ? <span className="text-emerald-600">✓</span> : <span className="text-amber-600">คีย์</span>}
                         </button>
                       ) : '-'}
                     </td>
@@ -228,11 +216,6 @@ export default function DashboardTab({ companyId }: Props) {
         <FilingStatusModal companyId={companyId} filingType={1} year={year} month={pnd1Month}
           title={`ภ.ง.ด.1 (${MONTH_TH[pnd1Month]})`} baseLabel="เงินได้สุทธิ" amountLabel="ภาษีนำส่ง"
           onClose={() => { setPnd1Month(null); qc.invalidateQueries({ queryKey: ['payroll-dashboard', companyId, year] }) }} />
-      )}
-      {expressMonth !== null && (
-        <ExpressPostingModal companyId={companyId} sourceType={1} year={year} month={expressMonth}
-          title={`ค่าใช้จ่ายเงินเดือน (${MONTH_TH[expressMonth]})`}
-          onClose={() => { setExpressMonth(null); qc.invalidateQueries({ queryKey: ['payroll-dashboard', companyId, year] }) }} />
       )}
     </div>
   )

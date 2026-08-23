@@ -82,10 +82,32 @@ public static class ExpressPostingService
         if (oldEntries.Count > 0)
             db.JournalEntries.RemoveRange(oldEntries); // ลบ Lines ตาม cascade
 
-        // ── 3) สร้าง JournalEntry ยอดยกมา + ยอดเคลื่อนไหว จาก staging TB ชุด CUR ──────
-        var curRows = await db.StagingTrialBalances
-            .Where(t => t.ImportBatchId == batch.Id && t.IsValid && t.PeriodSet == "CUR")
+        // ── 3) สร้าง JournalEntry ยอดยกมา + ยอดเคลื่อนไหว จาก staging TB ของปีที่ post ──
+        // เลือกด้วย FiscalYear (ที่ tag ตาม slot LY/CUR/NY ตอน import) ไม่ใช่ PeriodSet คงที่ "CUR"
+        // เพื่อให้ post ปี NY (ปีที่กำลังทำงาน) อ่านยอด slot NY จริง ไม่ใช่ CUR ปีก่อน
+        var yearRows = await db.StagingTrialBalances
+            .Where(t => t.ImportBatchId == batch.Id && t.IsValid && t.FiscalYear == fy)
             .ToListAsync(ct);
+
+        // ── 3.1) ด่านกัน batch เก่า (import ก่อนมี FiscalYear ต่อ slot) ────────────────
+        // batch เก่า tag ทุก slot (LY/CUR/NY) เป็นปีเดียวกัน → กรองด้วย FiscalYear จะได้ 3 ระเบียน
+        // ต่อบัญชี = ยอดเบิ้ล 3 เท่า. ถ้าเจอแบบนั้นให้ถอยไปใช้พฤติกรรมเดิม (slot CUR เท่านั้น)
+        // ซึ่งเป็นยอดเดียวกับที่ batch นั้นเคย post ไว้ + เตือนให้นำเข้าใหม่เพื่อรองรับหลายปี.
+        string legacyWarning = "";
+        var slots = yearRows.Select(r => r.PeriodSet).Distinct().ToList();
+        var curRows = yearRows;
+        if (slots.Count > 1)
+        {
+            curRows = yearRows.Where(r => r.PeriodSet == "CUR").ToList();
+            legacyWarning =
+                " (คำเตือน: batch นี้นำเข้าด้วยรุ่นก่อนที่จะแยกปีงบต่อ slot LY/CUR/NY — post จากยอด slot CUR ตามเดิม; " +
+                "หากต้องการยอดปีอื่นในไฟล์เดียวกัน ให้นำเข้าใหม่)";
+        }
+        else if (curRows.Count == 0)
+        {
+            legacyWarning =
+                $" (คำเตือน: ไม่พบยอดของปี {fy} ใน batch นี้ — ไฟล์ Express ที่นำเข้าอาจไม่มี slot ของปีนี้ ให้นำเข้าใหม่โดยเลือกปีให้ตรง)";
+        }
 
         var openingEntry = new JournalEntry
         {
@@ -157,7 +179,7 @@ public static class ExpressPostingService
 
         return new PostImportResultDto(
             batch.Id, fy, stagingAccounts.Count, openingLines, movementLines,
-            $"Post สำเร็จ: บัญชี {stagingAccounts.Count} รายการ, ยอดยกมา {openingLines} บรรทัด, ยอดเคลื่อนไหว {movementLines} บรรทัด");
+            $"Post สำเร็จ: บัญชี {stagingAccounts.Count} รายการ, ยอดยกมา {openingLines} บรรทัด, ยอดเคลื่อนไหว {movementLines} บรรทัด{legacyWarning}");
     }
 
     private static AccountType MapAccountType(int group) => group switch

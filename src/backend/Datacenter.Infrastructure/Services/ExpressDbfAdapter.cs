@@ -678,4 +678,65 @@ public class ExpressDbfAdapter : IExpressDbfAdapter
 
         return Task.FromResult<IReadOnlyList<ExpressGlJournalLineDto>>(result);
     }
+
+    public Task<IReadOnlyList<ExpressPayrollOeLineDto>> ReadPayrollOeLinesAsync(
+        string companyFolderPath, ISet<string> anchorAccounts, CancellationToken ct = default)
+    {
+        if (anchorAccounts is null || anchorAccounts.Count == 0)
+            return Task.FromResult<IReadOnlyList<ExpressPayrollOeLineDto>>([]);
+
+        List<DbfRow> ap, gl;
+        try { ap = ReadDbf(companyFolderPath, "APTRN"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressPayrollOeLineDto>>([]); }
+        try { gl = ReadDbf(companyFolderPath, "GLJNLIT"); }
+        catch (FileNotFoundException) { return Task.FromResult<IReadOnlyList<ExpressPayrollOeLineDto>>([]); }
+
+        // เอกสาร OE (RECTYP='7') → (SUPCOD, DOCDAT) — เฉพาะเอกสารบันทึกค่าใช้จ่ายอื่นๆ
+        var oeDoc = new Dictionary<string, (string Sup, DateTime Date)>();
+        foreach (var r in ap)
+        {
+            if (Str(r, "RECTYP") != "7") continue;
+            var doc = Str(r, "DOCNUM");
+            var date = Date(r, "DOCDAT");
+            if (string.IsNullOrWhiteSpace(doc) || date is null) continue;
+            oeDoc[doc] = (Str(r, "SUPCOD"), date.Value);
+        }
+        if (oeDoc.Count == 0) return Task.FromResult<IReadOnlyList<ExpressPayrollOeLineDto>>([]);
+
+        // จัดกลุ่มบรรทัด GLJNLIT ตาม voucher (เฉพาะ voucher ที่เป็นเอกสาร OE)
+        var linesByVoucher = new Dictionary<string, List<DbfRow>>();
+        foreach (var r in gl)
+        {
+            var v = Str(r, "VOUCHER");
+            if (!oeDoc.ContainsKey(v)) continue;
+            (linesByVoucher.TryGetValue(v, out var list) ? list : linesByVoucher[v] = []).Add(r);
+        }
+
+        var result = new List<ExpressPayrollOeLineDto>();
+        foreach (var (voucher, lines) in linesByVoucher)
+        {
+            // เอกสารนี้เป็นเงินเดือนก็ต่อเมื่อมีบรรทัดลงบัญชี anchor (เงินเดือน/ค่าจ้าง) อย่างน้อย 1
+            if (!lines.Any(r => anchorAccounts.Contains(Str(r, "ACCNUM")))) continue;
+
+            var (sup, date) = oeDoc[voucher];
+            if (string.IsNullOrWhiteSpace(sup)) continue;
+
+            foreach (var r in lines)
+            {
+                var amount = Math.Round(Dec(r, "AMOUNT"), 2);
+                var isCredit = Str(r, "TRNTYP") == "1"; // ''/'0' = เดบิต, '1' = เครดิต
+                result.Add(new ExpressPayrollOeLineDto(
+                    Voucher:      voucher,
+                    SupplierCode: sup,
+                    Year:         date.Year,
+                    Month:        date.Month,
+                    AccountCode:  Str(r, "ACCNUM"),
+                    Description:  Str(r, "DESCRP"),
+                    Debit:        isCredit ? 0m : amount,
+                    Credit:       isCredit ? amount : 0m));
+            }
+        }
+
+        return Task.FromResult<IReadOnlyList<ExpressPayrollOeLineDto>>(result);
+    }
 }

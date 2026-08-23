@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Button from '../../../../shared/components/ui/Button'
 import Card from '../../../../shared/components/ui/Card'
 import StateMessage from '../../../../shared/components/ui/StateMessage'
 import { payrollApi } from '../../services/payrollApi'
-import { usePayrollYearSummary } from '../../hooks/usePayroll'
+import { usePayrollDataYears, usePayrollYearSummary } from '../../hooks/usePayroll'
 import { MONTH_TH, type PayrollSummaryRow } from '../../types/payroll.types'
 import Salary50TawiModal from '../../components/Salary50TawiModal'
 import Kt20Modal from '../../components/Kt20Modal'
@@ -63,13 +63,17 @@ const GROUPS: { label: string; span: number; cls: string }[] = [
 
 export default function YearSummaryTab({ companyId }: Props) {
   const thisYear = new Date().getFullYear()
+  const dataYears = usePayrollDataYears(companyId)
   const [year, setYear] = useState(thisYear)
   const [show50Tawi, setShow50Tawi] = useState(false)
   const [showKt20, setShowKt20] = useState(false)
   const [filingModal, setFilingModal] = useState<null | 'pnd1k' | 'kt20'>(null)
   const { data, isLoading, isError } = usePayrollYearSummary(companyId, year)
 
-  const yearOptions = Array.from({ length: 6 }, (_, i) => thisYear - i)
+  const yearOptions = useMemo(() => {
+    const s = new Set<number>([...Array.from({ length: 6 }, (_, i) => thisYear - i), ...dataYears])
+    return [...s].sort((a, b) => b - a)
+  }, [thisYear, dataYears])
 
   function cell(row: PayrollSummaryRow, c: (typeof COLS)[number]) {
     const v = row[c.key] as number

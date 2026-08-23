@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { payrollApi } from '../services/payrollApi'
 import type { EmployeeInput, PayrollItemInput } from '../types/payroll.types'
@@ -94,6 +95,15 @@ export function usePayrollRuns(companyId: number, year?: number) {
     queryFn: () => payrollApi.runs(companyId, year),
     enabled: companyId > 0,
   })
+}
+
+// ปีที่มีข้อมูลงวดเงินเดือนจริง (เรียงใหม่→เก่า) — รวมเข้า dropdown เลือกปี ให้เห็นปีที่มีข้อมูลจริง
+export function usePayrollDataYears(companyId: number) {
+  const { data } = usePayrollRuns(companyId)
+  return useMemo(() => {
+    const years = [...new Set((data ?? []).map((r) => r.year))]
+    return years.sort((a, b) => b - a)
+  }, [data])
 }
 
 export function usePayrollYearSummary(companyId: number, year: number) {

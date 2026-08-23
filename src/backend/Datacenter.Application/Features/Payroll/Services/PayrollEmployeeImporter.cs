@@ -16,9 +16,11 @@ public static class PayrollEmployeeImporter
         IApplicationDbContext db, IExpressDbfAdapter adapter, string folderPath,
         int companyId, string username, CancellationToken ct)
     {
+        // เฉพาะบัญชี **เงินเดือน (SalaryExpense)** เท่านั้น — ไม่รวม "ค่าจ้าง" (DailyWageExpense เช่น 5140
+        // ค่าจ้างประกอบ) เพราะเป็น "ค่าจ้างทำของ" (ผู้รับเหมา ภ.ง.ด.3) ไม่ใช่พนักงานเงินเดือน จะทำให้ทะเบียนบวม
         var map = await db.PayrollAccountMappings.AsNoTracking()
             .Where(m => m.ClientCompanyId == companyId && m.Department != null
-                && (m.Role == PayrollPostingRole.SalaryExpense || m.Role == PayrollPostingRole.DailyWageExpense))
+                && m.Role == PayrollPostingRole.SalaryExpense)
             .ToDictionaryAsync(m => m.AccountCode.Trim(), m => m.Department!, ct);
         if (map.Count == 0) return 0; // ยังไม่ได้แมพบัญชีเงินเดือน → ข้าม
 

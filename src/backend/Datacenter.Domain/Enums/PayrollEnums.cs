@@ -62,6 +62,12 @@ public enum PayrollPostingRole
     DailyWageExpense = 2,     // ค่าจ้างรายวัน
     AllowanceExpense = 3,     // เบี้ยเลี้ยง/OT/เบี้ยขยัน/โบนัส/อื่น (รวม)
     EmployerSsoExpense = 4,   // เงินสมทบนายจ้าง ปกส.
+    // ── เดบิต (รายได้ย่อย) — ใช้ตอน import จาก Express เพื่อแยกช่องให้ตรง (คนละบัญชี) ──
+    OvertimeExpense = 5,      // ค่าล่วงเวลา (OT)
+    HousingAllowanceExpense = 6, // ค่าที่พักอาศัย
+    FoodAllowanceExpense = 7, // ค่าอาหาร
+    DiligenceExpense = 8,     // เบี้ยขยัน
+    BonusExpense = 9,         // โบนัส
     // ── เครดิต (หนี้สิน/หักจ่าย) ──
     SsoPayable = 10,          // เงินประกันสังคมรอนำส่ง (ลูกจ้าง+นายจ้าง) — ทั้งบริษัท
     WhtPayable = 11,          // ภาษีหัก ณ ที่จ่ายค้างจ่าย — ทั้งบริษัท

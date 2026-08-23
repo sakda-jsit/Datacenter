@@ -42,6 +42,21 @@ public record ExpressGlJournalLineDto(
     decimal Credit);
 
 /// <summary>
+/// บรรทัดในเอกสารเงินเดือน "บันทึกค่าใช้จ่ายอื่นๆ" (OE) ของ Express: APTRN(RECTYP='7') + GLJNLIT.
+/// คืน "ทุกบรรทัด" ของเอกสารที่ถือเป็นเงินเดือน (เอกสารที่มีบรรทัดลงบัญชี anchor เงินเดือน/ค่าจ้าง)
+/// เพื่อให้ importer แยกช่องรายได้/ปกส./ภาษี/สุทธิ เชื่อมพนักงานด้วย SupplierCode.
+/// </summary>
+public record ExpressPayrollOeLineDto(
+    string Voucher,        // เลขที่เอกสาร (DOCNUM/VOUCHER) เช่น OE6906034
+    string SupplierCode,   // SUPCOD = รหัสเจ้าหนี้ = รหัสพนักงาน
+    int Year,
+    int Month,
+    string AccountCode,    // รหัสบัญชี GL เช่น 5150-01
+    string Description,
+    decimal Debit,
+    decimal Credit);
+
+/// <summary>
 /// One row per (AccountCode, PeriodSet) combination.
 /// PeriodSet: "LY" | "CUR" | "NY"
 /// BeginBalance, TotalDebit, TotalCredit are already aggregated from monthly columns.

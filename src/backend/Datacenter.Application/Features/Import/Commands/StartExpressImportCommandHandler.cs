@@ -108,13 +108,24 @@ public class StartExpressImportCommandHandler(
             }).ToList();
             db.StagingAccounts.AddRange(stagingAccounts);
 
+            // GLBAL เก็บยอด 3 ปีในระเบียนเดียว (LY/CUR/NY) — ต้อง tag ปีงบจริงของแต่ละ slot
+            // ไม่ใช่ request.FiscalYear ทุกแถว มิฉะนั้น post ปีไหนก็ได้ slot CUR เดิมเสมอ (ข้อมูลไม่ update).
+            // ปี CUR = ปีเล็กสุดในนิยาม ISPRD (งวดปัจจุบัน), NY = CUR+1, LY = CUR-1 (ระบบใช้ปีปฏิทิน/สิ้นงวด 31 ธ.ค.)
+            int curYear = definedYears.Min();
+            int SlotFiscalYear(string periodSet) => periodSet switch
+            {
+                "LY" => curYear - 1,
+                "NY" => curYear + 1,
+                _    => curYear, // "CUR"
+            };
+
             var stagingTb = trialBalanceRows.Select(r => new StagingTrialBalance
             {
                 ImportBatchId   = batch.Id,
                 ClientCompanyId = request.ClientCompanyId,
                 AccountCode     = r.AccountCode,
                 PeriodSet       = r.PeriodSet,
-                FiscalYear      = request.FiscalYear,
+                FiscalYear      = SlotFiscalYear(r.PeriodSet),
                 BeginBalance    = r.BeginBalance,
                 TotalDebit      = r.TotalDebit,
                 TotalCredit     = r.TotalCredit,
@@ -366,6 +377,31 @@ public class StartExpressImportCommandHandler(
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     batch.Message += $" (นำเข้าพนักงานไม่สำเร็จ: {ex.Message})";
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
+
+                // นำเข้างวดเงินเดือนจาก Express (เอกสาร OE บันทึกค่าใช้จ่ายอื่นๆ) — หลังนำเข้าพนักงานแล้ว
+                // ข้ามงวดที่มีอยู่ (ไม่ทับที่กรอกมือ); แยก try/catch ไม่ให้กระทบ batch หลัก
+                try
+                {
+                    var payResult = await Payroll.Services.PayrollExpressImporter.ImportAsync(
+                        db, dbfAdapter, folderPath, request.ClientCompanyId, currentUser.Username, ct);
+                    if (payResult.RunsCreated > 0)
+                    {
+                        batch.Message += $" · {payResult.Message}";
+                        await audit.LogAsync(
+                            action: "ImportPayroll",
+                            entityName: "ImportBatch",
+                            entityId: batch.Id.ToString(),
+                            afterValue: payResult.Message,
+                            companyId: request.ClientCompanyId,
+                            cancellationToken: ct);
+                        await db.SaveChangesAsync(ct);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    batch.Message += $" (นำเข้าเงินเดือนไม่สำเร็จ: {ex.Message})";
                     await db.SaveChangesAsync(CancellationToken.None);
                 }
 
