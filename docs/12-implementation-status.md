@@ -17,7 +17,7 @@
 | 3 | VAT Management | ✅ เสร็จ (2026-06-05) | นำเข้า ISVAT.DBF + รายงาน ภ.พ.30 รายเดือน + รายละเอียดภาษีซื้อ/ขาย — ดูหัวข้อด้านล่าง |
 | 4 | AR Management | ✅ เสร็จ (2026-06-05) | นำเข้า ARMAS/ARTRN → ลูกค้า + ใบแจ้งหนี้ + รายงานอายุหนี้ (aging) — ดูหัวข้อด้านล่าง |
 | 5 | AP Management | ✅ เสร็จ (2026-06-05) | นำเข้า APMAS/APTRN → ผู้ขาย + ใบตั้งหนี้ + รายงานอายุหนี้เจ้าหนี้ — ดูหัวข้อด้านล่าง |
-| 6 | Payroll | ✅ เสร็จ (P1+P2, มิ.ย.2026) | Express ไม่มี DBF เงินเดือน → ทะเบียนพนักงาน+เอกสาร PDPA + import Excel + คำนวณ ปกส./ภาษี (PayrollCalculator) + PayrollRun + ภ.ง.ด.1/1ก + ปกส./กท.20 + 50ทวิ + Excel + post GL (docs/23) |
+| 6 | Payroll | ✅ เสร็จ (P1+P2, มิ.ย.2026) + **นำเข้าจาก Express (ก.ค.2026)** | ทะเบียนพนักงาน+เอกสาร PDPA + คำนวณ ปกส./ภาษี (PayrollCalculator) + PayrollRun + ภ.ง.ด.1/1ก + ปกส./กท.20 + 50ทวิ + Excel + post GL (docs/23). **แก้ความเข้าใจเดิม:** Express *มี* ข้อมูลเงินเดือน — อยู่ในเอกสาร "บันทึกค่าใช้จ่ายอื่นๆ" (OE: APTRN RECTYP=7 + GLJNLIT) → `PayrollExpressImporter` ดึงงวดเงินเดือนอัตโนมัติตอนนำเข้า Express (แยกช่องรายได้ตามบัญชี, ข้ามงวดที่มีอยู่) ไม่ต้อง import Excel |
 | 7 | Bank / สมุดเงินฝาก | ✅ เสร็จ (2026-06-08) | สมุดเงินฝาก + กระทบยอด statement (RPT-015/016): parser SCB/KBANK/TTB + Excel/CSV → จับคู่ BKTRN; เหลือ parser GSB/KTB/BBL + จับคู่หลายต่อหนึ่ง |
 | 8 | Trial Balance | ✅ เสร็จ | อ่านจาก Account + JournalEntry (ต้อง post ก่อน) |
 | 9 | General Ledger | ✅ เสร็จ | running balance ต่อบัญชี |
@@ -422,3 +422,34 @@ Utility กลางฝั่ง frontend + ปุ่ม `ExportMenu` ใช้�
 11. Leasing/Loan = **มีหน้าจัดการในระบบ** → adjustment เข้า TB ปีปัจจุบัน
 12. PDF สรรพากร = **layout คงที่ → template parser**
 13. Retention = **10 ปี**
+
+---
+
+## ✅ นำเข้าเงินเดือนจาก Express (OE) — เสร็จ 2026-07-14
+
+แก้ความเข้าใจเดิมที่ว่า "Express ไม่มี DBF เงินเดือน": เงินเดือนอยู่ใน**เอกสารบันทึกค่าใช้จ่ายอื่นๆ (OE)**
+คือ `APTRN` (RECTYP='7') คู่กับบรรทัดลงบัญชีใน `GLJNLIT` → ดึงได้อัตโนมัติ ไม่ต้อง import Excel
+
+- **Adapter:** `ReadPayrollOeLinesAsync` — หาเอกสาร OE ที่มีบรรทัดลงบัญชี "anchor" (บัญชีเงินเดือนตาม
+  `PayrollAccountMapping` role = SalaryExpense) แล้วคืน**ทุกบรรทัด**ของเอกสารนั้น (เดบิตรายได้ + เครดิต ปกส./ภาษี/สุทธิ)
+- **Importer:** `PayrollExpressImporter` — จับคู่พนักงานด้วย `SUPCOD` → `Employee.SourceSupplierCode`,
+  แยกช่องรายได้ตามบัญชี (เงินเดือน/OT/ที่พัก/อาหาร/เบี้ยขยัน/โบนัส — เพิ่ม `PayrollPostingRole` 5–9),
+  derive ปกส.ลูกจ้าง = ปกส.รอนำส่ง(เครดิต) − เงินสมทบนายจ้าง(เดบิต), ภาษี = ภาษีหัก ณ ที่จ่ายค้างจ่าย(เครดิต),
+  **ข้ามงวดที่มีอยู่แล้ว** (ไม่ทับที่กรอกมือ) — เรียกอัตโนมัติตอนนำเข้า Express (ตามหลัก "import ที่เดียว")
+- **ไม่รวมบัญชี "ค่าจ้าง" (DailyWageExpense เช่น 5140 ค่าจ้างประกอบ)** เป็น anchor เพราะเป็นค่าจ้างทำของ
+  (ผู้รับเหมา ภ.ง.ด.3 ไม่มี ปกส.) — จะทำให้ทะเบียนพนักงานบวม
+- **Verify:** บ.242 ปี 2026 → 6 งวด; frontend เพิ่มปีที่มีข้อมูลจริงใน dropdown + ป้ายสถานะงวดเป็น "ร่าง (ยังไม่ตรวจ)/ตรวจแล้ว/ยืนยัน-ปิด"
+- **ค้างต่อ:** post GL ยังไม่แยกบรรทัดตาม role 5–9 (ยอดกองที่ AllowanceExpense/เงินเดือนตามเดิม) —
+  ต้องขยาย `PayrollRunFeature.RoleLabels` + การสร้างบรรทัด ถ้าต้องการลงบัญชีแยกช่อง
+
+## ✅ Hardening ก่อนขึ้น production v1 — เสร็จ 2026-08-23
+
+ครบทั้งชุด: กุญแจ/ความลับออกจาก git + ระบบผู้ใช้จริง (สร้าง/สิทธิ์รายบริษัท/รีเซ็ต/ล็อก) + refresh token +
+log ไฟล์ + ชุด deploy + สำรองข้อมูล + ด่านกัน batch นำเข้าเก่า post ซ้ำ 3 slot — **รายละเอียดทั้งหมดดู `docs/24-deployment.md`**
+
+- **API ใหม่:** `POST /auth/refresh` (rotation), `POST /auth/logout`, `POST /auth/change-password`,
+  `GET/POST/PUT /users`, `POST /users/{id}/reset-password`, `POST /users/{id}/unlock` (ทั้งชุด `[Authorize(Roles="Admin")]`)
+- **Entity/migration:** `RefreshToken` (เก็บ hash เท่านั้น) + `User.MustChangePassword/FailedLoginCount/LockedUntil`
+  — migration `AddUserSecurityAndRefreshTokens`; `User` เข้า field-audit แต่ ignore `PasswordHash` และตัวนับ login
+- **Frontend:** หน้า `/settings/users` (Admin) + `/change-password` (บังคับเมื่อ `mustChangePassword`),
+  apiClient ต่ออายุ token อัตโนมัติเมื่อ 401, เมนู "ผู้ใช้งานระบบ" ซ่อนสำหรับ Maker/Checker

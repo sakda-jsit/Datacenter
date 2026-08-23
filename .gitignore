@@ -46,6 +46,11 @@ yarn-error.log*
 .env.local
 .env.*.local
 appsettings.*.local.json
+# ค่าตั้งเฉพาะเครื่อง/production (connection string, Jwt:Key) — ห้าม commit
+appsettings.Local.json
+appsettings.Production.json
+# log ไฟล์ที่ระบบเขียนตอนรัน
+logs/
 
 # ---------------------------------------------------------------------------
 # OS

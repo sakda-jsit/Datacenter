@@ -1,5 +1,6 @@
 using System.Text;
 using Datacenter.Application.Common.Interfaces;
+using Datacenter.Application.Common.Security;
 using Datacenter.Infrastructure.Identity;
 using Datacenter.Infrastructure.Persistence;
 using Datacenter.Infrastructure.Persistence.Interceptors;
@@ -38,6 +39,9 @@ public static class DependencyInjection
         services.AddScoped<IImportSnapshotService, ImportSnapshotService>();
         services.AddScoped<IBankStatementParser, Services.Bank.BankStatementParser>();
         services.AddHttpContextAccessor();
+
+        // ค่าตั้งความปลอดภัยการเข้าสู่ระบบ (อายุ token / ล็อกบัญชีเมื่อใส่รหัสผิด)
+        services.Configure<AuthSettings>(configuration.GetSection(AuthSettings.SectionName));
 
         // อีเมล (SMTP) — เจ้าหน้าที่กรอก credential ใน config "EmailSettings" ตอน deploy
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));

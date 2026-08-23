@@ -8,6 +8,7 @@ public interface IApplicationDbContext
     DbSet<ClientCompany> ClientCompanies { get; }
     DbSet<User> Users { get; }
     DbSet<CompanyUserAccess> CompanyUserAccesses { get; }
+    DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<Account> Accounts { get; }
     DbSet<ImportBatch> ImportBatches { get; }
     DbSet<JournalEntry> JournalEntries { get; }

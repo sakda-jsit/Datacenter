@@ -339,6 +339,7 @@ public static class DbInitializer
         if (db.ChangeTracker.HasChanges()) await db.SaveChangesAsync();
 
         // ── Seed admin user ───────────────────────────────────────────────────
+        // รหัสตั้งต้น admin1234 เป็นรหัส "ชั่วคราว" เท่านั้น — MustChangePassword บังคับให้เปลี่ยนก่อนใช้งานจริง
         if (!await db.Users.AnyAsync(u => u.Username == "admin"))
         {
             db.Users.Add(new User
@@ -348,12 +349,24 @@ public static class DbInitializer
                 DisplayName  = "Administrator",
                 Role         = UserRole.Admin,
                 IsActive     = true,
+                MustChangePassword = true,
                 CreatedAt    = DateTime.UtcNow,
                 CreatedBy    = "system",
             });
 
             await db.SaveChangesAsync();
-            logger.LogInformation("Seeded admin user.");
+            logger.LogWarning("Seeded admin user (รหัสชั่วคราว admin1234 — ต้องเปลี่ยนตอนเข้าใช้งานครั้งแรก).");
+        }
+        else
+        {
+            // ฐานข้อมูลเดิมที่ยังใช้รหัสตั้งต้นอยู่ → บังคับเปลี่ยนรหัสตอน login ครั้งถัดไป
+            var admin = await db.Users.FirstAsync(u => u.Username == "admin");
+            if (!admin.MustChangePassword && passwordHasher.Verify("admin1234", admin.PasswordHash))
+            {
+                admin.MustChangePassword = true;
+                await db.SaveChangesAsync();
+                logger.LogWarning("บัญชี admin ยังใช้รหัสตั้งต้น — ตั้งค่าให้ต้องเปลี่ยนรหัสตอนเข้าใช้งานครั้งถัดไป.");
+            }
         }
 
         // ── Seed StatementLines (บรรทัดงบการเงินมาตรฐาน, master reference) ──────

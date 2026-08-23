@@ -9,6 +9,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ClientCompany> ClientCompanies => Set<ClientCompany>();
     public DbSet<User> Users => Set<User>();
     public DbSet<CompanyUserAccess> CompanyUserAccesses => Set<CompanyUserAccess>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
     public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();

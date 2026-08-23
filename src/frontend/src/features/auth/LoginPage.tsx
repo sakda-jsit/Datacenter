@@ -14,10 +14,14 @@ export default function LoginPage() {
     try {
       const { data } = await apiClient.post('/auth/login', { username, password })
       localStorage.setItem('token', data.token)
+      localStorage.setItem('refreshToken', data.refreshToken)
       localStorage.setItem('user', JSON.stringify(data))
-      navigate('/dashboard')
-    } catch {
-      setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')
+      // ผู้ดูแลตั้งรหัสให้ (หรือรหัสตั้งต้นของระบบ) → ต้องเปลี่ยนรหัสก่อนเข้าใช้งานส่วนอื่น
+      navigate(data.mustChangePassword ? '/change-password' : '/dashboard')
+    } catch (err) {
+      // ข้อความจาก server บอกเหตุจริง (บัญชีถูกล็อกชั่วคราว / ถูกปิดใช้งาน) ถ้าไม่มีจึงใช้ข้อความกลาง
+      const title = (err as { response?: { data?: { title?: string } } }).response?.data?.title
+      setError(title || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')
     }
   }
 

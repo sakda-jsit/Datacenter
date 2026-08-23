@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from '../shared/components/layout/AppLayout'
 import ProtectedRoute from './ProtectedRoute'
 import LoginPage from '../features/auth/LoginPage'
+import ChangePasswordPage from '../features/auth/ChangePasswordPage'
 import ClientListPage from '../features/clients/pages/ClientListPage'
 import ClientFormPage from '../features/clients/pages/ClientFormPage'
 import ImportPage from '../features/import/pages/ImportPage'
@@ -25,6 +26,7 @@ import EvidencePage from '../features/attachments/pages/EvidencePage'
 import PayrollPage from '../features/payroll/pages/PayrollPage'
 import PayrollRatesPage from '../features/settings/pages/PayrollRatesPage'
 import OfficeProfilePage from '../features/settings/pages/OfficeProfilePage'
+import UsersPage from '../features/settings/pages/UsersPage'
 import AuditorsPage from '../features/settings/pages/AuditorsPage'
 import BookkeepersPage from '../features/settings/pages/BookkeepersPage'
 import SignerAssignmentsPage from '../features/settings/pages/SignerAssignmentsPage'
@@ -44,6 +46,7 @@ export default function AppRouter() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
+          <Route path="change-password" element={<ChangePasswordPage />} />
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="clients" element={<ClientListPage />} />
@@ -77,6 +80,7 @@ export default function AppRouter() {
           <Route path="evidence" element={<EvidencePage />} />
           <Route path="audit-log" element={<AuditLogPage />} />
           <Route path="settings/payroll-rates" element={<PayrollRatesPage />} />
+          <Route path="settings/users" element={<UsersPage />} />
           <Route path="settings/office-profile" element={<OfficeProfilePage />} />
           <Route path="settings/auditors" element={<AuditorsPage />} />
           <Route path="settings/bookkeepers" element={<BookkeepersPage />} />

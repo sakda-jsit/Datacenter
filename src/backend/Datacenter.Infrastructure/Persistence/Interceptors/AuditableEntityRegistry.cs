@@ -42,12 +42,15 @@ internal static class AuditableEntityRegistry
         typeof(AccountCit50Mapping), // แมพบัญชี→บรรทัด CIT50
         typeof(WorkTask),          // งานทั่วไป (ad-hoc) มอบหมาย/ติดตาม
         typeof(WorkTaskItem),      // รายการย่อย (checklist) ของงาน
+        typeof(User),              // ผู้ใช้ระบบ (บทบาท/สถานะ) — ไม่เก็บ hash รหัสผ่าน ดู IgnoredProperties
     ];
 
     /// <summary>property ที่ไม่ต้องลง audit (metadata ของ BaseEntity)</summary>
     public static readonly HashSet<string> IgnoredProperties =
     [
         "Id", "CreatedAt", "CreatedBy", "ModifiedAt", "ModifiedBy",
+        // ความปลอดภัย/ข้อมูลที่เปลี่ยนทุกครั้งที่ login — ห้ามลง audit (hash รหัสผ่านต้องไม่ถูกคัดลอกไปที่อื่น)
+        "PasswordHash", "FailedLoginCount", "LockedUntil", "LastLoginAt", "MustChangePassword",
     ];
 
     public static bool IsAudited(Type entityType) => Audited.Contains(entityType);

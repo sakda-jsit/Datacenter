@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
+import { useAuth } from '../../hooks/useAuth'
 
 type IconName =
   | 'overview'
@@ -29,6 +30,8 @@ interface NavItem {
   icon: IconName
   label: string
   desc: string
+  /** เมนูที่เห็นเฉพาะผู้ดูแลระบบ (Admin) */
+  adminOnly?: boolean
 }
 
 interface NavGroup {
@@ -114,6 +117,8 @@ const navGroups: NavGroup[] = [
     icon: 'history',
     desc: 'ตั้งค่ากลาง · Audit',
     items: [
+      { to: '/settings/users', icon: 'users', label: 'ผู้ใช้งานระบบ', desc: 'บัญชีพนักงาน + สิทธิ์รายบริษัท', adminOnly: true },
+      { to: '/change-password', icon: 'lock', label: 'เปลี่ยนรหัสผ่าน', desc: 'รหัสผ่านของบัญชีคุณ' },
       { to: '/settings/office-profile', icon: 'building', label: 'โปรไฟล์สำนักงานบัญชี', desc: 'ข้อมูลสำนักงานคุณ (ใช้ทุกบริษัท)' },
       { to: '/settings/auditors', icon: 'users', label: 'ทะเบียนผู้สอบบัญชี', desc: 'master ใช้เลือกในแบบภาษี' },
       { to: '/settings/bookkeepers', icon: 'users', label: 'ทะเบียนผู้ทำบัญชี', desc: 'master ใช้เลือกในแบบภาษี' },
@@ -282,12 +287,22 @@ export default function Sidebar({ collapsed, open, onToggleCollapsed, onCloseMob
   const location = useLocation()
   const sidebarRef = useRef<HTMLElement | null>(null)
   const currentUrl = `${location.pathname}${location.search}`
+  const { isAdmin } = useAuth()
+
+  // เมนูที่ผู้ใช้คนนี้เห็น (เมนู adminOnly ซ่อนสำหรับ Maker/Checker — API ก็บล็อกอีกชั้น)
+  const groups = useMemo(
+    () =>
+      navGroups
+        .map((g) => ({ ...g, items: g.items.filter((i) => !i.adminOnly || isAdmin) }))
+        .filter((g) => g.items.length > 0),
+    [isAdmin],
+  )
 
   const activeGroupTitle = useMemo(() => {
-    return navGroups.find((group) =>
+    return groups.find((group) =>
       group.items.some((item) => item.to === currentUrl || item.to.split('?')[0] === location.pathname),
     )?.title
-  }, [currentUrl, location.pathname])
+  }, [groups, currentUrl, location.pathname])
 
   const [openGroup, setOpenGroup] = useState('')
   const visibleOpenGroup = openGroup
@@ -358,7 +373,7 @@ export default function Sidebar({ collapsed, open, onToggleCollapsed, onCloseMob
       </div>
 
       <nav className={`flex flex-1 flex-col gap-3 px-3 pb-4 ${collapsed ? 'md:gap-2 md:px-2' : ''}`} aria-label="เมนูหลัก">
-        {navGroups.map((group) => (
+        {groups.map((group) => (
           <div key={group.title} className="relative flex flex-col gap-1">
             <button
               type="button"
