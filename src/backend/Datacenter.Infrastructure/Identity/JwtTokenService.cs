@@ -21,12 +21,16 @@ public class JwtTokenService(IConfiguration configuration, IOptions<AuthSettings
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Role, user.Role.ToString()),
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Name, user.Username),
+            new(ClaimTypes.Role, user.Role.ToString()),
         };
+
+        // ยังไม่เปลี่ยนรหัสชั่วคราว → ติดธงไว้ในโทเคน ให้ middleware กันไม่ให้ใช้ API อื่น
+        if (user.MustChangePassword)
+            claims.Add(new Claim("must_change_password", "1"));
 
         var expiresAt = DateTime.UtcNow.AddMinutes(Math.Max(5, authOptions.Value.AccessTokenMinutes));
         var token = new JwtSecurityToken(

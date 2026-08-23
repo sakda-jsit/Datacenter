@@ -93,6 +93,7 @@ if (!app.Environment.IsDevelopment()
 
 if (allowedOrigins.Length > 0) app.UseCors("Frontend");
 app.UseAuthentication();
+app.UseMiddleware<MustChangePasswordMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 
