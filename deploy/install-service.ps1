@@ -71,11 +71,25 @@ function Get-Sqlcmd {
     return $null
 }
 
+function Get-SqlAuthArgs {
+    if ($SqlUser) { return @('-U', $SqlUser, '-P', $SqlPassword) }
+    return @('-E')
+}
+
+# คืน "exit code" เท่านั้น (ทิ้ง output) — ถ้าปล่อย output ออกมาด้วย ค่าที่ได้จะกลายเป็น array
+# แล้วการเทียบ -eq 0 จะเป็นการกรอง array ไม่ใช่การเทียบค่า (เคยทำให้ตรวจ DB ว่า "ไม่ผ่าน" ทั้งที่ต่อได้)
 function Invoke-Sql($sqlcmdPath, $query) {
-    $auth = @('-E')
-    if ($SqlUser) { $auth = @('-U', $SqlUser, '-P', $SqlPassword) }
-    & $sqlcmdPath -S $SqlServer @auth -C -b -h -1 -W -Q $query
+    $auth = Get-SqlAuthArgs
+    & $sqlcmdPath -S $SqlServer @auth -C -b -h -1 -W -Q $query | Out-Null
     return $LASTEXITCODE
+}
+
+# คืนบรรทัดผลลัพธ์แรกแบบ string (ใช้ตอนต้องอ่านค่าจริง เช่น edition/ขนาดฐาน)
+function Get-SqlValue($sqlcmdPath, $query) {
+    $auth = Get-SqlAuthArgs
+    $out = & $sqlcmdPath -S $SqlServer @auth -C -b -h -1 -W -d $Database -Q $query
+    if ($LASTEXITCODE -ne 0) { return '' }
+    return (($out | Where-Object { $_ -and $_.Trim() -ne '' }) -join '')
 }
 
 $exePath = Join-Path $AppPath 'Datacenter.Api.exe'
@@ -135,6 +149,16 @@ if ($sqlcmdPath) {
     $dbCheck = Invoke-Sql $sqlcmdPath "SET NOCOUNT ON; SELECT CASE WHEN DB_ID('$Database') IS NULL THEN 'MISSING' ELSE 'OK' END;"
     if ($dbCheck -eq 0) {
         Ok "เชื่อมต่อ SQL Server ได้ และพบฐานข้อมูล $Database"
+
+        # Express Edition: ฐานข้อมูลโตได้ไม่เกิน 10 GB — ระบบนี้เก็บไฟล์แนบ/รูปบัตรเป็น blob ในฐาน จึงต้องเฝ้าดู
+        $edition = Get-SqlValue $sqlcmdPath "SET NOCOUNT ON; SELECT CAST(SERVERPROPERTY('Edition') AS varchar(100)) + '|' + CAST(CAST(SUM(size)*8.0/1048576 AS decimal(10,2)) AS varchar(20)) FROM sys.database_files;"
+        if ($edition -match 'Express') {
+            $sizeGb = 0
+            $parts = $edition.Split('|')
+            if ($parts.Length -ge 2) { [double]::TryParse($parts[1], [ref]$sizeGb) | Out-Null }
+            if ($sizeGb -gt 8) { Bad "SQL Server Express จำกัดฐานข้อมูลที่ 10 GB และตอนนี้ใช้ไปแล้ว $sizeGb GB — ต้องย้ายไป Standard หรือย้ายไฟล์แนบออกก่อน" }
+            else { Warn "SQL Server เป็น Express Edition (จำกัด 10 GB/ฐาน, ตอนนี้ $sizeGb GB) — ไฟล์แนบและรูปบัตรเก็บเป็น blob ในฐาน ควรเฝ้าดูขนาดเป็นระยะ; backup ไม่บีบอัด" }
+        }
     } else {
         Bad "เชื่อมต่อ SQL Server [$SqlServer] หรือหาฐานข้อมูล [$Database] ไม่ได้ — ตรวจว่า service SQL Server รันอยู่ และบัญชีที่ใช้มีสิทธิ์ (ดู deploy\create-sql-login.ps1)"
     }

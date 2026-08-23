@@ -41,15 +41,23 @@ New-Item -ItemType Directory -Force -Path $BackupDir | Out-Null
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $file = Join-Path $BackupDir "$Database-$stamp.bak"
 
+$auth = @('-E')
+if ($SqlUser) { $auth = @('-U', $SqlUser, '-P', $SqlPassword) }
+
+# SQL Server Express ไม่รองรับ BACKUP ... WITH COMPRESSION (Msg 1844) -> ตรวจ edition ก่อน
+$edition = (& $sqlcmd -S $Server @auth -C -b -h -1 -W -Q "SET NOCOUNT ON; SELECT CAST(SERVERPROPERTY('Edition') AS varchar(100));") -join ''
+$withOptions = 'INIT, COMPRESSION, CHECKSUM, STATS = 10'
+if ($edition -match 'Express') {
+    $withOptions = 'INIT, CHECKSUM, STATS = 10'
+    Write-Host "SQL Server เป็น Express Edition — สำรองแบบไม่บีบอัด (edition นี้ไม่รองรับ COMPRESSION)"
+}
+
 $query = @"
 BACKUP DATABASE [$Database]
 TO DISK = N'$file'
-WITH INIT, COMPRESSION, CHECKSUM, STATS = 10,
+WITH $withOptions,
      NAME = N'$Database full backup $stamp';
 "@
-
-$auth = @('-E')
-if ($SqlUser) { $auth = @('-U', $SqlUser, '-P', $SqlPassword) }
 
 Write-Host "สำรอง [$Database] → $file"
 & $sqlcmd -S $Server @auth -C -b -Q $query
