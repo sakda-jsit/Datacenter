@@ -62,6 +62,14 @@ if (Test-Path $dist) {
     Write-Host "  [คำเตือน] ไม่พบ $dist — ชุดนี้จะมีแต่ API" -ForegroundColor Yellow
 }
 
+# สคริปต์ปฏิบัติการ (ติดตั้ง service / สำรองข้อมูล / ตัวอย่างค่าตั้ง) — ให้ชุด deploy พึ่งตัวเองได้
+$deployDir = Join-Path $staging 'deploy'
+New-Item -ItemType Directory -Force -Path $deployDir | Out-Null
+Get-ChildItem -Path $PSScriptRoot -File |
+    Where-Object { $_.Name -ne 'publish.ps1' } |
+    Copy-Item -Destination $deployDir -Force
+Write-Host "  ใส่สคริปต์ปฏิบัติการไว้ที่ deploy\ ในชุดแล้ว"
+
 # ── 3) คัดลอกไปโฟลเดอร์ปลายทาง (คง appsettings.Production.json เดิม) ───────────
 Write-Host "`n[3/3] คัดลอกไป $OutputPath ..." -ForegroundColor Cyan
 New-Item -ItemType Directory -Force -Path $OutputPath | Out-Null
@@ -81,10 +89,18 @@ Remove-Item $staging -Recurse -Force
 Write-Host "`nเสร็จแล้ว" -ForegroundColor Green
 Write-Host @"
 
-ขั้นถัดไป (ครั้งแรกเท่านั้น):
-  1. สร้าง $OutputPath\appsettings.Production.json จากตัวอย่าง deploy\appsettings.Production.example.json
-     (ตั้ง ConnectionStrings:DefaultConnection และ Jwt:Key แบบสุ่ม — ดู deploy\README.md)
-  2. ตั้ง environment variable ASPNETCORE_ENVIRONMENT=Production ให้ service/app pool
-  3. เปิดใช้งานผ่าน IIS หรือ Windows service (ดู deploy\README.md)
-  4. เข้าระบบด้วย admin / admin1234 ครั้งแรก → ระบบบังคับเปลี่ยนรหัสทันที แล้วสร้างผู้ใช้รายคนที่เมนู ระบบ → ผู้ใช้งานระบบ
+ขั้นถัดไป — คัดลอกโฟลเดอร์นี้ทั้งชุดไปเครื่อง server แล้วรันในโฟลเดอร์ deploy\ ของชุด:
+
+  1. ตรวจความพร้อม (ไม่แก้อะไร):
+       .\install-service.ps1 -AppPath <โฟลเดอร์ชุด> -CheckOnly
+  2. สร้าง SQL login ให้ระบบ (ครั้งเดียว, ใช้บัญชี sysadmin ของ SQL Server):
+       .\create-sql-login.ps1 -Database DatacenterDb -Login dc_app -Password '<รหัสสุ่ม>'
+  3. ติดตั้ง (PowerShell แบบ Run as administrator):
+       .\install-service.ps1 -AppPath <โฟลเดอร์ชุด> -Port 5000 -SqlUser dc_app -SqlPassword '<รหัสเดิม>'
+     สคริปต์จะสร้าง appsettings.Production.json (สุ่ม Jwt:Key), สำรอง DB, ลงทะเบียน service,
+     เปิด firewall, ตั้งงานสำรองรายวัน แล้วทดสอบว่า API ตอบจริง
+  4. เข้าระบบด้วย admin → ระบบบังคับเปลี่ยนรหัสทันที (รายละเอียด: deploy\README.md)
+
+  หมายเหตุ: ถ้าจะนำเข้า Express จากเครื่อง server ต้องตั้ง Import:ExpressBasePath เป็น UNC
+  (mapped drive ใช้ไม่ได้) และรัน service ด้วยบัญชีที่อ่าน share นั้นได้
 "@

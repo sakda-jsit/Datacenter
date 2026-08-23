@@ -77,3 +77,29 @@
 
 การกรองสิทธิ์บังคับที่ฝั่ง server (`CompanyAccessGuard` + `CompanyAccessBehaviour`) ทุก query/command
 ที่อ้างบริษัท — การซ่อนเมนูที่ frontend เป็นเพียงชั้นความสะดวก ไม่ใช่ด่านความปลอดภัย
+
+---
+
+## 7. แผนที่เลือกสำหรับ v1 (ยืนยัน 2026-08-23)
+
+| หัวข้อ | ที่เลือก | ผลต่อการติดตั้ง |
+|---|---|---|
+| เครื่อง server | ยังไม่กำหนด — **เตรียมชุด deploy ไว้ก่อน** | ชุดพร้อมใช้อยู่ที่ `D:\Datacenterelease1` (สร้างใหม่ได้ด้วย `deploy\publish.ps1`) คัดลอกทั้งโฟลเดอร์ไปเครื่องไหนก็ติดตั้งได้ |
+| ฐานข้อมูล | **`DatacenterDb` เดิม** (มีข้อมูลจริงแล้ว) | สตาร์ตครั้งแรกจะรัน migration `AddUserSecurityAndRefreshTokens` → `install-service.ps1` สำรองฐานให้ก่อนอัตโนมัติ |
+| การเข้าถึง | **Windows service + HTTP ในวง LAN** (พอร์ต 5000) | ไม่ต้องมีใบรับรอง/IIS; ค่าตั้ง `Hosting:UseHttpsRedirection=false`; firewall เปิดเฉพาะโปรไฟล์ Domain/Private |
+| ผู้ใช้ชุดแรก | **บัญชี admin คนเดียว** | ไม่ต้องสร้างผู้ใช้อื่นตอนติดตั้ง; `admin` ถูกบังคับเปลี่ยนรหัสตอน login ครั้งแรก แล้วค่อยเพิ่มทีมที่เมนู ระบบ → ผู้ใช้งานระบบ |
+
+**ขั้นตอนลงมือ:** ดู `deploy/README.md` หัวข้อ "ติดตั้งครั้งแรก — 4 คำสั่ง"
+
+### สองเรื่องที่ต้องจัดการก่อนกดติดตั้งจริง
+1. **SQL Server ต้องรันอยู่** — ตอนตรวจ (2026-08-23) service `MSSQLSERVER` บนเครื่อง dev หยุดอยู่
+   และ `Start-Service` ต้องสิทธิ์ administrator; `install-service.ps1 -CheckOnly` จะรายงานให้เห็นก่อนติดตั้ง
+2. **path ข้อมูล Express ต้องเป็น UNC** — `J:` บนเครื่อง dev คือ `\\js-server\ExpressI`
+   (ตรวจแล้วว่า `secure\sccomp.dbf` เข้าถึงได้ทาง UNC) service มองไม่เห็น mapped drive ของผู้ใช้
+   → ตั้ง `Import:ExpressBasePath` เป็น `\\js-server\ExpressI\` (ในไฟล์ JSON ต้อง escape เป็น `"\\\\js-server\\ExpressI\\"`)
+   และรัน service ด้วยบัญชีที่มีสิทธิ์อ่าน share (`-ServiceUser`)
+
+### สคริปต์ที่เพิ่มในรอบนี้
+- `deploy/install-service.ps1` — ติดตั้ง/ถอน Windows service ครั้งเดียวจบ (idempotent, มี `-CheckOnly`)
+- `deploy/create-sql-login.ps1` — สร้าง login `dc_app` + db_owner เฉพาะฐานนี้ แทนการใช้ `sa`
+- `deploy/publish.ps1` — บรรจุสคริปต์ทั้งหมดไว้ใน `deploy\` ของชุดที่ publish ด้วย (เครื่อง server ใช้โฟลเดอร์เดียวจบ)

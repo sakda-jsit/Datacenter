@@ -4,84 +4,103 @@
 
 | ไฟล์ | ใช้ทำอะไร |
 |---|---|
-| `publish.ps1` | build frontend + backend เป็นชุดเดียว (frontend ไปอยู่ `wwwroot` ของ API) |
-| `appsettings.Production.example.json` | ตัวอย่างค่าตั้ง production — คัดลอกเป็น `appsettings.Production.json` ที่เครื่อง server |
-| `backup-db.ps1` | สำรองฐานข้อมูล + ตรวจไฟล์ backup + ลบไฟล์เก่า |
+| `publish.ps1` | build frontend + backend เป็นชุดเดียว (frontend ไปอยู่ `wwwroot` ของ API) + ใส่สคริปต์ในโฟลเดอร์ `deploy\` ของชุดให้ด้วย |
+| `install-service.ps1` | **ติดตั้งครั้งเดียวจบ**: ตรวจความพร้อม → สร้างค่าตั้ง (สุ่ม Jwt:Key) → สำรอง DB → ลงทะเบียน Windows service → firewall → งานสำรองรายวัน → สตาร์ต+ทดสอบ |
+| `create-sql-login.ps1` | สร้าง SQL login เฉพาะงาน (เช่น `dc_app`) + ให้ db_owner เฉพาะฐานนี้ แทนการใช้ `sa` |
+| `backup-db.ps1` | สำรองฐานข้อมูล + ตรวจไฟล์ backup (`RESTORE VERIFYONLY`) + ลบไฟล์เก่า |
+| `appsettings.Production.example.json` | ตัวอย่างค่าตั้งครบทุก section (ถ้าอยากเขียนเองแทนให้สคริปต์สร้าง) |
 
-> คู่มือฉบับเต็ม (checklist + PDPA + การตั้งผู้ใช้) อยู่ที่ `docs/24-deployment.md`
+> คู่มือเชิงนโยบาย (checklist, PDPA, สิ่งที่เป็นหน้าที่ IT) อยู่ที่ `docs/24-deployment.md`
 
-## สถาปัตยกรรมการ deploy ที่แนะนำ (ง่ายที่สุด)
+## รูปแบบที่เลือกสำหรับ v1
 
 ```
-ผู้ใช้ ──HTTPS──> IIS (reverse proxy / TLS) ──HTTP──> Kestrel :5000  ──> SQL Server
-                                                       │
-                                            wwwroot = frontend (ไฟล์นิ่งจาก Vite)
+ผู้ใช้ในสำนักงาน ──HTTP (วง LAN)──> Windows service "DatacenterApi" (Kestrel :5000) ──> SQL Server / DatacenterDb
+                                              │
+                                   wwwroot = หน้าจอ (ไฟล์นิ่งจาก Vite)
 ```
 
-frontend กับ API อยู่ origin เดียวกัน → **ไม่ต้องตั้ง CORS** และไม่ต้องมี web server แยก
+frontend กับ API อยู่ origin เดียวกัน → ไม่ต้องตั้ง CORS, ไม่ต้องมี web server แยก, ไม่ต้องมีใบรับรอง
+(เมื่อพร้อมทำ HTTPS ค่อยเอา IIS มาวางหน้าเป็น reverse proxy — ดูหัวข้อท้ายไฟล์)
 
-## ขั้นตอนครั้งแรก
+## ติดตั้งครั้งแรก — 4 คำสั่ง
 
-1. **เตรียมฐานข้อมูล**
-   - สร้างฐานข้อมูลเปล่า `DatacenterDb` (ระบบ migrate โครงสร้างเองตอนสตาร์ตครั้งแรก)
-   - สร้าง SQL login เฉพาะงานนี้ เช่น `dc_app` และให้เป็น `db_owner` ของ `DatacenterDb` เท่านั้น
-     (ต้องมีสิทธิ์สร้าง/แก้ตาราง เพราะระบบรัน EF migrations ตอนสตาร์ต) — **ห้ามใช้ `sa`**
+```powershell
+# 0) คัดลอกชุด deploy ทั้งโฟลเดอร์ไปที่เครื่อง server เช่น C:\Datacenter\app
+#    (ชุดนี้สร้างจากเครื่อง dev ด้วย: .\deploy\publish.ps1 -OutputPath D:\Datacenter\release\v1)
 
-2. **build ชุด deploy** (ทำที่เครื่อง dev)
-   ```powershell
-   .\deploy\publish.ps1 -OutputPath D:\Datacenter\app
-   ```
+# 1) ตรวจความพร้อมก่อน (ไม่แก้อะไร รันได้โดยไม่ต้องเป็น administrator)
+cd C:\Datacenter\app\deploy
+.\install-service.ps1 -AppPath C:\Datacenter\app -CheckOnly
 
-3. **ตั้งค่า** ที่เครื่อง server
-   ```powershell
-   Copy-Item .\deploy\appsettings.Production.example.json D:\Datacenter\app\appsettings.Production.json
-   # แก้ ConnectionStrings:DefaultConnection และ Jwt:Key
-   # สร้าง Jwt:Key แบบสุ่ม:
-   [Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 }))
-   ```
-   ระบบ **จะไม่สตาร์ต** ถ้า `Jwt:Key` ว่าง สั้นกว่า 32 ตัวอักษร หรือยังเป็นค่าตัวอย่างในซอร์สโค้ด
+# 2) สร้าง SQL login ให้ระบบ (ทำครั้งเดียว รันด้วยบัญชีที่เป็น sysadmin ของ SQL Server)
+.\create-sql-login.ps1 -Server localhost -Database DatacenterDb -Login dc_app -Password '<รหัสยาว ๆ ที่สุ่มมา>'
 
-4. **เปิดใช้งาน** — เลือกอย่างใดอย่างหนึ่ง
+# 3) ติดตั้ง (เปิด PowerShell แบบ Run as administrator)
+.\install-service.ps1 -AppPath C:\Datacenter\app -Port 5000 `
+    -SqlServer localhost -Database DatacenterDb -SqlUser dc_app -SqlPassword '<รหัสเดียวกับข้อ 2>' `
+    -BackupDir D:\Backup\Datacenter
+```
 
-   **ก) IIS** (แนะนำบน Windows Server)
-   - ติดตั้ง [ASP.NET Core Hosting Bundle](https://dotnet.microsoft.com/download/dotnet/8.0) (ให้ IIS รู้จัก .NET 8)
-   - สร้าง Application Pool: .NET CLR version = **No Managed Code**, Identity = บัญชีที่อ่าน path Express ได้
-   - สร้าง Site ชี้ที่ `D:\Datacenter\app` ผูก HTTPS + ใบรับรอง
-   - ตั้ง environment variable ของ app pool: `ASPNETCORE_ENVIRONMENT=Production`
-   - ใน `appsettings.Production.json` ตั้ง `Hosting:UseHttpsRedirection = false` (TLS จบที่ IIS แล้ว)
+สคริปต์จะสรุปตอนจบว่าเข้าใช้งานที่ `http://<ชื่อเครื่อง>:5000/` — ผู้ใช้ในวง LAN เปิด URL นี้ได้เลย
 
-   **ข) Windows service** (Kestrel ตรง ๆ + reverse proxy อะไรก็ได้)
-   ```powershell
-   New-Service -Name DatacenterApi -BinaryPathName '"D:\Datacenter\app\Datacenter.Api.exe"' -StartupType Automatic
-   [Environment]::SetEnvironmentVariable('ASPNETCORE_ENVIRONMENT','Production','Machine')
-   Start-Service DatacenterApi
-   ```
+**สิ่งที่สคริปต์ทำให้:** สร้าง `appsettings.Production.json` พร้อม `Jwt:Key` สุ่ม 48 ไบต์ (ถ้ามีไฟล์อยู่แล้วจะไม่ทับ) ·
+ปิด HTTPS redirect (เพราะใช้ HTTP ใน LAN) · สำรอง DB ก่อนสตาร์ตครั้งแรก (ระบบอัปเกรด schema เองตอนสตาร์ต) ·
+ตั้ง service เป็น Automatic + รีสตาร์ตเองเมื่อล้ม · เปิด firewall เฉพาะโปรไฟล์ Domain/Private ·
+ตั้ง Task Scheduler สำรองข้อมูลรายวัน 01:30 · ทดสอบว่า API ตอบจริงก่อนจบ
 
-5. **เข้าใช้งานครั้งแรก**
-   - login `admin` / `admin1234` → ระบบ**บังคับเปลี่ยนรหัสทันที** (รหัสตั้งต้นใช้งานต่อไม่ได้)
-   - ไปเมนู **ระบบ → ผู้ใช้งานระบบ** สร้างบัญชีรายคนให้พนักงาน + เลือกบริษัทที่แต่ละคนเข้าถึงได้
-   - พนักงานที่ถูกสร้างใหม่จะถูกบังคับเปลี่ยนรหัสของตัวเองตอน login ครั้งแรกเช่นกัน
+**คำสั่งเสริม:** `-SkipBackup` (ข้ามสำรอง), `-SkipBackupTask` (ไม่ตั้งงานสำรอง),
+`-ServiceUser DOMAIN\user -ServicePassword '***'` (ให้ service รันด้วยบัญชีนี้ — จำเป็นถ้าต้องอ่าน Express จาก network share),
+`-Uninstall` (ถอน service + firewall + งานสำรอง โดยไม่ลบข้อมูลและไฟล์ค่าตั้ง)
 
-6. **ตั้งงานสำรองข้อมูลรายวัน** (Task Scheduler)
-   ```powershell
-   $action  = New-ScheduledTaskAction -Execute 'powershell.exe' `
-       -Argument '-NonInteractive -ExecutionPolicy Bypass -File "D:\Datacenter\app\deploy\backup-db.ps1" -BackupDir D:\Backup\Datacenter'
-   $trigger = New-ScheduledTaskTrigger -Daily -At 1:30am
-   Register-ScheduledTask -TaskName 'Datacenter DB backup' -Action $action -Trigger $trigger -RunLevel Highest
-   ```
+## ⚠️ ข้อมูล Express ต้องเป็น UNC ไม่ใช่ mapped drive
+
+Windows service มองไม่เห็น drive ที่ผู้ใช้ map ไว้ บนเครื่อง dev ปัจจุบัน `J:` = `\\js-server\ExpressI`
+ดังนั้นใน `appsettings.Production.json` ต้องตั้ง
+
+```json
+"Import": {
+  "ExpressBasePath": "\\\\js-server\\ExpressI\\",
+  "SnapshotBasePath": "D:\\ExpressSnapshots"
+}
+```
+
+และให้ service รันด้วยบัญชีที่มีสิทธิ์อ่าน share นั้น (`-ServiceUser`) — ถ้ารันเป็น LocalSystem จะอ่าน share ไม่ได้
+(`install-service.ps1 -CheckOnly` เตือนให้เมื่อเจอ mapped drive)
+
+## ผู้ใช้ชุดแรก
+
+1. เปิด `http://<ชื่อเครื่อง>:5000/` → login `admin` (รหัสตั้งต้น `admin1234` ถ้ายังไม่เคยเปลี่ยน)
+2. ระบบ**บังคับเปลี่ยนรหัสทันที** — ตั้งรหัสใหม่ (≥8 ตัว มีตัวอักษร+ตัวเลข)
+3. เมื่อพร้อมเพิ่มทีม: เมนู **ระบบ → ผู้ใช้งานระบบ** สร้างบัญชีรายคน + เลือกบริษัทที่แต่ละคนเข้าถึงได้
+   (ห้ามใช้บัญชี `admin` ร่วมกัน — audit log ต้องระบุตัวบุคคลได้)
 
 ## อัปเดตรุ่นถัดไป
 
 ```powershell
-Stop-Service DatacenterApi        # หรือ Stop-WebAppPool ถ้าใช้ IIS
-.\deploy\backup-db.ps1            # สำรองก่อนทุกครั้ง (ระบบ migrate ฐานข้อมูลอัตโนมัติตอนสตาร์ต)
-.\deploy\publish.ps1 -OutputPath D:\Datacenter\app
+# ที่เครื่อง dev
+.\deploy\publish.ps1 -OutputPath D:\Datacenter\release\v1
+
+# ที่เครื่อง server
+Stop-Service DatacenterApi
+.\deploy\backup-db.ps1 -BackupDir D:\Backup\Datacenter     # สำรองก่อนทุกครั้ง (schema อัปเกรดอัตโนมัติ)
+# คัดลอกไฟล์ชุดใหม่ทับ C:\Datacenter\app (ไม่ต้องแตะ appsettings.Production.json)
 Start-Service DatacenterApi
 ```
 
-`publish.ps1` ไม่ทับ `appsettings.Production.json` เดิม และไม่คัดลอก `appsettings.Local.json` ของเครื่อง dev ขึ้นไป
+## log และการตรวจสอบ
 
-## log
+```powershell
+Get-Service DatacenterApi
+Get-Content C:\Datacenter\app\logs\datacenter-$(Get-Date -Format yyyyMMdd).log -Tail 50
+```
 
-ระบบเขียน log ลงไฟล์รายวันที่ `D:\Datacenter\app\logs\datacenter-yyyyMMdd.log` (เก็บ 90 วัน)
-ปรับได้ที่ section `Logging:File` — ดู `appsettings.Production.example.json`
+log ไฟล์รายวัน เก็บ 90 วัน (ปรับที่ section `Logging:File`)
+
+## ทางเลือก: IIS + HTTPS (เมื่อต้องการเข้าจากภายนอก)
+
+- ติดตั้ง [ASP.NET Core Hosting Bundle](https://dotnet.microsoft.com/download/dotnet/8.0)
+- Application Pool: .NET CLR = **No Managed Code**; Site ชี้ที่โฟลเดอร์ชุด deploy; ผูก HTTPS + ใบรับรอง
+- ตั้ง env `ASPNETCORE_ENVIRONMENT=Production` ให้ app pool และคง `Hosting:UseHttpsRedirection = false`
+  (TLS จบที่ IIS แล้ว ระบบอ่าน `X-Forwarded-Proto` ผ่าน ForwardedHeaders อยู่)
+- ถ้าใช้ IIS ก็ถอน Windows service ออกได้ด้วย `.\install-service.ps1 -Uninstall`
