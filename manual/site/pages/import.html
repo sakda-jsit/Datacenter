@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>นำเข้าข้อมูล — คู่มือการใช้งาน JSP Datacenter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<div class="wrap">
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="logo">JS</span>
+      <span><b>Datacenter</b><small>คู่มือการใช้งาน</small></span>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-title">เริ่มต้น</div>
+      <a href="../index.html">ภาพรวมระบบ</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">ภาพรวม</div>
+      <span class="todo">Dashboard</span>
+      <span class="todo">ปฏิทินงาน</span>
+      <span class="todo">งาน / มอบหมายงาน</span>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">ข้อมูลและนำเข้า</div>
+      <span class="todo">ลูกค้า</span>
+      <a href="import.html" class="active">นำเข้าข้อมูล</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">บัญชี</div>
+      <span class="todo">งบทดลอง</span>
+      <span class="todo">บัญชีแยกประเภท</span>
+      <span class="todo">ลูกหนี้ / เจ้าหนี้</span>
+      <span class="todo">สินค้าคงคลัง</span>
+      <span class="todo">ธนาคาร / สมุดเงินฝาก</span>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">เงินเดือน · ภาษี</div>
+      <span class="todo">เงินเดือน / ภ.ง.ด.1 / ปกส.</span>
+      <span class="todo">ภาษีมูลค่าเพิ่ม / ภ.ง.ด.50 / หัก ณ ที่จ่าย</span>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">รายงานและปิดงวด</div>
+      <span class="todo">กระดาษทำการปิดงบ</span>
+      <span class="todo">งบการเงิน</span>
+      <span class="todo">ปิดรอบบัญชี · ชุดรายงาน</span>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">ระบบ</div>
+      <span class="todo">ตั้งค่า · ประวัติการใช้งาน</span>
+    </div>
+  </aside>
+
+  <!-- ===== Content ===== -->
+  <main class="content">
+  <div class="content-inner">
+
+    <div class="crumbs"><a href="../index.html">คู่มือการใช้งาน</a> › ข้อมูลและนำเข้า › นำเข้าข้อมูล</div>
+    <h1>นำเข้าข้อมูล</h1>
+    <p class="lead">
+      หัวใจของระบบ — ดึงข้อมูลบัญชีจากโปรแกรม Express เข้าสู่ระบบ ทั้งผังบัญชี ยอดยกมา ความเคลื่อนไหวรายปี
+      และรอบบัญชี ในการทำงานครั้งเดียว
+    </p>
+
+    <div class="callout tip">
+      <span class="tag">แนวคิดหลัก: ดึงที่เดียว ดึงครั้งเดียว</span>
+      <p>เมนูนี้คือช่องทาง <b>เดียว</b> ในการนำข้อมูลจาก Express เข้าระบบ เมื่อกดนำเข้า ระบบจะดึง
+      <b>ทุกอย่าง</b>ที่เกี่ยวข้อง (บัญชี GL, ยอดยกมา/เคลื่อนไหว, รอบบัญชี, ทะเบียนสินทรัพย์ FAMAS, ภาษีซื้อ-ขาย ฯลฯ)
+      ให้พร้อมกัน — หน้าอื่นๆ ในระบบจึง <b>ไม่มี</b> ปุ่มนำเข้าแยก และจะไม่ให้แก้ไขทับข้อมูลที่มาจาก Express</p>
+    </div>
+
+    <h2>1. การเข้าใช้งาน</h2>
+    <ol class="steps">
+      <li><b>เลือกบริษัทลูกค้า</b> ที่แถบด้านบนก่อน (ระบบนำเข้าตามบริษัทที่เลือกอยู่)</li>
+      <li>เปิดเมนู <b>ข้อมูลและนำเข้า → นำเข้าข้อมูล</b></li>
+    </ol>
+
+    <h2>2. องค์ประกอบของหน้าจอ</h2>
+    <p>หน้าจอแสดง “ประวัติการนำเข้า” ของบริษัทที่เลือก โดยแต่ละครั้งที่นำเข้าจะเป็น 1 แถว (batch)</p>
+    <figure>
+      <img src="../assets/img/import.png" alt="หน้าจอนำเข้าข้อมูล พร้อมประวัติการนำเข้า" />
+      <figcaption>หน้าจอนำเข้าข้อมูล — ตารางประวัติการนำเข้าของบริษัท JSP CONNX (ปีบัญชี 2025)</figcaption>
+    </figure>
+
+    <h3>ปุ่มการทำงานมุมขวาบน</h3>
+    <table class="doc">
+      <tr><th style="width:180px">ปุ่ม</th><th>หน้าที่</th></tr>
+      <tr><td><b>+ นำเข้าข้อมูลใหม่</b></td><td>เปิดฟอร์มเพื่อเริ่มนำเข้าข้อมูลรอบปีบัญชีใหม่ (ดูขั้นตอนข้อ 3)</td></tr>
+      <tr><td><b>ส่งออก</b></td><td>ส่งออกประวัติการนำเข้าเป็นไฟล์ (Excel/CSV/PDF) จะแสดงเมื่อมีประวัติอย่างน้อย 1 รายการ</td></tr>
+    </table>
+
+    <h3>คอลัมน์ในตารางประวัติ</h3>
+    <table class="doc">
+      <tr><th style="width:160px">คอลัมน์</th><th>ความหมาย</th></tr>
+      <tr><td><b>บริษัท</b></td><td>ชื่อบริษัทลูกค้าที่นำเข้า</td></tr>
+      <tr><td><b>ปีบัญชี</b></td><td>ปีบัญชี (ค.ศ.) ของข้อมูลที่นำเข้า</td></tr>
+      <tr><td><b>ประเภท</b></td><td>ชนิดข้อมูลที่นำเข้า (เช่น <code>TrialBalance</code> = ผังบัญชี + ยอดงบทดลองจาก Express)</td></tr>
+      <tr><td><b>สถานะ</b></td><td>ผลการนำเข้า — ดูตารางสถานะด้านล่าง</td></tr>
+      <tr><td><b>รวม</b></td><td>จำนวนแถวข้อมูลทั้งหมดที่อ่านจาก Express</td></tr>
+      <tr><td><b>สำเร็จ</b></td><td>จำนวนแถวที่ผ่านการตรวจสอบและนำเข้าได้ (สีเขียว)</td></tr>
+      <tr><td><b>ผิดพลาด</b></td><td>จำนวนแถวที่มีปัญหา (สีแดง) — ถ้าไม่มีจะแสดง <code>-</code></td></tr>
+      <tr><td><b>นำเข้าโดย</b></td><td>ชื่อผู้ใช้ที่กดนำเข้า</td></tr>
+      <tr><td><b>เวลา</b></td><td>วัน-เวลาที่นำเข้า</td></tr>
+    </table>
+
+    <h3>ความหมายของสถานะ</h3>
+    <table class="doc">
+      <tr><th style="width:170px">สถานะ</th><th>ความหมาย</th></tr>
+      <tr><td><span class="badge amber">รอดำเนินการ</span></td><td>สร้าง batch แล้ว รอเริ่มประมวลผล</td></tr>
+      <tr><td><span class="badge blue">กำลังนำเข้า</span></td><td>ระบบกำลังอ่านและตรวจข้อมูล</td></tr>
+      <tr><td><span class="badge green">สำเร็จ</span></td><td>นำเข้าเรียบร้อย ข้อมูลพร้อมใช้งาน</td></tr>
+      <tr><td><span class="badge red">มีข้อผิดพลาด</span></td><td>พบแถวที่มีปัญหา ให้กด “ดูข้อผิดพลาด” เพื่อตรวจ</td></tr>
+      <tr><td><span class="badge gray">ยกเลิก</span></td><td>การนำเข้าถูกยกเลิก</td></tr>
+    </table>
+
+    <h2>3. ขั้นตอนการนำเข้าข้อมูลใหม่</h2>
+    <ol class="steps">
+      <li><b>ตรวจว่าเลือกบริษัทถูกต้อง</b> ที่แถบด้านบน</li>
+      <li>กด <b>+ นำเข้าข้อมูลใหม่</b> — ฟอร์มจะปรากฏขึ้น โดยช่อง “บริษัทลูกค้า” จะล็อกตามบริษัทที่เลือกอยู่</li>
+      <li><b>กรอกปีบัญชี (ค.ศ.)</b> ที่ต้องการนำเข้า เช่น <code>2025</code></li>
+      <li>กด <b>เริ่มนำเข้า</b> — ระบบจะอ่านไฟล์ Express ของบริษัทนั้น ตรวจความถูกต้อง แล้วบันทึกเข้าระบบ</li>
+      <li>เมื่อสำเร็จ ระบบ <b>ลงบัญชีให้อัตโนมัติ</b> (สร้างผังบัญชี + รายการยอดยกมา/เคลื่อนไหว) และแถวใหม่จะขึ้นในตารางพร้อมป้าย <span class="badge green">ลงบัญชีแล้ว</span></li>
+    </ol>
+    <div class="callout note">
+      <span class="tag">ข้อมูลนำเข้ามาจากไหน</span>
+      <p>ระบบจับคู่บริษัทกับข้อมูล Express ด้วย “รหัสบริษัท” (เช่น <code>JSIT2016</code>) และอ่านจากไฟล์ต้นทางของ Express โดยตรง
+      ผู้ใช้ไม่ต้องเลือกไฟล์เอง</p>
+    </div>
+    <div class="callout warn">
+      <span class="tag">การนำเข้าซ้ำปีเดิม</span>
+      <p>ถ้านำเข้า/Post ปีบัญชีเดิมอีกครั้ง ระบบจะ <b>แทนที่</b>ข้อมูลปีเดียวกันที่เคยลงไว้ก่อนหน้า (ยอดยกมา/เคลื่อนไหวของปีนั้น)
+      เพื่อไม่ให้ยอดซ้ำซ้อน</p>
+    </div>
+
+    <h2>4. การทำงานกับแต่ละรายการ (ปุ่มท้ายแถว)</h2>
+    <table class="doc">
+      <tr><th style="width:170px">ปุ่ม</th><th>หน้าที่</th></tr>
+      <tr><td><b>รายละเอียด</b></td><td>เปิดหน้าผลการตรวจสอบของ batch นั้น (ดูข้อ 5)</td></tr>
+      <tr><td><b>ดูข้อผิดพลาด</b></td><td>แสดงเมื่อมีแถวผิดพลาด — เปิดดูรายการที่มีปัญหาเพื่อแก้ไข</td></tr>
+      <tr><td><b>หลักฐาน</b></td><td>เปิดหลักฐานการนำเข้า (snapshot ไฟล์ Express ต้นฉบับที่เก็บถาวรไว้ตรวจย้อนหลัง)</td></tr>
+      <tr><td><span class="badge green">ลงบัญชีแล้ว</span> / <b>Post เข้าบัญชี</b></td>
+          <td>บอกว่าข้อมูลถูกลงบัญชีแล้วหรือยัง — หากยัง กดปุ่ม “Post เข้าบัญชี” เพื่อยกข้อมูลเข้าระบบบัญชีจริง</td></tr>
+      <tr><td><b>ลบ</b></td><td>ลบ batch และข้อมูลที่เกี่ยวข้อง (ระบบจะถามยืนยัน — ดูคำเตือนด้านล่าง)</td></tr>
+    </table>
+    <div class="callout danger">
+      <span class="tag">ระวังการลบ</span>
+      <p>ถ้า batch นั้น <b>ลงบัญชีแล้ว</b> การลบจะดึงข้อมูลที่ post เข้าระบบบัญชี (ยอดยกมา/เคลื่อนไหวปีนั้น) ออกไปด้วย
+      ระบบจะแสดงข้อความยืนยันก่อนเสมอ ควรลบเฉพาะกรณีที่ต้องการนำเข้าใหม่จริงๆ</p>
+    </div>
+
+    <h2>5. หน้าผลการตรวจสอบ (รายละเอียด batch)</h2>
+    <p>กด “รายละเอียด” ที่ท้ายแถว เพื่อดูสรุปผลการตรวจความถูกต้องของข้อมูลที่นำเข้า</p>
+    <figure>
+      <img src="../assets/img/import-validation.png" alt="หน้าผลการตรวจสอบ batch การนำเข้า" />
+      <figcaption>ผลการตรวจสอบ Batch #1 — ตรวจผ่านทั้งหมด 863 แถว (0 ข้อผิดพลาด, 100%)</figcaption>
+    </figure>
+    <table class="doc">
+      <tr><th style="width:180px">ตัวเลข</th><th>ความหมาย</th></tr>
+      <tr><td><b>รวมทั้งหมด</b></td><td>จำนวนแถวข้อมูลที่อ่านจาก Express ทั้งหมด</td></tr>
+      <tr><td><b>ผ่านการตรวจ</b></td><td>จำนวนแถวที่ถูกต้องและนำเข้าได้</td></tr>
+      <tr><td><b>มีข้อผิดพลาด</b></td><td>จำนวนแถวที่มีปัญหา — ถ้ามากกว่า 0 จะแสดงรายการปัญหาด้านล่างเพื่อให้แก้</td></tr>
+      <tr><td><b>อัตราผ่าน</b></td><td>เปอร์เซ็นต์แถวที่ผ่าน (ควรได้ 100% จึงจะพร้อมใช้งานเต็มรูปแบบ)</td></tr>
+    </table>
+    <div class="callout tip">
+      <span class="tag">อ่านผลอย่างไร</span>
+      <p>ถ้าขึ้น “ข้อมูลผ่านการตรวจสอบทั้งหมด — ไม่พบข้อผิดพลาด พร้อมใช้งาน” แสดงว่าข้อมูลพร้อมนำไปทำงบทดลอง งบการเงิน และรายงานอื่นได้ทันที</p>
+    </div>
+
+    <h2>6. สิ่งที่ควรรู้</h2>
+    <ul>
+      <li>ข้อมูลจาก Express เป็นยอด <b>รวมรายปี</b> — งบทดลอง/บัญชีแยกประเภทรายปีถูกต้องแม่นยำ แต่การกรองรายเดือนภายในปีอาจไม่ละเอียด</li>
+      <li>ระบบเก็บ <b>สำเนาไฟล์ Express ต้นฉบับ (หลักฐาน)</b> ของทุกครั้งที่นำเข้า ไว้ตรวจย้อนหลังได้ยาวนานตามกฎหมาย</li>
+      <li>ข้อมูลที่ Express ไม่มี (เงินเดือน, ค่าใช้จ่ายจ่ายล่วงหน้า, รายการปรับปรุงปิดงบ ฯลฯ) จะป้อนที่เมนูเฉพาะของงานนั้น ไม่ใช่ที่หน้านี้</li>
+    </ul>
+
+    <div class="callout note">
+      <span class="tag">ถัดไป</span>
+      <p>เมื่อนำเข้าสำเร็จแล้ว ขั้นต่อไปคือตรวจสอบยอดที่เมนู <span class="todo" style="display:inline;padding:0;color:#64748b">งบทดลอง</span>
+      และ <span class="todo" style="display:inline;padding:0;color:#64748b">บัญชีแยกประเภท</span> (คู่มือกำลังจัดทำ)</p>
+    </div>
+
+    <div class="footer-note">
+      คู่มือการใช้งาน JSP Datacenter — โมดูลนำเข้าข้อมูล · ภาพประกอบจากระบบจริง (บริษัท JSP CONNX ปีบัญชี 2025)
+    </div>
+
+  </div>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,178 @@
+/* JSP Datacenter — คู่มือการใช้งาน (static site) */
+:root {
+  --sky: #0284c7;
+  --sky-light: #38bdf8;
+  --ink: #0f172a;
+  --slate: #475569;
+  --muted: #94a3b8;
+  --line: #e2e8f0;
+  --bg: #f7f9fc;
+  --card: #ffffff;
+  --green: #16a34a;
+  --amber: #d97706;
+  --red: #dc2626;
+  --radius: 14px;
+  --sidebar-w: 300px;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: 'Sarabun', 'IBM Plex Sans Thai', -apple-system, 'Segoe UI', Tahoma, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+a { color: var(--sky); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---------- Layout ---------- */
+.wrap { display: flex; align-items: flex-start; }
+
+.sidebar {
+  width: var(--sidebar-w);
+  flex: none;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  background: #fff;
+  border-right: 1px solid var(--line);
+  padding: 22px 16px 40px;
+}
+
+.brand { display: flex; align-items: center; gap: 12px; padding: 4px 8px 18px; }
+.brand .logo {
+  width: 44px; height: 44px; border-radius: 13px; flex: none;
+  display: grid; place-items: center; color: #fff; font-weight: 800; letter-spacing: 1px;
+  background: linear-gradient(135deg, var(--sky-light), #7dd3fc);
+  box-shadow: 0 12px 28px rgba(56,189,248,.30);
+}
+.brand b { display: block; font-size: 17px; }
+.brand small { color: var(--muted); font-size: 11px; letter-spacing: 1px; }
+
+.nav-group { margin-top: 14px; }
+.nav-group > .nav-title {
+  font-size: 12px; font-weight: 800; letter-spacing: .5px; color: var(--muted);
+  text-transform: uppercase; padding: 4px 10px; margin-bottom: 4px;
+}
+.nav-group a, .nav-group span.todo {
+  display: block; padding: 7px 12px; border-radius: 10px; font-size: 14.5px;
+  color: var(--slate); font-weight: 600;
+}
+.nav-group a:hover { background: #eff6ff; color: var(--sky); text-decoration: none; }
+.nav-group a.active { background: #e0f2fe; color: var(--sky); }
+.nav-group span.todo { color: var(--muted); font-weight: 500; cursor: default; }
+.nav-group span.todo::after { content: ' · เร็วๆ นี้'; font-size: 11px; color: #cbd5e1; }
+
+/* ---------- Content ---------- */
+.content { flex: 1 1 auto; min-width: 0; padding: 40px 48px 80px; }
+.content-inner { max-width: 880px; margin: 0 auto; }
+
+.crumbs { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.crumbs a { color: var(--muted); }
+
+h1 { font-size: 32px; line-height: 1.3; margin: 6px 0 6px; font-weight: 800; }
+h2 {
+  font-size: 23px; margin: 42px 0 14px; font-weight: 800; padding-bottom: 8px;
+  border-bottom: 2px solid var(--line);
+}
+h3 { font-size: 18.5px; margin: 28px 0 10px; font-weight: 700; color: #1e293b; }
+p { margin: 12px 0; }
+.lead { font-size: 18px; color: var(--slate); }
+
+ul, ol { padding-left: 24px; }
+li { margin: 6px 0; }
+
+code {
+  background: #f1f5f9; padding: 1.5px 6px; border-radius: 6px; font-size: 13.5px;
+  font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace; color: #0f172a;
+}
+
+/* ---------- Figures ---------- */
+figure { margin: 22px 0; }
+figure img {
+  width: 100%; display: block; border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 18px 45px rgba(15,23,42,.08);
+}
+figure img.bordered { background: #fff; }
+figcaption {
+  margin-top: 10px; font-size: 13.5px; color: var(--muted); text-align: center;
+}
+.shot-narrow { max-width: 460px; margin-inline: auto; }
+
+/* ---------- Callouts ---------- */
+.callout {
+  border-radius: 12px; padding: 14px 18px 14px 16px; margin: 20px 0;
+  border-left: 5px solid; font-size: 15px;
+}
+.callout p { margin: 6px 0; }
+.callout .tag { font-weight: 800; display: block; margin-bottom: 2px; }
+.callout.note { background: #eff6ff; border-color: #3b82f6; }
+.callout.note .tag { color: #1d4ed8; }
+.callout.tip { background: #ecfdf5; border-color: var(--green); }
+.callout.tip .tag { color: #047857; }
+.callout.warn { background: #fffbeb; border-color: var(--amber); }
+.callout.warn .tag { color: #b45309; }
+.callout.danger { background: #fef2f2; border-color: var(--red); }
+.callout.danger .tag { color: #b91c1c; }
+
+/* ---------- Steps ---------- */
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  position: relative; padding: 4px 0 18px 46px; margin: 0;
+  border-left: 2px solid var(--line); margin-left: 16px;
+}
+.steps > li:last-child { border-left-color: transparent; }
+.steps > li::before {
+  counter-increment: step; content: counter(step);
+  position: absolute; left: -16px; top: 0;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--sky); color: #fff; font-weight: 800; font-size: 15px;
+  display: grid; place-items: center;
+}
+.steps > li b { color: var(--ink); }
+
+/* ---------- Tables ---------- */
+table.doc {
+  width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14.5px;
+  background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid var(--line);
+}
+table.doc th {
+  background: #f1f5f9; text-align: left; padding: 10px 14px; font-weight: 700; color: #334155;
+  border-bottom: 1px solid var(--line);
+}
+table.doc td { padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.doc tr:last-child td { border-bottom: none; }
+table.doc td code { white-space: nowrap; }
+
+/* ---------- Badges ---------- */
+.badge {
+  display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+}
+.badge.green { background: #dcfce7; color: #166534; }
+.badge.blue  { background: #dbeafe; color: #1e40af; }
+.badge.amber { background: #fef3c7; color: #92400e; }
+.badge.red   { background: #fee2e2; color: #991b1b; }
+.badge.gray  { background: #e2e8f0; color: #475569; }
+
+/* ---------- Cards grid (overview module map) ---------- */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin: 18px 0; }
+.mcard { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.mcard b { display: block; margin-bottom: 2px; }
+.mcard small { color: var(--muted); }
+
+hr { border: none; border-top: 1px solid var(--line); margin: 36px 0; }
+
+.footer-note { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .content { padding: 24px 18px 60px; }
+}
