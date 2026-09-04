@@ -1,7 +1,13 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
+// base ของ API: ตั้ง VITE_API_BASE_URL เมื่อ deploy UI แยกโดเมน/พอร์ตจาก API (cross-origin)
+// เช่น VITE_API_BASE_URL=http://js-server:5000  →  http://js-server:5000/api/v1
+// ปล่อยว่าง = same-origin (frontend เสิร์ฟจาก wwwroot ของ API) — ได้ '/api/v1' เหมือนเดิม
+// หมายเหตุ: cross-origin ต้องเปิด Cors:AllowedOrigins ที่ฝั่ง API ให้ตรงกับ origin ของ UI ด้วย
+export const apiBaseUrl = `${(import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')}/api/v1`
+
 const apiClient = axios.create({
-  baseURL: '/api/v1',
+  baseURL: apiBaseUrl,
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -33,7 +39,7 @@ async function refreshAccessToken(): Promise<string> {
   if (!refreshToken) throw new Error('no refresh token')
 
   // ใช้ axios ตัวเปล่า ไม่ผ่าน interceptor นี้ กัน loop
-  const { data } = await axios.post('/api/v1/auth/refresh', { refreshToken })
+  const { data } = await axios.post(`${apiBaseUrl}/auth/refresh`, { refreshToken })
   localStorage.setItem('token', data.token)
   localStorage.setItem('refreshToken', data.refreshToken)
   localStorage.setItem('user', JSON.stringify(data))

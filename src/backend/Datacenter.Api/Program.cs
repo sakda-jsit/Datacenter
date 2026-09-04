@@ -30,6 +30,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Datacenter API", Version = "v1" });
+    // ตั้งชื่อ schema ด้วยชื่อเต็มของ type: ค่าเริ่มต้นใช้ชื่อสั้น ซึ่งชนกันเมื่อมีคลาสชื่อเดียวกัน
+    // คนละที่ (เช่น AssignRequest ที่ประกาศทั้งใน TasksController และ ComplianceCalendarController)
+    // แล้ว /swagger/v1/swagger.json จะพัง 500 ทั้งหน้า ไม่ใช่แค่ endpoint นั้น
+    // ('+' คือคั่น nested type ใน .NET แปลงเป็น '.' ให้อ่านง่าย)
+    c.CustomSchemaIds(t => t.FullName!.Replace("+", "."));
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -78,7 +83,11 @@ await Datacenter.Infrastructure.Persistence.DbInitializer.SeedAsync(app.Services
 app.UseForwardedHeaders();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment())
+// Swagger: เปิดใน Development เสมอ; บน production เปิดชั่วคราวได้ด้วย Swagger:Enabled=true
+// (ตั้งใน appsettings.Production.json หรือ env var Swagger__Enabled แล้วรีสตาร์ตแอป)
+// เปิดแล้วใครเข้าถึง URL ได้ก็เห็นรายการ endpoint และ schema ทั้งหมด — endpoint ยังต้องมี JWT ตามเดิม
+// จึงควรเปิดเท่าที่ต้องใช้แล้วปิดกลับ
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue("Swagger:Enabled", false))
 {
     app.UseSwagger();
     app.UseSwaggerUI();
