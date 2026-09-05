@@ -146,6 +146,45 @@ ROUTES.push(
   { name: 'bank-recon', path: '/bank-reconciliation', full: false, prepare: tab('กระทบยอด (Reconciliation)') },
 )
 
+// ── กลุ่ม "ภาษี": หัก ณ ที่จ่าย / ภ.ง.ด.50 ──
+/** ตั้งปีที่ select ตัวแรกของหน้า (หน้าที่ปีเป็น dropdown ของปีที่มีข้อมูล) */
+async function setYearSelect(page) {
+  await page.locator('main select').first().selectOption(YEAR)
+  await page.waitForTimeout(1800)
+}
+
+ROUTES.push(
+  { name: 'wht-report', path: '/wht', full: false, prepare: setYearSelect },
+  {
+    name: 'wht-entries',
+    path: '/wht',
+    full: false,
+    prepare: async (page) => {
+      await setYearSelect(page)
+      await tab('รายละเอียดรายผู้ถูกหัก')(page)
+    },
+  },
+  {
+    name: 'pnd50',
+    path: '/pnd50',
+    prepare: async (page) => {
+      await page.locator('main input[type="number"]').first().fill(YEAR)
+      await page.getByRole('button', { name: 'แสดงข้อมูล' }).click()
+      await page.waitForTimeout(3000)
+    },
+  },
+  {
+    name: 'cit50-mapping',
+    path: '/pnd50/cit50-mapping',
+    full: false,
+    prepare: async (page) => {
+      await page.locator('main input[type="number"]').first().fill(YEAR)
+      await page.getByRole('button', { name: 'แสดงบัญชี' }).click()
+      await page.waitForTimeout(3000)
+    },
+  },
+)
+
 const only = process.argv.slice(2)
 const routes = only.length ? ROUTES.filter((r) => only.includes(r.name)) : ROUTES
 if (!routes.length) {

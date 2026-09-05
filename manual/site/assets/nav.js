@@ -55,8 +55,8 @@
       title: 'ภาษี',
       items: [
         { label: 'ภาษีมูลค่าเพิ่ม', href: 'pages/vat.html' },
-        { label: 'ภ.ง.ด.50' },
-        { label: 'หัก ณ ที่จ่าย' },
+        { label: 'ภ.ง.ด.50', href: 'pages/pnd50.html' },
+        { label: 'หัก ณ ที่จ่าย', href: 'pages/wht.html' },
       ],
     },
     {
