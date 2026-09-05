@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Datacenter.Api.Controllers;
 
 // ประวัติการใช้งานทั้งสำนักงาน — ข้อมูลกำกับดูแล เปิดให้เฉพาะผู้ดูแลระบบ
-[Authorize(Roles = nameof(UserRole.Admin))]
+[Authorize(Roles = AuthRoles.AdminOnly)]
 [ApiController]
 [Route("api/v1/audit-log")]
 public class AuditLogController(IMediator mediator) : ControllerBase

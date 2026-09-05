@@ -79,9 +79,13 @@ export default function AppRouter() {
           <Route path="closing-period" element={<ClosingPeriodPage />} />
           <Route path="report-packages" element={<ReportPackagesPage />} />
           <Route path="evidence" element={<EvidencePage />} />
-          {/* ตั้งค่ากลาง + audit log — ผู้ดูแลระบบเท่านั้น (พิมพ์ URL ตรงก็เข้าไม่ได้) */}
-          <Route element={<AdminRoute />}>
+          {/* ประวัติการใช้งาน — ผู้ดูแลระบบเท่านั้น */}
+          <Route element={<AdminRoute level="admin" />}>
             <Route path="audit-log" element={<AuditLogPage />} />
+          </Route>
+
+          {/* ตั้งค่ากลาง — Admin + หัวหน้างาน (พิมพ์ URL ตรงก็เข้าไม่ได้) */}
+          <Route element={<AdminRoute />}>
             <Route path="settings/payroll-rates" element={<PayrollRatesPage />} />
             <Route path="settings/users" element={<UsersPage />} />
             <Route path="settings/office-profile" element={<OfficeProfilePage />} />

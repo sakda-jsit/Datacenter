@@ -2,7 +2,7 @@ export interface AuthUser {
   userId: number
   username: string
   displayName: string
-  role: 'Admin' | 'Maker' | 'Checker'
+  role: 'Admin' | 'Maker' | 'Checker' | 'Supervisor'
   token: string
   /** ใช้ต่ออายุการเข้าใช้งานเมื่อ token หมดอายุ (apiClient จัดการให้อัตโนมัติ) */
   refreshToken: string

@@ -21,7 +21,7 @@ public class OfficeProfileController(IMediator mediator) : ControllerBase
         => Ok(await mediator.Send(new GetOfficeProfileQuery(), ct));
 
     /// <summary>PUT /api/v1/office-profile (body: OfficeProfileInput) — บันทึกโปรไฟล์สำนักงาน</summary>
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    [Authorize(Roles = AuthRoles.CentralSettings)]
     [HttpPut]
     public async Task<IActionResult> Save([FromBody] OfficeProfileInput data, CancellationToken ct)
         => Ok(await mediator.Send(new SaveOfficeProfileCommand(data), ct));

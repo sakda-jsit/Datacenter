@@ -30,8 +30,12 @@ interface NavItem {
   icon: IconName
   label: string
   desc: string
-  /** เมนูที่เห็นเฉพาะผู้ดูแลระบบ (Admin) */
-  adminOnly?: boolean
+  /**
+   * ระดับสิทธิ์ที่ต้องมีถึงจะเห็นเมนูนี้ (ไม่ใส่ = ทุกคนเห็น)
+   * - 'central' = ตั้งค่ากลาง → Admin + หัวหน้างาน
+   * - 'admin'   = Admin เท่านั้น
+   */
+  access?: 'central' | 'admin'
 }
 
 interface NavGroup {
@@ -119,14 +123,14 @@ const navGroups: NavGroup[] = [
     items: [
       // ตั้งค่ากลางทั้งหมดกระทบทุกบริษัท จึงเป็นของผู้ดูแลระบบ —
       // ผู้ใช้ทั่วไปเห็นเฉพาะ "เปลี่ยนรหัสผ่าน" ซึ่งเป็นของบัญชีตัวเอง
-      { to: '/settings/users', icon: 'users', label: 'ผู้ใช้งานระบบ', desc: 'บัญชีพนักงาน + สิทธิ์รายบริษัท', adminOnly: true },
+      { to: '/settings/users', icon: 'users', label: 'ผู้ใช้งานระบบ', desc: 'บัญชีพนักงาน + สิทธิ์รายบริษัท', access: 'central' },
       { to: '/change-password', icon: 'lock', label: 'เปลี่ยนรหัสผ่าน', desc: 'รหัสผ่านของบัญชีคุณ' },
-      { to: '/settings/office-profile', icon: 'building', label: 'โปรไฟล์สำนักงานบัญชี', desc: 'ข้อมูลสำนักงานคุณ (ใช้ทุกบริษัท)', adminOnly: true },
-      { to: '/settings/auditors', icon: 'users', label: 'ทะเบียนผู้สอบบัญชี', desc: 'master ใช้เลือกในแบบภาษี', adminOnly: true },
-      { to: '/settings/bookkeepers', icon: 'users', label: 'ทะเบียนผู้ทำบัญชี', desc: 'master ใช้เลือกในแบบภาษี', adminOnly: true },
-      { to: '/settings/signer-assignments', icon: 'scale', label: 'มอบหมายผู้ลงนาม', desc: 'ภาพรวมผู้สอบ/ผู้ทำบัญชี ทุกบริษัท', adminOnly: true },
-      { to: '/settings/payroll-rates', icon: 'shield', label: 'อัตราเงินสมทบ ปกส.', desc: 'ค่ากลาง ปกส./กองทุนทดแทน', adminOnly: true },
-      { to: '/audit-log', icon: 'history', label: 'ประวัติการใช้งาน', desc: 'Audit log', adminOnly: true },
+      { to: '/settings/office-profile', icon: 'building', label: 'โปรไฟล์สำนักงานบัญชี', desc: 'ข้อมูลสำนักงานคุณ (ใช้ทุกบริษัท)', access: 'central' },
+      { to: '/settings/auditors', icon: 'users', label: 'ทะเบียนผู้สอบบัญชี', desc: 'master ใช้เลือกในแบบภาษี', access: 'central' },
+      { to: '/settings/bookkeepers', icon: 'users', label: 'ทะเบียนผู้ทำบัญชี', desc: 'master ใช้เลือกในแบบภาษี', access: 'central' },
+      { to: '/settings/signer-assignments', icon: 'scale', label: 'มอบหมายผู้ลงนาม', desc: 'ภาพรวมผู้สอบ/ผู้ทำบัญชี ทุกบริษัท', access: 'central' },
+      { to: '/settings/payroll-rates', icon: 'shield', label: 'อัตราเงินสมทบ ปกส.', desc: 'ค่ากลาง ปกส./กองทุนทดแทน', access: 'central' },
+      { to: '/audit-log', icon: 'history', label: 'ประวัติการใช้งาน', desc: 'Audit log', access: 'admin' },
     ],
   },
 ]
@@ -289,15 +293,19 @@ export default function Sidebar({ collapsed, open, onToggleCollapsed, onCloseMob
   const location = useLocation()
   const sidebarRef = useRef<HTMLElement | null>(null)
   const currentUrl = `${location.pathname}${location.search}`
-  const { isAdmin } = useAuth()
+  const { isAdmin, canCentralSettings } = useAuth()
 
   // เมนูที่ผู้ใช้คนนี้เห็น (เมนู adminOnly ซ่อนสำหรับ Maker/Checker — API ก็บล็อกอีกชั้น)
   const groups = useMemo(
     () =>
       navGroups
-        .map((g) => ({ ...g, items: g.items.filter((i) => !i.adminOnly || isAdmin) }))
+        .map((g) => ({
+          ...g,
+          items: g.items.filter((i) =>
+            i.access === 'admin' ? isAdmin : i.access === 'central' ? canCentralSettings : true),
+        }))
         .filter((g) => g.items.length > 0),
-    [isAdmin],
+    [isAdmin, canCentralSettings],
   )
 
   const activeGroupTitle = useMemo(() => {

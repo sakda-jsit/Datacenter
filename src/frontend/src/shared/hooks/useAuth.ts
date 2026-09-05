@@ -18,6 +18,8 @@ export function useAuth() {
 
   const isAuthenticated = !!user
   const isAdmin = user?.role === 'Admin'
+  /** เข้าเมนูตั้งค่ากลางได้ (Admin + หัวหน้างาน) — ประวัติการใช้งานยังเป็นของ Admin เท่านั้น */
+  const canCentralSettings = isAdmin || user?.role === 'Supervisor'
 
   /**
    * ผู้ใช้ปัจจุบัน "ดูแล" บริษัทนี้หรือไม่ = ทำรายการได้ไหม
@@ -40,5 +42,5 @@ export function useAuth() {
     window.location.href = '/login'
   }
 
-  return { user, isAuthenticated, isAdmin, canManage, logout }
+  return { user, isAuthenticated, isAdmin, canCentralSettings, canManage, logout }
 }

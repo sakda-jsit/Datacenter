@@ -27,13 +27,13 @@ public class PayrollRatesController(IMediator mediator) : ControllerBase
         => Ok(await mediator.Send(new GetEffectivePayrollConfigQuery(asOf), ct));
 
     /// <summary>POST /api/v1/payroll-rates (body: PayrollRateConfigInput)</summary>
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    [Authorize(Roles = AuthRoles.CentralSettings)]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] PayrollRateConfigInput data, CancellationToken ct)
         => Ok(new { id = await mediator.Send(new UpsertPayrollConfigCommand(null, data), ct) });
 
     /// <summary>PUT /api/v1/payroll-rates/{id} (body: PayrollRateConfigInput)</summary>
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    [Authorize(Roles = AuthRoles.CentralSettings)]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] PayrollRateConfigInput data, CancellationToken ct)
     {
@@ -42,7 +42,7 @@ public class PayrollRatesController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>DELETE /api/v1/payroll-rates/{id}</summary>
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    [Authorize(Roles = AuthRoles.CentralSettings)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {

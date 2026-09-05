@@ -9,7 +9,7 @@ namespace Datacenter.Api.Controllers;
 /// จัดการผู้ใช้ระบบ — <b>เฉพาะ Admin</b>. สร้างผู้ใช้ให้พนักงานแต่ละคน (ห้ามใช้บัญชีร่วมกัน
 /// เพราะ audit log/field-audit ต้องระบุตัวผู้ทำได้) + ผูกสิทธิ์เข้าถึงรายบริษัทลูกค้า.
 /// </summary>
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = AuthRoles.CentralSettings)]
 [ApiController]
 [Route("api/v1/users")]
 public class UsersController(IMediator mediator) : ControllerBase

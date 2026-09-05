@@ -56,7 +56,7 @@ public class CorporateTaxController(IMediator mediator) : ControllerBase
 
     /// <summary>GET /corporate-tax/signer-assignments — ภาพรวมผู้ลงนามประจำของทุกบริษัท (จัดการรวมศูนย์)</summary>
     // ภาพรวมข้ามทุกบริษัท เป็นหน้าจัดการรวมศูนย์ในเมนูระบบ
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    [Authorize(Roles = AuthRoles.CentralSettings)]
     [HttpGet("signer-assignments")]
     public async Task<IActionResult> GetSignerAssignments(
         [FromQuery] string? search, [FromQuery] int? auditorId, [FromQuery] int? bookkeeperId, CancellationToken ct)

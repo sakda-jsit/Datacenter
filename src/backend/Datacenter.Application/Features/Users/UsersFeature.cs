@@ -119,8 +119,8 @@ public class UpdateUserCommandHandler(
         var before = $"{user.DisplayName} / {user.Role} / {(user.IsActive ? "ใช้งาน" : "ปิดใช้งาน")}";
 
         // กันล็อกตัวเองออกจากระบบ และกันไม่ให้เหลือ Admin ที่ใช้งานได้ 0 คน
-        if (req.Id == currentUser.UserId && (!d.IsActive || role != UserRole.Admin))
-            throw new DomainException("ไม่สามารถปิดใช้งานหรือลดสิทธิ์บัญชีของตัวเองได้ — ให้ผู้ดูแลอีกคนดำเนินการ");
+        if (req.Id == currentUser.UserId && (!d.IsActive || role != user.Role))
+            throw new DomainException("ไม่สามารถปิดใช้งานหรือเปลี่ยนบทบาทของบัญชีตัวเองได้ — ให้ผู้ดูแลอีกคนดำเนินการ");
 
         if (user.Role == UserRole.Admin && (role != UserRole.Admin || !d.IsActive))
         {
@@ -217,7 +217,8 @@ internal static class UsersFeatureHelpers
         1 => UserRole.Admin,
         2 => UserRole.Maker,
         3 => UserRole.Checker,
-        _ => throw new DomainException("บทบาทผู้ใช้ไม่ถูกต้อง (1=Admin, 2=Maker, 3=Checker)"),
+        4 => UserRole.Supervisor,
+        _ => throw new DomainException("บทบาทผู้ใช้ไม่ถูกต้อง (1=Admin, 2=Maker, 3=Checker, 4=Supervisor)"),
     };
 
     /// <summary>แทนที่สิทธิ์เข้าถึงบริษัททั้งชุด (null = ไม่แก้). ยังไม่ SaveChanges ให้ผู้เรียกรวมบันทึกทีเดียว</summary>
