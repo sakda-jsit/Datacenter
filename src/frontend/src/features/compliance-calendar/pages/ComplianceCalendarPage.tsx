@@ -20,7 +20,7 @@ import { useAssignableUsers } from '../../tasks/hooks/useTasks'
 import AttachmentUploadModal from '../../attachments/components/AttachmentUploadModal'
 import { AttachmentCategory } from '../../attachments/types/attachment.types'
 import type { ComplianceTaskDto, ComplianceTaskStatus, MonthSummaryDto } from '../types/compliance.types'
-import { STATUS_COLORS, STATUS_LABELS, TASK_TYPE_LABELS } from '../types/compliance.types'
+import { CYCLE_COLORS, STATUS_COLORS, STATUS_LABELS, TASK_TYPE_LABELS } from '../types/compliance.types'
 
 const MONTH_NAMES = [
   '', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
@@ -72,16 +72,24 @@ export default function ComplianceCalendarPage({ clients }: Props) {
   const taskColumns: DataTableColumn<ComplianceTaskDto>[] = [
     {
       key: 'month',
-      header: 'เดือน',
-      render: (task) => <span className="text-gray-600">{MONTH_NAMES[task.month]}</span>,
+      header: 'งวด',
+      render: (task) => <span className="text-gray-600">{task.periodLabel}</span>,
       sortValue: (task) => task.month,
       sortable: true,
-      headerClassName: 'w-16',
+      headerClassName: 'w-28',
     },
     {
       key: 'taskType',
       header: 'ประเภทงาน',
-      render: (task) => <span className="text-gray-800">{task.taskTypeName}</span>,
+      render: (task) => (
+        <span className="flex items-center gap-2">
+          <span className="text-gray-800">{task.taskTypeName}</span>
+          {/* งานรายเดือนเป็นค่าปกติ ไม่ต้องติดป้าย — ติดเฉพาะรอบที่มาไม่บ่อย */}
+          {task.cycle !== 1 && (
+            <span className={`dc-pill ${CYCLE_COLORS[task.cycle]}`}>{task.cycleName}</span>
+          )}
+        </span>
+      ),
       sortValue: (task) => task.taskTypeName,
       sortable: true,
     },
@@ -229,7 +237,7 @@ export default function ComplianceCalendarPage({ clients }: Props) {
               <div className="flex flex-wrap gap-2">
                 {dashboard.upcomingDueSoon.map(t => (
                   <span key={t.id} className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">
-                    {MONTH_NAMES[t.month]} — {TASK_TYPE_LABELS[t.taskType]}
+                    {t.periodLabel} — {TASK_TYPE_LABELS[t.taskType]}
                     {' '}(ครบ {new Date(t.dueDate).toLocaleDateString('th-TH')})
                   </span>
                 ))}
@@ -317,7 +325,7 @@ export default function ComplianceCalendarPage({ clients }: Props) {
           defaultCategory={AttachmentCategory.RevenueFiling}
           moduleName="ComplianceTask"
           recordId={evidenceFor.id}
-          recordRef={`${evidenceFor.taskTypeName} ${evidenceFor.month}/${evidenceFor.year}`}
+          recordRef={`${evidenceFor.taskTypeName} ${evidenceFor.periodLabel}`}
           onClose={() => {
             setEvidenceFor(null)
             // อัปเดตจำนวนหลักฐานบนตารางหลังแนบไฟล์

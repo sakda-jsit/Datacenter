@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Datacenter.Application.Features.ComplianceCalendar.Queries;
 
 /// <summary>
-/// คืน template งานประจำ 6 ประเภท (สถานะ effective).
+/// คืน template งานประจำทุกประเภท (สถานะ effective) เรียงตามรอบ รายเดือน → ครึ่งปี → รายปี.
 /// ClientCompanyId = null/0 → ระดับ global (ทุกบริษัท); >0 → เฉพาะบริษัท (แสดง override + ที่ inherit).
 /// </summary>
 public record GetComplianceTaskTemplatesQuery(int? ClientCompanyId)
@@ -35,12 +35,8 @@ public class GetComplianceTaskTemplatesQueryHandler(IApplicationDbContext db)
             return ComplianceTemplateResolver.AllTypes.Select(type =>
             {
                 gmap.TryGetValue(type, out var gr);
-                return new ComplianceTaskTemplateDto(
-                    type, ComplianceTaskHelpers.TaskTypeName(type),
-                    gr?.Enabled ?? true, gr?.DueDay,
-                    ComplianceDueDateCalculator.DefaultDueDay(type),
+                return Build(type, gr?.Enabled ?? true, gr?.DueDay, gr?.DueMonthsAfter,
                     gr?.RequireEvidence ?? ComplianceTemplateResolver.DefaultRequireEvidence(type),
-                    ComplianceTemplateResolver.DefaultRequireEvidence(type),
                     gr is null ? "default" : "global");
             }).ToList();
         }
@@ -50,13 +46,29 @@ public class GetComplianceTaskTemplatesQueryHandler(IApplicationDbContext db)
         return ComplianceTemplateResolver.AllTypes.Select(type =>
         {
             var e = eff[type];
-            return new ComplianceTaskTemplateDto(
-                type, ComplianceTaskHelpers.TaskTypeName(type),
-                e.Enabled, e.DueDay,
-                ComplianceDueDateCalculator.DefaultDueDay(type),
-                e.RequireEvidence,
-                ComplianceTemplateResolver.DefaultRequireEvidence(type),
-                e.Source);
+            return Build(type, e.Enabled, e.DueDay, e.DueMonthsAfter, e.RequireEvidence, e.Source);
         }).ToList();
+    }
+
+    private static ComplianceTaskTemplateDto Build(
+        Domain.Enums.ComplianceTaskType type, bool enabled, int? dueDay, int? dueMonthsAfter,
+        bool requireEvidence, string source)
+    {
+        var cycle = ComplianceTaskCatalog.Cycle(type);
+        return new ComplianceTaskTemplateDto(
+            type,
+            ComplianceTaskHelpers.TaskTypeName(type),
+            cycle,
+            ComplianceTaskCatalog.CycleName(cycle),
+            enabled,
+            dueDay,
+            ComplianceDueDateCalculator.DefaultDueDay(type),
+            dueMonthsAfter,
+            ComplianceDueDateCalculator.DefaultDueMonthsAfter(type),
+            ComplianceTaskCatalog.DueDescription(type, dueDay, dueMonthsAfter),
+            ComplianceTaskCatalog.UsesDaysAfterRule(type, dueDay, dueMonthsAfter),
+            requireEvidence,
+            ComplianceTemplateResolver.DefaultRequireEvidence(type),
+            source);
     }
 }

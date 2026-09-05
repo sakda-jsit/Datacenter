@@ -27,21 +27,27 @@ public class GenerateMonthlyTasksCommandHandler(IApplicationDbContext db, IAudit
             .Where(t => t.ClientCompanyId == request.ClientCompanyId).ToListAsync(ct);
         var effective = ComplianceTemplateResolver.Resolve(globalRules, companyRules);
 
-        // ผู้รับผิดชอบประจำบริษัท → ตั้งเป็นผู้รับผิดชอบงานที่สร้างใหม่ (มอบหมายใหม่รายงานได้ภายหลัง)
-        var defaultAssigneeId = await db.ClientCompanies
+        // ผู้รับผิดชอบประจำบริษัท + เดือนเริ่มรอบบัญชี (กำหนดว่างานครึ่งปี/รายปีตกเดือนไหน)
+        var company = await db.ClientCompanies
             .Where(c => c.Id == request.ClientCompanyId)
-            .Select(c => c.DefaultAssigneeUserId)
+            .Select(c => new { c.DefaultAssigneeUserId, c.FiscalYearStartMonth })
             .FirstOrDefaultAsync(ct);
+        var defaultAssigneeId = company?.DefaultAssigneeUserId;
+        int fiscalStart = company?.FiscalYearStartMonth ?? 1;
 
+        // งานรายเดือนสร้างทุกเดือน ส่วนงานครึ่งปี/รายปีสร้างเฉพาะเดือนที่งวดนั้นสิ้นสุด
         var toCreate = ComplianceTemplateResolver.AllTypes
-            .Where(type => !existingSet.Contains(type) && effective[type].Enabled)
+            .Where(type => !existingSet.Contains(type)
+                        && effective[type].Enabled
+                        && ComplianceTaskCatalog.OccursIn(type, request.Month, fiscalStart))
             .Select(type => new ComplianceTask
             {
                 ClientCompanyId = request.ClientCompanyId,
                 TaskType = type,
                 Year = request.Year,
                 Month = request.Month,
-                DueDate = ComplianceDueDateCalculator.Calculate(type, request.Year, request.Month, effective[type].DueDay),
+                DueDate = ComplianceDueDateCalculator.Calculate(
+                    type, request.Year, request.Month, effective[type].DueDay, effective[type].DueMonthsAfter),
                 Status = ComplianceTaskStatus.Pending,
                 AssignedUserId = defaultAssigneeId,
             })

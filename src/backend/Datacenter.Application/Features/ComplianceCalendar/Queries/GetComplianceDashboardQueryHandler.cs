@@ -65,6 +65,9 @@ public class GetComplianceDashboardQueryHandler(IApplicationDbContext db)
     private static ComplianceTaskDto ToDto(Domain.Entities.ComplianceTask t, DateTime now) =>
         new(t.Id, t.ClientCompanyId, t.ClientCompany?.Code ?? "", t.ClientCompany?.LegalName ?? "",
             t.TaskType, ComplianceTaskHelpers.TaskTypeName(t.TaskType),
+            Services.ComplianceTaskCatalog.Cycle(t.TaskType),
+            Services.ComplianceTaskCatalog.CycleName(Services.ComplianceTaskCatalog.Cycle(t.TaskType)),
+            Services.ComplianceTaskCatalog.PeriodLabel(t.TaskType, t.Year, t.Month),
             t.Year, t.Month, t.DueDate,
             t.Status, ComplianceTaskHelpers.StatusName(t.Status),
             t.AssignedUserId, t.AssignedUser?.DisplayName,

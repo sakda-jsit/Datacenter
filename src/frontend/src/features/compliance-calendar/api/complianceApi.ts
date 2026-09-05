@@ -7,10 +7,17 @@ export async function getTemplates(clientCompanyId?: number): Promise<Compliance
   return data
 }
 
-export async function upsertTemplate(input: {
-  clientCompanyId: number | null; taskType: ComplianceTaskType; enabled: boolean; dueDay: number | null
+export interface UpsertTemplateInput {
+  clientCompanyId: number | null
+  taskType: ComplianceTaskType
+  enabled: boolean
+  dueDay: number | null
   requireEvidence?: boolean | null
-}): Promise<void> {
+  /** ครบกำหนดกี่เดือนหลังสิ้นงวด; null = ใช้ค่าเริ่มต้นของประเภทงาน */
+  dueMonthsAfter?: number | null
+}
+
+export async function upsertTemplate(input: UpsertTemplateInput): Promise<void> {
   await apiClient.put('/compliance-calendar/templates', input)
 }
 

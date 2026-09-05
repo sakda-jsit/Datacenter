@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { assignTask, generateTasks, getDashboard, getTasks, getTemplates, resetTemplate, updateStatus, upsertTemplate } from '../api/complianceApi'
+import type { UpsertTemplateInput } from '../api/complianceApi'
 import type { ComplianceTaskStatus, ComplianceTaskType } from '../types/compliance.types'
 
 const KEYS = {
@@ -55,8 +56,7 @@ export function useTaskTemplates(clientCompanyId?: number) {
 export function useUpsertTemplate() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { clientCompanyId: number | null; taskType: ComplianceTaskType; enabled: boolean; dueDay: number | null; requireEvidence?: boolean | null }) =>
-      upsertTemplate(input),
+    mutationFn: (input: UpsertTemplateInput) => upsertTemplate(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['compliance', 'templates'] }),
   })
 }

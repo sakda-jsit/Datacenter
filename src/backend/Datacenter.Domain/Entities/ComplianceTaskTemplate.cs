@@ -22,5 +22,11 @@ public class ComplianceTaskTemplate : BaseEntity
     /// </summary>
     public bool? RequireEvidence { get; set; }
 
+    /// <summary>
+    /// ครบกำหนดกี่เดือนหลังสิ้นงวด (override). null = ใช้ค่าเริ่มต้นของประเภทงาน.
+    /// ใช้คู่กับ <see cref="DueDay"/> เช่น 2 + วันที่ 0 = สิ้นเดือนที่ 2 หลังสิ้นงวด
+    /// </summary>
+    public int? DueMonthsAfter { get; set; }
+
     public ClientCompany? ClientCompany { get; set; }
 }
