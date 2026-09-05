@@ -110,10 +110,12 @@ export default function UsersPage() {
     })
   }
 
-  /** หัวหน้างานแตะบัญชีผู้ดูแลระบบไม่ได้ (API ปฏิเสธอยู่แล้ว — ซ่อนปุ่มไม่ให้กดเสียเที่ยว) */
-  function canManageUser(u: SystemUser) {
-    return isAdmin || u.role !== USER_ROLE.Admin
-  }
+  /**
+   * จัดการบัญชีผู้ใช้ (เพิ่ม/แก้/รีเซ็ตรหัส/ปลดล็อก) เป็นของผู้ดูแลระบบเท่านั้น —
+   * หัวหน้างานเปิดหน้านี้ได้เพื่อ "ดู" ว่าใครดูแลบริษัทไหน แต่แก้ไม่ได้.
+   * API ปฏิเสธอยู่แล้ว ตรงนี้แค่ซ่อนปุ่มไม่ให้กดเสียเที่ยว
+   */
+  const canManageUsers = isAdmin
 
   function toggleCompany(id: number) {
     setForm((p) => ({
@@ -206,10 +208,19 @@ export default function UsersPage() {
       ) : (
         <Card className="overflow-hidden">
           <div className="flex items-center justify-between border-b border-gray-100 p-3">
-            <span className="text-sm font-medium text-slate-700">ผู้ใช้ทั้งหมด {users?.length ?? 0} คน</span>
-            <Button type="button" onClick={startNew} className="px-3 py-1 text-xs">
-              + เพิ่มผู้ใช้
-            </Button>
+            <span className="text-sm font-medium text-slate-700">
+              ผู้ใช้ทั้งหมด {users?.length ?? 0} คน
+              {!canManageUsers && (
+                <span className="ml-2 text-xs font-normal text-gray-400">
+                  · ดูอย่างเดียว — เพิ่ม/แก้ไขบัญชีได้เฉพาะผู้ดูแลระบบ
+                </span>
+              )}
+            </span>
+            {canManageUsers && (
+              <Button type="button" onClick={startNew} className="px-3 py-1 text-xs">
+                + เพิ่มผู้ใช้
+              </Button>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -246,7 +257,7 @@ export default function UsersPage() {
                       {u.id === me?.userId && <span className="ml-1 text-xs text-gray-400">(คุณ)</span>}
                     </td>
                     <td className="px-3 py-2 text-right whitespace-nowrap">
-                      {canManageUser(u) ? (
+                      {canManageUsers ? (
                         <>
                           <button onClick={() => startEdit(u)} className="text-blue-600 hover:underline">
                             แก้ไข
@@ -267,7 +278,7 @@ export default function UsersPage() {
                           )}
                         </>
                       ) : (
-                        <span className="text-xs text-gray-400">เฉพาะผู้ดูแลระบบแก้ได้</span>
+                        <span className="text-xs text-gray-400">—</span>
                       )}
                     </td>
                   </tr>

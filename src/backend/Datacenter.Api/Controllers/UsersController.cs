@@ -9,6 +9,8 @@ namespace Datacenter.Api.Controllers;
 /// จัดการผู้ใช้ระบบ — <b>เฉพาะ Admin</b>. สร้างผู้ใช้ให้พนักงานแต่ละคน (ห้ามใช้บัญชีร่วมกัน
 /// เพราะ audit log/field-audit ต้องระบุตัวผู้ทำได้) + ผูกสิทธิ์เข้าถึงรายบริษัทลูกค้า.
 /// </summary>
+// ดูรายชื่อได้ทั้ง Admin และหัวหน้างาน แต่การ "เปลี่ยนแปลง" บัญชีผู้ใช้เป็นของ Admin เท่านั้น
+// (หัวหน้างานจัดการผู้ใช้คนอื่นไม่ได้ — รวมถึงรีเซ็ตรหัสซึ่งเป็นทางสวมสิทธิ์)
 [Authorize(Roles = AuthRoles.CentralSettings)]
 [ApiController]
 [Route("api/v1/users")]
@@ -20,11 +22,13 @@ public class UsersController(IMediator mediator) : ControllerBase
         => Ok(await mediator.Send(new GetUsersQuery(), ct));
 
     /// <summary>POST /api/v1/users (body: UserCreateInput) — สร้างผู้ใช้ (ต้องเปลี่ยนรหัสตอน login ครั้งแรก)</summary>
+    [Authorize(Roles = AuthRoles.AdminOnly)]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] UserCreateInput body, CancellationToken ct)
         => Ok(new { id = await mediator.Send(new CreateUserCommand(body), ct) });
 
     /// <summary>PUT /api/v1/users/{id} (body: UserUpdateInput) — แก้ชื่อ/อีเมล/บทบาท/สถานะ + สิทธิ์บริษัท</summary>
+    [Authorize(Roles = AuthRoles.AdminOnly)]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UserUpdateInput body, CancellationToken ct)
     {
@@ -33,6 +37,7 @@ public class UsersController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>POST /api/v1/users/{id}/reset-password (body: { newPassword }) — ผู้ดูแลตั้งรหัสชั่วคราวให้</summary>
+    [Authorize(Roles = AuthRoles.AdminOnly)]
     [HttpPost("{id:int}/reset-password")]
     public async Task<IActionResult> ResetPassword(int id, [FromBody] ResetPasswordRequest body, CancellationToken ct)
     {
@@ -41,6 +46,7 @@ public class UsersController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>POST /api/v1/users/{id}/unlock — ปลดล็อกบัญชีที่ถูกล็อกจากการใส่รหัสผิด</summary>
+    [Authorize(Roles = AuthRoles.AdminOnly)]
     [HttpPost("{id:int}/unlock")]
     public async Task<IActionResult> Unlock(int id, CancellationToken ct)
     {
