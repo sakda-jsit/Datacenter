@@ -92,6 +92,11 @@ manual/site/assets/img/import.png
 manual/site/assets/img/login.png
 manual/site/assets/img/sidebar-expanded.png
 manual/site/assets/img/trial-balance.png
+manual/site/assets/img/vat-branch-mapping.png
+manual/site/assets/img/vat-branches.png
+manual/site/assets/img/vat-entries.png
+manual/site/assets/img/vat-filing.png
+manual/site/assets/img/vat-report.png
 manual/site/assets/nav.js
 manual/site/assets/style.css
 manual/site/index.html
@@ -100,6 +105,7 @@ manual/site/pages/dashboard.html
 manual/site/pages/general-ledger.html
 manual/site/pages/import.html
 manual/site/pages/trial-balance.html
+manual/site/pages/vat.html
 manual/tools/capture-nav.mjs
 manual/tools/capture.mjs
 manual/tools/list-companies.mjs
@@ -6088,6 +6094,98 @@ public class BankController(IMediator mediator) : ControllerBase
 }
 </file>
 
+<file path="src/backend/Datacenter.Api/Controllers/BankReconciliationController.cs">
+using Datacenter.Application.Features.Bank.Commands;
+using Datacenter.Application.Features.Bank.Queries;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Datacenter.Api.Controllers;
+
+[Authorize]
+[ApiController]
+[Route("api/v1/bank-reconciliation")]
+public class BankReconciliationController(IMediator mediator) : ControllerBase
+{
+    /// <summary>GET /template — เทมเพลต Excel สำหรับกรอก statement</summary>
+    [HttpGet("template")]
+    public async Task<IActionResult> GetTemplate(CancellationToken ct)
+    {
+        var bytes = await mediator.Send(new GetBankStatementTemplateQuery(), ct);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "bank-statement-template.xlsx");
+    }
+
+    /// <summary>POST /upload?clientCompanyId=&amp;bankAccountId=&amp;previewOnly= — อัปโหลด statement (PDF/Excel/CSV)</summary>
+    [HttpPost("upload")]
+    [RequestSizeLimit(20 * 1024 * 1024)]
+    public async Task<IActionResult> Upload(
+        [FromQuery] int clientCompanyId,
+        [FromQuery] int bankAccountId,
+        [FromQuery] bool previewOnly,
+        IFormFile file,
+        [FromForm] decimal? openingBalance,
+        [FromForm] decimal? closingBalance,
+        [FromForm] string? note,
+        CancellationToken ct)
+    {
+        if (file is null || file.Length == 0) return BadRequest("ไฟล์ว่าง");
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        var bytes = ms.ToArray();
+
+        if (previewOnly)
+            return Ok(await mediator.Send(new ParseBankStatementPreviewCommand(clientCompanyId, bankAccountId, file.FileName, bytes), ct));
+
+        var id = await mediator.Send(new UploadBankStatementCommand(
+            clientCompanyId, bankAccountId, file.FileName, bytes, openingBalance, closingBalance, note), ct);
+        return Ok(new { id });
+    }
+
+    /// <summary>GET /imports?clientCompanyId=&amp;bankAccountId=</summary>
+    [HttpGet("imports")]
+    public async Task<IActionResult> GetImports([FromQuery] int clientCompanyId, [FromQuery] int? bankAccountId, CancellationToken ct)
+        => Ok(await mediator.Send(new GetBankStatementImportsQuery(clientCompanyId, bankAccountId), ct));
+
+    /// <summary>GET /{importId}?clientCompanyId= — รายงานกระทบยอด</summary>
+    [HttpGet("{importId:int}")]
+    public async Task<IActionResult> GetReconciliation(int importId, [FromQuery] int clientCompanyId, CancellationToken ct)
+        => Ok(await mediator.Send(new GetBankReconciliationQuery(clientCompanyId, importId), ct));
+
+    /// <summary>POST /{importId}/match — จับคู่บรรทัดกับรายการในสมุดเอง</summary>
+    [HttpPost("{importId:int}/match")]
+    public async Task<IActionResult> Match(int importId, [FromBody] MatchBankLineBody body, CancellationToken ct)
+    {
+        await mediator.Send(new MatchBankLineCommand(body.ClientCompanyId, importId, body.StatementLineId, body.BankTransactionId), ct);
+        return NoContent();
+    }
+
+    /// <summary>POST /{importId}/unmatch — ปลดคู่</summary>
+    [HttpPost("{importId:int}/unmatch")]
+    public async Task<IActionResult> Unmatch(int importId, [FromBody] UnmatchBankLineBody body, CancellationToken ct)
+    {
+        await mediator.Send(new UnmatchBankLineCommand(body.ClientCompanyId, importId, body.StatementLineId), ct);
+        return NoContent();
+    }
+
+    /// <summary>DELETE /imports/{id}?clientCompanyId=</summary>
+    [HttpDelete("imports/{id:int}")]
+    public async Task<IActionResult> Delete(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
+    {
+        await mediator.Send(new DeleteBankStatementImportCommand(clientCompanyId, id), ct);
+        return NoContent();
+    }
+
+    /// <summary>POST /generate-adjustment — สร้างรายการปรับปรุงจากรายการ statement ที่สมุดยังไม่ลง</summary>
+    [HttpPost("generate-adjustment")]
+    public async Task<IActionResult> GenerateAdjustment([FromBody] GenerateBankReconciliationAdjustmentCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command, ct));
+
+    public record MatchBankLineBody(int ClientCompanyId, int StatementLineId, int BankTransactionId);
+    public record UnmatchBankLineBody(int ClientCompanyId, int StatementLineId);
+}
+</file>
+
 <file path="src/backend/Datacenter.Api/Controllers/CashCountController.cs">
 using Datacenter.Application.Features.CashCount.Commands;
 using Datacenter.Application.Features.CashCount.Queries;
@@ -9640,6 +9738,156 @@ public class GenerateBankReconciliationAdjustmentCommandHandler(IApplicationDbCo
 }
 </file>
 
+<file path="src/backend/Datacenter.Application/Features/Bank/Commands/UploadBankStatementCommand.cs">
+using System.Security.Cryptography;
+using Datacenter.Application.Common.Exceptions;
+using Datacenter.Application.Common.Interfaces;
+using Datacenter.Application.Common.Security;
+using Datacenter.Application.Features.Bank.DTOs;
+using Datacenter.Application.Features.Bank.Services;
+using Datacenter.Domain.Entities;
+using Datacenter.Domain.Enums;
+using Datacenter.Domain.Exceptions;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+
+namespace Datacenter.Application.Features.Bank.Commands;
+
+// ── preview (parse อย่างเดียว ไม่บันทึก) ─────────────────────────────────────────
+public record ParseBankStatementPreviewCommand(int ClientCompanyId, int BankAccountId, string FileName, byte[] Content)
+    : IRequest<BankStatementParsePreviewDto>, IRequireCompanyAccess;
+
+public class ParseBankStatementPreviewCommandHandler(IApplicationDbContext db, IBankStatementParser parser)
+    : IRequestHandler<ParseBankStatementPreviewCommand, BankStatementParsePreviewDto>
+{
+    public async Task<BankStatementParsePreviewDto> Handle(ParseBankStatementPreviewCommand request, CancellationToken ct)
+    {
+        if (request.Content is not { Length: > 0 }) throw new DomainException("ไฟล์ว่าง");
+        var r = parser.Parse(request.Content, request.FileName);
+
+        // เทียบเลขบัญชีใน statement กับบัญชีบริษัทที่เลือก (Express)
+        string? expected = null;
+        if (request.BankAccountId > 0)
+            expected = await db.BankAccounts.AsNoTracking()
+                .Where(b => b.Id == request.BankAccountId && b.ClientCompanyId == request.ClientCompanyId)
+                .Select(b => b.AccountNumber)
+                .FirstOrDefaultAsync(ct);
+        var matches = BankAccountNumberComparer.Matches(r.AccountNo, expected);
+
+        var dto = new BankStatementParsePreviewDto(
+            r.BankCode, r.AccountNo, r.PeriodStart, r.PeriodEnd,
+            r.OpeningBalance, r.ClosingBalance, r.ComputedClosing, r.BalanceCheckPasses, r.Warning,
+            expected, matches,
+            r.Lines.Select(l => new BankStatementParsePreviewLineDto(
+                l.Date, l.Description, l.Withdrawal, l.Deposit, l.Balance)).ToList());
+        return dto;
+    }
+}
+
+// ── upload (parse + บันทึก + auto-match) ─────────────────────────────────────────
+public record UploadBankStatementCommand(
+    int ClientCompanyId, int BankAccountId, string FileName, byte[] Content,
+    decimal? OpeningBalance, decimal? ClosingBalance, string? Note)
+    : IRequest<int>, IRequireCompanyAccess;
+
+public class UploadBankStatementCommandHandler(
+    IApplicationDbContext db, IBankStatementParser parser, ICurrentUserService currentUser, IAuditService audit)
+    : IRequestHandler<UploadBankStatementCommand, int>
+{
+    public async Task<int> Handle(UploadBankStatementCommand request, CancellationToken ct)
+    {
+        if (request.Content is not { Length: > 0 }) throw new DomainException("ไฟล์ว่าง");
+
+        var account = await db.BankAccounts.AsNoTracking()
+            .FirstOrDefaultAsync(b => b.Id == request.BankAccountId
+                                   && b.ClientCompanyId == request.ClientCompanyId, ct)
+            ?? throw new NotFoundException("BankAccount", request.BankAccountId);
+
+        var parsed = parser.Parse(request.Content, request.FileName);
+        if (parsed.Lines.Count == 0)
+            throw new DomainException(parsed.Warning ?? "ไม่พบรายการใน statement");
+
+        // เลขบัญชีใน statement ต้องตรงกับบัญชีบริษัทที่เลือก (ถ้าระบุได้) — กันอัปโหลดผิดบัญชี
+        if (BankAccountNumberComparer.Matches(parsed.AccountNo, account.AccountNumber) == false)
+            throw new DomainException(
+                $"เลขบัญชีใน statement ({parsed.AccountNo}) ไม่ตรงกับบัญชีบริษัทที่เลือก ({account.AccountNumber}) — โปรดเลือกบัญชีให้ถูกต้อง");
+
+        var ps = parsed.PeriodStart ?? parsed.Lines.Min(l => l.Date);
+        var pe = parsed.PeriodEnd ?? parsed.Lines.Max(l => l.Date);
+        var sha = Convert.ToHexString(SHA256.HashData(request.Content)).ToLowerInvariant();
+
+        var import = new BankStatementImport
+        {
+            ClientCompanyId = request.ClientCompanyId,
+            BankAccountId = account.Id,
+            BankCode = parsed.BankCode,
+            StatementAccountNo = parsed.AccountNo,
+            PeriodStart = ps,
+            PeriodEnd = pe,
+            OpeningBalance = request.OpeningBalance ?? parsed.OpeningBalance,
+            ClosingBalance = request.ClosingBalance ?? parsed.ClosingBalance,
+            ParsedOk = parsed.BalanceCheckPasses,
+            SourceFileName = request.FileName,
+            SourceContent = request.Content,
+            Sha256 = sha,
+            ByteSize = request.Content.LongLength,
+            Note = request.Note,
+            Status = BankStatementImportStatus.Draft,
+            CreatedBy = currentUser.Username,
+        };
+        foreach (var l in parsed.Lines)
+            import.Lines.Add(new BankStatementLine
+            {
+                LineDate = l.Date,
+                Description = l.Description,
+                Withdrawal = Math.Round(l.Withdrawal, 2),
+                Deposit = Math.Round(l.Deposit, 2),
+                Balance = l.Balance,
+                MatchStatus = BankLineMatchStatus.Unmatched,
+                CreatedBy = currentUser.Username,
+            });
+
+        db.BankStatementImports.Add(import);
+        await db.SaveChangesAsync(ct); // ได้ Id ของ import + lines
+
+        await AutoMatchAsync(db, import, account.BankAccountCode, ct);
+        await db.SaveChangesAsync(ct);
+
+        await audit.LogAsync("ImportBankStatement", "BankStatementImport",
+            entityId: import.Id.ToString(),
+            afterValue: $"{parsed.BankCode} {ps:yyyy-MM-dd}..{pe:yyyy-MM-dd} lines={parsed.Lines.Count}",
+            companyId: request.ClientCompanyId, cancellationToken: ct);
+
+        return import.Id;
+    }
+
+    /// <summary>auto-match บรรทัด statement กับ BankTransaction ของบัญชีในช่วงงวด</summary>
+    internal static async Task AutoMatchAsync(
+        IApplicationDbContext db, BankStatementImport import, string bankAccountCode, CancellationToken ct)
+    {
+        var from = import.PeriodStart.Date.AddDays(-7);
+        var to = import.PeriodEnd.Date.AddDays(7);
+        var txns = await db.BankTransactions.AsNoTracking()
+            .Where(t => t.ClientCompanyId == import.ClientCompanyId
+                     && t.BankAccountCode == bankAccountCode
+                     && t.TransactionDate >= from && t.TransactionDate <= to)
+            .Select(t => new BankReconciliationMatcher.BookTxn(t.Id, t.TransactionDate, t.IsDeposit, t.Amount))
+            .ToListAsync(ct);
+
+        var stmt = import.Lines.Select(l =>
+            new BankReconciliationMatcher.StmtLine(l.Id, l.LineDate, l.Deposit, l.Withdrawal));
+
+        var map = BankReconciliationMatcher.Match(stmt, txns);
+        foreach (var line in import.Lines)
+            if (map.TryGetValue(line.Id, out var bid))
+            {
+                line.MatchedBankTransactionId = bid;
+                line.MatchStatus = BankLineMatchStatus.AutoMatched;
+            }
+    }
+}
+</file>
+
 <file path="src/backend/Datacenter.Application/Features/Bank/DTOs/BankDtos.cs">
 namespace Datacenter.Application.Features.Bank.DTOs;
 
@@ -9680,6 +9928,57 @@ public record BankBookDto(
     public decimal TotalDeposit => Rows.Sum(r => r.Deposit);
     public decimal TotalWithdrawal => Rows.Sum(r => r.Withdrawal);
     public decimal ClosingBalance => Rows.Count > 0 ? Rows[^1].Balance : OpeningBalance;
+}
+</file>
+
+<file path="src/backend/Datacenter.Application/Features/Bank/DTOs/BankReconciliationDtos.cs">
+namespace Datacenter.Application.Features.Bank.DTOs;
+
+// ── preview (ก่อน commit) ─────────────────────────────────────────────────────
+public record BankStatementParsePreviewLineDto(
+    DateTime Date, string? Description, decimal Withdrawal, decimal Deposit, decimal? Balance);
+
+public record BankStatementParsePreviewDto(
+    string BankCode, string? AccountNo, DateTime? PeriodStart, DateTime? PeriodEnd,
+    decimal OpeningBalance, decimal ClosingBalance, decimal ComputedClosing,
+    bool BalanceCheckPasses, string? Warning,
+    string? ExpectedAccountNo, bool? AccountMatches,
+    IReadOnlyList<BankStatementParsePreviewLineDto> Lines);
+
+// ── import list ───────────────────────────────────────────────────────────────
+public record BankStatementImportListDto(
+    int Id, int BankAccountId, string BankCode, string? StatementAccountNo,
+    DateTime PeriodStart, DateTime PeriodEnd, decimal OpeningBalance, decimal ClosingBalance,
+    bool ParsedOk, int Status, int LineCount, int MatchedCount, DateTime CreatedAt, string CreatedBy,
+    string? ExpectedAccountNo = null, bool? AccountMatches = null);
+
+// ── reconciliation report ───────────────────────────────────────────────────────
+public record ReconMatchedPairDto(
+    int StatementLineId, DateTime Date, string? Description, decimal Amount, bool IsDeposit,
+    int BankTransactionId, DateTime BookDate, string? BookCounterparty);
+
+public record ReconStatementLineDto(
+    int StatementLineId, DateTime Date, string? Description, decimal Withdrawal, decimal Deposit, decimal? Balance);
+
+public record ReconBookTxnDto(
+    int BankTransactionId, DateTime Date, string? Counterparty, string? Remark,
+    decimal Deposit, decimal Withdrawal);
+
+public record BankReconciliationDto(
+    int ImportId, int ClientCompanyId, string ClientName,
+    int BankAccountId, string BankAccountCode, string BankName, string BankCode,
+    DateTime PeriodStart, DateTime PeriodEnd,
+    decimal StatementOpeningBalance, decimal StatementClosingBalance, decimal BookClosingBalance,
+    decimal ReconciledDifference, bool IsBalanced, bool ParsedOk,
+    IReadOnlyList<ReconMatchedPairDto> Matched,
+    IReadOnlyList<ReconStatementLineDto> UnmatchedStatement,  // ในธนาคาร ไม่อยู่ในสมุด (เช่น ค่าธรรมเนียม/ดอกเบี้ย)
+    IReadOnlyList<ReconBookTxnDto> UnmatchedBook,             // ในสมุด ไม่อยู่ใน statement (deposit-in-transit/เช็คค้าง)
+    DateTime? DataAsOf)
+{
+    public int MatchedCount => Matched.Count;
+    public decimal MatchedAmount => Matched.Sum(m => m.Amount);
+    public int UnmatchedStatementCount => UnmatchedStatement.Count;
+    public int UnmatchedBookCount => UnmatchedBook.Count;
 }
 </file>
 
@@ -9883,6 +10182,54 @@ public class GetBankReconciliationQueryHandler(IApplicationDbContext db)
 }
 </file>
 
+<file path="src/backend/Datacenter.Application/Features/Bank/Queries/GetBankStatementImportsQuery.cs">
+using Datacenter.Application.Common.Interfaces;
+using Datacenter.Application.Common.Security;
+using Datacenter.Application.Features.Bank.DTOs;
+using Datacenter.Application.Features.Bank.Services;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+
+namespace Datacenter.Application.Features.Bank.Queries;
+
+/// <summary>รายการรอบนำเข้า statement ของบริษัท (กรองตามบัญชีได้)</summary>
+public record GetBankStatementImportsQuery(int ClientCompanyId, int? BankAccountId)
+    : IRequest<IReadOnlyList<BankStatementImportListDto>>, IRequireCompanyAccess;
+
+public class GetBankStatementImportsQueryHandler(IApplicationDbContext db)
+    : IRequestHandler<GetBankStatementImportsQuery, IReadOnlyList<BankStatementImportListDto>>
+{
+    public async Task<IReadOnlyList<BankStatementImportListDto>> Handle(GetBankStatementImportsQuery request, CancellationToken ct)
+    {
+        var q = db.BankStatementImports.AsNoTracking()
+            .Where(i => i.ClientCompanyId == request.ClientCompanyId);
+        if (request.BankAccountId is int bid) q = q.Where(i => i.BankAccountId == bid);
+
+        var rows = await q.OrderByDescending(i => i.PeriodStart).ThenByDescending(i => i.Id)
+            .Select(i => new
+            {
+                i.Id, i.BankAccountId, i.BankCode, i.StatementAccountNo,
+                i.PeriodStart, i.PeriodEnd, i.OpeningBalance, i.ClosingBalance,
+                i.ParsedOk, i.Status, LineCount = i.Lines.Count,
+                MatchedCount = i.Lines.Count(l => l.MatchedBankTransactionId != null),
+                i.CreatedAt, i.CreatedBy,
+                ExpectedAccountNo = db.BankAccounts
+                    .Where(b => b.Id == i.BankAccountId).Select(b => b.AccountNumber).FirstOrDefault(),
+            })
+            .ToListAsync(ct);
+
+        return rows.Select(i => new BankStatementImportListDto(
+                i.Id, i.BankAccountId, i.BankCode, i.StatementAccountNo,
+                i.PeriodStart, i.PeriodEnd, i.OpeningBalance, i.ClosingBalance,
+                i.ParsedOk, (int)i.Status, i.LineCount, i.MatchedCount,
+                i.CreatedAt, i.CreatedBy,
+                i.ExpectedAccountNo,
+                BankAccountNumberComparer.Matches(i.StatementAccountNo, i.ExpectedAccountNo)))
+            .ToList();
+    }
+}
+</file>
+
 <file path="src/backend/Datacenter.Application/Features/Bank/Queries/GetBankStatementTemplateQuery.cs">
 using Datacenter.Application.Common.Interfaces;
 using MediatR;
@@ -9922,6 +10269,41 @@ public class GetBankYearsQueryHandler(IApplicationDbContext db)
             .Distinct()
             .OrderByDescending(y => y)
             .ToListAsync(ct);
+}
+</file>
+
+<file path="src/backend/Datacenter.Application/Features/Bank/Services/BankAccountNumberComparer.cs">
+namespace Datacenter.Application.Features.Bank.Services;
+
+/// <summary>
+/// เทียบเลขบัญชีที่อ่านได้จาก statement กับเลขบัญชีของบริษัทใน Express (BankAccount.AccountNumber)
+/// โดยตัดอักขระที่ไม่ใช่ตัวเลขออกก่อน (รูปแบบ xxx-x-xxxxx-x vs xxxxxxxxxx).
+/// รองรับเลขบัญชีที่ถูกปิดบังบางส่วนใน statement ด้วยการเทียบส่วนท้าย (suffix) อย่างน้อย 4 หลัก.
+/// </summary>
+public static class BankAccountNumberComparer
+{
+    /// <summary>เหลือเฉพาะตัวเลข</summary>
+    public static string DigitsOnly(string? s)
+        => string.IsNullOrEmpty(s) ? string.Empty : new string(s.Where(char.IsDigit).ToArray());
+
+    /// <returns>
+    /// true = ตรงกัน, false = ไม่ตรง (ควรแจ้งเตือน),
+    /// null = ระบุไม่ได้ (ฝั่งใดฝั่งหนึ่งไม่มีเลขบัญชีให้เทียบ)
+    /// </returns>
+    public static bool? Matches(string? statementAccountNo, string? companyAccountNo)
+    {
+        var a = DigitsOnly(statementAccountNo);
+        var b = DigitsOnly(companyAccountNo);
+        if (a.Length == 0 || b.Length == 0) return null; // ไม่มีข้อมูลให้เทียบ
+
+        if (a == b) return true;
+
+        // รองรับเลขบัญชีที่ปิดบังบางส่วน / รูปแบบต่างกัน → เทียบส่วนท้าย ≥ 4 หลัก
+        int n = Math.Min(a.Length, b.Length);
+        if (n >= 4 && (a.EndsWith(b) || b.EndsWith(a))) return true;
+
+        return false;
+    }
 }
 </file>
 
@@ -120343,6 +120725,364 @@ public class AuditService(IApplicationDbContext context, ICurrentUserService cur
 }
 </file>
 
+<file path="src/backend/Datacenter.Infrastructure/Services/Bank/BankStatementParser.cs">
+using System.Globalization;
+using System.Text.RegularExpressions;
+using ClosedXML.Excel;
+using Datacenter.Application.Common.Interfaces;
+using UglyToad.PdfPig;
+using UglyToad.PdfPig.Content;
+
+namespace Datacenter.Infrastructure.Services.Bank;
+
+/// <summary>
+/// แปลงไฟล์ statement → บรรทัดมาตรฐาน.
+/// - PDF: coordinate-based (PdfPig) auto-detect SCB/KBANK/TTB/BAY → group แถวด้วย y, แยกคอลัมน์ด้วยช่วง x,
+///   ระบุทิศ (ฝาก/ถอน) จาก balance-delta แล้ว self-check (ยอดต้น + Σฝาก − Σถอน = ยอดปลาย).
+/// - Excel/CSV: คอลัมน์คงที่ A=วันที่ B=รายละเอียด C=ถอน D=ฝาก E=ยอดคงเหลือ (data เริ่มแถว 2).
+/// </summary>
+public class BankStatementParser : IBankStatementParser
+{
+    private static readonly Regex Num = new(@"^-?\d{1,3}(,\d{3})*\.\d{2}$", RegexOptions.Compiled);
+    private static readonly string[] OpeningKeywords =
+        { "BROUGHT FORWARD", "ยอดยกมา", "ยอดเงินยกมา", "ยอดคงเหลือยกมา" };
+
+    public BankStatementParseResult Parse(byte[] content, string fileName)
+    {
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
+        return ext switch
+        {
+            ".pdf" => ParsePdf(content),
+            ".xlsx" or ".xls" => ParseExcel(content),
+            ".csv" => ParseCsv(content),
+            _ => throw new InvalidOperationException($"ไม่รองรับไฟล์ชนิด {ext} (รองรับ .pdf, .xlsx, .csv)")
+        };
+    }
+
+    public byte[] BuildTemplate()
+    {
+        using var wb = new XLWorkbook();
+        var ws = wb.Worksheets.Add("Statement");
+        var headers = new[] { "วันที่ (dd/MM/yyyy)", "รายละเอียด", "เงินออก (ถอน)", "เงินเข้า (ฝาก)", "ยอดคงเหลือ" };
+        for (int c = 0; c < headers.Length; c++)
+        {
+            var cell = ws.Cell(1, c + 1);
+            cell.Value = headers[c];
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = XLColor.LightGray;
+        }
+        // ตัวอย่าง 1 แถว
+        ws.Cell(2, 1).Value = "01/05/2026";
+        ws.Cell(2, 2).Value = "โอนเงินรับจากลูกค้า";
+        ws.Cell(2, 3).Value = 0;
+        ws.Cell(2, 4).Value = 5000;
+        ws.Cell(2, 5).Value = 105000;
+        ws.Columns().AdjustToContents();
+        using var ms = new MemoryStream();
+        wb.SaveAs(ms);
+        return ms.ToArray();
+    }
+
+    // ─────────────────────────── PDF ───────────────────────────
+
+    private sealed record BankConfig(string Code, Regex DateRegex, string DateFormat, double MergeTol);
+
+    // เรียงตาม "ความเฉพาะเจาะจง" (specificity) — DetectBank assign แต่ละบรรทัดให้ config แรกที่ match
+    // จึงต้องวาง BAY (สแลช ปี 4 หลัก) ก่อน SCB (สแลช ปี 2 หลัก prefix) ไม่งั้น SCB จะกินวันที่ของ BAY
+    private static readonly BankConfig[] Configs =
+    {
+        // แยกธนาคารด้วยตัวคั่นวันที่: TTB=. KBANK=- BAY=/(ปี 4 หลัก) SCB=/(ปี 2 หลัก)
+        // ใช้ prefix match (ไม่ anchor ท้าย) เผื่อ PdfPig รวม date+time เป็น token เดียว เช่น "30-04-2602:49"
+        new("TTB",   new(@"^\d{2}\.\d{2}\.\d{4}"), "dd.MM.yyyy", 4.0),
+        new("KBANK", new(@"^\d{2}-\d{2}-\d{2}"),   "dd-MM-yy",   4.0),
+        new("BAY",   new(@"^\d{2}/\d{2}/\d{4}"),   "dd/MM/yyyy", 4.0),
+        new("SCB",   new(@"^\d{2}/\d{2}/\d{2}"),   "dd/MM/yy",   4.0),
+    };
+
+    private sealed class VLine { public int Page; public double Y; public List<(double X, string T)> W = new(); }
+
+    private BankStatementParseResult ParsePdf(byte[] content)
+    {
+        using var doc = PdfDocument.Open(content);
+        var allText = new System.Text.StringBuilder();
+        var lines = new List<VLine>();
+
+        foreach (var page in doc.GetPages())
+        {
+            // group words into visual lines (y top-down = Height - Top)
+            var words = page.GetWords()
+                .Select(w => (X: w.BoundingBox.Left, Y: page.Height - w.BoundingBox.Top, T: w.Text))
+                .Where(t => !string.IsNullOrWhiteSpace(t.T))
+                .ToList();
+            foreach (var w in words) allText.Append(w.T).Append(' ');
+
+            // จับ word เป็น "บรรทัด" ด้วย adaptive clustering: word เข้าบรรทัดเดิมถ้า Y ห่าง ≤ 2pt
+            // (แยกแถวที่ชิดกัน เช่น KBANK วันเดียวกันหลายรายการ ได้ดีกว่า bucket หยาบ)
+            VLine? acc = null;
+            foreach (var w in words.OrderBy(w => w.Y).ThenBy(w => w.X))
+            {
+                if (acc is null || Math.Abs(w.Y - acc.Y) > 3.0)
+                {
+                    acc = new VLine { Page = page.Number, Y = w.Y };
+                    lines.Add(acc);
+                }
+                acc.W.Add((w.X, w.T));
+            }
+        }
+        foreach (var l in lines) l.W = l.W.OrderBy(w => w.X).ToList();
+        lines = lines.OrderBy(l => l.Page).ThenBy(l => l.Y).ToList();
+
+        var cfg = DetectBank(lines);
+        if (cfg is null)
+            return new BankStatementParseResult("UNKNOWN", null, null, null, 0, 0, 0, false,
+                Array.Empty<ParsedStatementLine>(), "ไม่รองรับการ parse PDF ของธนาคารนี้ — โปรดใช้เทมเพลต Excel/CSV");
+
+        decimal? opening = null, pendingSingle = null;
+        bool seenTxn = false;
+        var raw = new List<(DateTime Date, decimal Amount, decimal Balance, string Desc)>();
+        // cur: วันที่ + ตัวเลขสะสม (x,value) + คำอธิบาย
+        (DateTime Date, List<(double X, decimal V)> Nums, string Desc)? cur = null;
+        double curY = 0;
+
+        void Flush()
+        {
+            if (cur is { } c && c.Nums.Count >= 2)
+            {
+                var ns = c.Nums.OrderBy(n => n.X).ToList();
+                raw.Add((c.Date, ns[^2].V, ns[^1].V, c.Desc)); // ท้ายสุด = ยอดคงเหลือ, ก่อนหน้า = จำนวนเงิน
+            }
+            cur = null;
+        }
+
+        foreach (var line in lines)
+        {
+            var joined = string.Join(' ', line.W.Select(w => w.T));
+            var nums = line.W.Where(w => Num.IsMatch(w.T))
+                .Select(w => (w.X, V: decimal.Parse(w.T.Replace(",", ""), CultureInfo.InvariantCulture))).ToList();
+            bool isKeyword = OpeningKeywords.Any(k => joined.Contains(k, StringComparison.OrdinalIgnoreCase));
+            // หา date token ในคอลัมน์ซ้าย (x < 120) — ธุรกรรมจริงวันที่อยู่ซ้ายสุด,
+            // ส่วนบรรทัดสรุปมีวันที่ฝังในข้อความ (x มาก) จะไม่ถูกจับ; เผื่อ PdfPig merge footer (x น้อย) เข้ามา
+            var dateTok = line.W.Where(w => w.X < 120 && cfg.DateRegex.IsMatch(w.T))
+                .Select(w => w.T).FirstOrDefault();
+
+            if (isKeyword)
+            {
+                if (opening is null && nums.Count > 0) opening = nums.OrderBy(n => n.X).Last().V;
+                Flush(); // page-boundary / brought-forward marker — ไม่ใช่ธุรกรรม
+                continue;
+            }
+
+            if (dateTok is not null)
+            {
+                Flush();
+                var dt = ParseDate(cfg.DateRegex.Match(dateTok).Value, cfg.DateFormat);
+                cur = dt is null ? null : (dt.Value, new List<(double, decimal)>(nums), joined);
+                curY = line.Y;
+                seenTxn = true;
+            }
+            else if (cur is not null && line.Y - curY <= cfg.MergeTol && nums.Count < 3)
+            {
+                cur.Value.Nums.AddRange(nums);
+            }
+            else if (!seenTxn && opening is null && nums.Count == 1)
+            {
+                pendingSingle = nums[0].V; // ผู้สมัครยอดยกมา (บรรทัดก่อนธุรกรรมแรก)
+            }
+        }
+        Flush();
+
+        opening ??= pendingSingle;
+
+        // direction via balance-delta
+        decimal open = opening ?? 0m;
+        decimal prev = open, dep = 0m, wd = 0m;
+        var outLines = new List<ParsedStatementLine>(raw.Count);
+        bool allDeltaOk = true;
+        foreach (var r in raw)
+        {
+            decimal delta = Math.Round(r.Balance - prev, 2);
+            decimal amt = Math.Round(r.Amount, 2);
+            if (Math.Abs(Math.Abs(delta) - amt) > 0.009m) allDeltaOk = false;
+            bool isDeposit = delta >= 0;
+            outLines.Add(new ParsedStatementLine(r.Date, CleanDesc(r.Desc, cfg),
+                isDeposit ? 0m : amt, isDeposit ? amt : 0m, r.Balance));
+            if (isDeposit) dep += amt; else wd += amt;
+            prev = r.Balance;
+        }
+
+        decimal closing = raw.Count > 0 ? raw[^1].Balance : open;
+        decimal computed = Math.Round(open + dep - wd, 2);
+        bool ok = opening is not null && raw.Count > 0 && allDeltaOk && Math.Abs(computed - closing) < 0.01m;
+
+        var (accNo, ps, pe) = ParseHeader(allText.ToString());
+        string? warn = ok ? null
+            : opening is null ? "หายอดยกมาไม่พบ — โปรดตรวจ/แก้บรรทัดใน preview"
+            : "balance self-check ไม่ผ่าน — โปรดตรวจ/แก้บรรทัดใน preview";
+
+        return new BankStatementParseResult(cfg.Code, accNo, ps, pe, open, closing, computed, ok, outLines, warn);
+    }
+
+    /// <summary>
+    /// เลือกธนาคารจากความถี่ของรูปแบบวันที่ (ตัวคั่น / - . แยกแบงก์ได้ชัด ไม่ปนกับชื่อคู่ค้า).
+    /// assign แต่ละบรรทัดให้ config แรกที่ match (เรียงตาม specificity ใน Configs) — กัน SCB(ปี 2 หลัก)
+    /// กินวันที่ของ BAY(ปี 4 หลัก) ที่ใช้สแลชเหมือนกัน เพราะ prefix regex ของ SCB ก็ match ปี 4 หลักได้.
+    /// </summary>
+    private static BankConfig? DetectBank(List<VLine> lines)
+    {
+        var counts = new int[Configs.Length];
+        foreach (var l in lines)
+            for (int i = 0; i < Configs.Length; i++)
+                if (l.W.Any(w => w.X < 120 && Configs[i].DateRegex.IsMatch(w.T)))
+                { counts[i]++; break; } // นับให้ config ที่เฉพาะเจาะจงสุดที่ match บรรทัดนี้
+
+        int bestIdx = -1, bestCount = 0;
+        for (int i = 0; i < counts.Length; i++)
+            if (counts[i] > bestCount) { bestCount = counts[i]; bestIdx = i; }
+        return bestIdx >= 0 ? Configs[bestIdx] : null;
+    }
+
+    private static DateTime? ParseDate(string s, string fmt)
+        => DateTime.TryParseExact(s, fmt, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
+
+    private static string? CleanDesc(string joined, BankConfig cfg)
+    {
+        // ตัดวันที่/เวลา/ตัวเลขจำนวนเงินออก เหลือคำอธิบาย (best-effort)
+        var parts = joined.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(p => !cfg.DateRegex.IsMatch(p) && !Num.IsMatch(p)
+                     && !Regex.IsMatch(p, @"^\d{2}:\d{2}(:\d{2})?$"))
+            .ToList();
+        var d = string.Join(' ', parts).Trim();
+        return d.Length == 0 ? null : (d.Length > 250 ? d[..250] : d);
+    }
+
+    private static (string? AccountNo, DateTime? Start, DateTime? End) ParseHeader(string text)
+    {
+        string? acc = null;
+        // รูปแบบเลขบัญชีตามธนาคาร (ลองทีละแบบ): KBANK ddd-d-ddddd-d, SCB ddd-dddddd-d, TTB ddd d ddddd d (เว้นวรรค)
+        foreach (var pat in new[]
+        {
+            @"\d{3}-\d-\d{5}-\d",        // KBANK 040-8-58386-1
+            @"\d{3}-\d{6}-\d",           // SCB   409-160519-2
+            @"\d{3}\s\d\s\d{5}\s\d",     // TTB   694 2 14261 0
+            @"\d{3}-\d{4}-\d{4}-\d",     // (สำรอง) ddd-dddd-dddd-d
+        })
+        {
+            var m = Regex.Match(text, pat);
+            if (m.Success) { acc = m.Value; break; }
+        }
+
+        DateTime? ps = null, pe = null;
+        var pm = Regex.Match(text, @"(\d{2}[/.]\d{2}[/.]\d{4})\s*-\s*(\d{2}[/.]\d{2}[/.]\d{4})");
+        if (pm.Success)
+        {
+            ps = TryDate(pm.Groups[1].Value);
+            pe = TryDate(pm.Groups[2].Value);
+        }
+        return (acc, ps, pe);
+    }
+
+    private static DateTime? TryDate(string s)
+    {
+        foreach (var f in new[] { "dd/MM/yyyy", "dd.MM.yyyy" })
+            if (DateTime.TryParseExact(s, f, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return d;
+        return null;
+    }
+
+    // ─────────────────────────── Excel / CSV (เทมเพลต) ───────────────────────────
+
+    private BankStatementParseResult ParseExcel(byte[] content)
+    {
+        using var ms = new MemoryStream(content);
+        using var wb = new XLWorkbook(ms);
+        var ws = wb.Worksheets.First();
+        int last = ws.LastRowUsed()?.RowNumber() ?? 0;
+        var rows = new List<ParsedStatementLine>();
+        for (int r = 2; r <= last; r++)
+        {
+            var dateCell = ws.Cell(r, 1);
+            if (dateCell.IsEmpty()) continue;
+            DateTime? dt = null;
+            if (dateCell.TryGetValue<DateTime>(out var dv)) dt = dv;
+            else dt = TryDateFlexible(dateCell.GetString().Trim());
+            if (dt is null) continue;
+            var desc = ws.Cell(r, 2).GetString().Trim();
+            decimal wd = DecCell(ws.Cell(r, 3)), dep = DecCell(ws.Cell(r, 4));
+            decimal? bal = ws.Cell(r, 5).IsEmpty() ? null : DecCell(ws.Cell(r, 5));
+            if (wd == 0 && dep == 0) continue;
+            rows.Add(new ParsedStatementLine(dt.Value, string.IsNullOrEmpty(desc) ? null : desc, wd, dep, bal));
+        }
+        return BuildTabularResult("EXCEL", rows);
+    }
+
+    private BankStatementParseResult ParseCsv(byte[] content)
+    {
+        var text = new System.Text.StringBuilder();
+        // strip UTF-8 BOM
+        int start = content.Length >= 3 && content[0] == 0xEF && content[1] == 0xBB && content[2] == 0xBF ? 3 : 0;
+        var s = System.Text.Encoding.UTF8.GetString(content, start, content.Length - start);
+        var rows = new List<ParsedStatementLine>();
+        var allLines = s.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
+        for (int i = 1; i < allLines.Length; i++) // skip header
+        {
+            var line = allLines[i];
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            var f = SplitCsv(line);
+            if (f.Count < 4) continue;
+            var dt = TryDateFlexible(f[0].Trim());
+            if (dt is null) continue;
+            decimal wd = ParseDec(f[2]), dep = ParseDec(f[3]);
+            decimal? bal = f.Count > 4 && !string.IsNullOrWhiteSpace(f[4]) ? ParseDec(f[4]) : null;
+            if (wd == 0 && dep == 0) continue;
+            rows.Add(new ParsedStatementLine(dt.Value, string.IsNullOrWhiteSpace(f[1]) ? null : f[1].Trim(), wd, dep, bal));
+        }
+        return BuildTabularResult("CSV", rows);
+    }
+
+    private static BankStatementParseResult BuildTabularResult(string code, List<ParsedStatementLine> rows)
+    {
+        decimal dep = rows.Sum(r => r.Deposit), wd = rows.Sum(r => r.Withdrawal);
+        var ps = rows.Count > 0 ? rows.Min(r => r.Date) : (DateTime?)null;
+        var pe = rows.Count > 0 ? rows.Max(r => r.Date) : (DateTime?)null;
+        decimal closing = rows.LastOrDefault(r => r.Balance is not null)?.Balance ?? 0m;
+        // เทมเพลตไม่บังคับ balance ทุกแถว → opening/closing best-effort, self-check ปล่อยให้ผู้ใช้กรอกยอดเอง
+        return new BankStatementParseResult(code, null, ps, pe, 0m, closing, Math.Round(dep - wd, 2),
+            false, rows, "นำเข้าจากเทมเพลต — โปรดตรวจ/กรอกยอดต้น-ปลายงวดเพื่อกระทบยอด");
+    }
+
+    private static List<string> SplitCsv(string line)
+    {
+        var res = new List<string>();
+        var sb = new System.Text.StringBuilder();
+        bool q = false;
+        foreach (var ch in line)
+        {
+            if (ch == '"') q = !q;
+            else if (ch == ',' && !q) { res.Add(sb.ToString()); sb.Clear(); }
+            else sb.Append(ch);
+        }
+        res.Add(sb.ToString());
+        return res;
+    }
+
+    private static decimal DecCell(IXLCell c)
+    {
+        if (c.IsEmpty()) return 0m;
+        if (c.TryGetValue<decimal>(out var d)) return d;
+        return ParseDec(c.GetString());
+    }
+
+    private static decimal ParseDec(string s)
+        => decimal.TryParse(s.Replace(",", "").Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0m;
+
+    private static DateTime? TryDateFlexible(string s)
+    {
+        foreach (var f in new[] { "dd/MM/yyyy", "dd-MM-yyyy", "dd.MM.yyyy", "yyyy-MM-dd", "d/M/yyyy" })
+            if (DateTime.TryParseExact(s, f, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return d;
+        return DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var g) ? g : null;
+    }
+}
+</file>
+
 <file path="src/backend/Datacenter.Infrastructure/Services/Dbf/DbfReader.cs">
 using System.Buffers.Binary;
 using System.Globalization;
@@ -125661,6 +126401,361 @@ export default function BankBookTab({ companyId, year }: Props) {
 }
 </file>
 
+<file path="src/frontend/src/features/bank-reconciliation/pages/tabs/ReconciliationTab.tsx">
+import { useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import Button from '../../../../shared/components/ui/Button'
+import Card from '../../../../shared/components/ui/Card'
+import StateMessage from '../../../../shared/components/ui/StateMessage'
+import { useAccountList } from '../../../trial-balance/hooks/useTrialBalance'
+import { bankApi } from '../../services/bankApi'
+import {
+  useBankAccounts, useBankReconciliation, useBankStatementImports, useReconMutations,
+} from '../../hooks/useBank'
+import type { StatementParsePreview } from '../../types/bank.types'
+
+function fmt(n: number) {
+  return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+function d(s?: string | null) {
+  if (!s) return '-'
+  const iso = /[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : s + 'Z'
+  return new Date(iso).toLocaleDateString('th-TH', { dateStyle: 'short' })
+}
+
+interface Props { companyId: number }
+
+export default function ReconciliationTab({ companyId }: Props) {
+  const { data: accounts } = useBankAccounts(companyId)
+  const { data: glAccounts } = useAccountList(companyId)
+  const [accountId, setAccountId] = useState(0)
+  const { data: imports } = useBankStatementImports(companyId, accountId || undefined, accountId > 0)
+
+  const [file, setFile] = useState<File | null>(null)
+  const [preview, setPreview] = useState<StatementParsePreview | null>(null)
+  const [opening, setOpening] = useState<string>('')
+  const [closing, setClosing] = useState<string>('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [openImportId, setOpenImportId] = useState(0)
+
+  const { data: recon } = useBankReconciliation(companyId, openImportId, openImportId > 0)
+  const m = useReconMutations(companyId)
+  const qc = useQueryClient()
+
+  const glOptions = useMemo(
+    () => (glAccounts ?? []).filter((a: any) => a.isPostable).map((a: any) => ({ id: a.id, label: `${a.accountCode} — ${a.accountName}` })),
+    [glAccounts],
+  )
+
+  async function doPreview() {
+    if (!file || !accountId) { setErr('เลือกบัญชีและไฟล์ก่อน'); return }
+    setErr(''); setBusy(true); setPreview(null)
+    try {
+      const p = await bankApi.preview(companyId, accountId, file)
+      setPreview(p)
+      setOpening(String(p.openingBalance || ''))
+      setClosing(String(p.closingBalance || ''))
+    } catch (e: any) {
+      setErr(e?.response?.data?.detail ?? e?.response?.data?.title ?? 'อ่านไฟล์ไม่สำเร็จ')
+    } finally { setBusy(false) }
+  }
+
+  async function doUpload() {
+    if (!file || !accountId) return
+    if (preview?.accountMatches === false) {
+      setErr(`เลขบัญชีใน statement (${preview.accountNo ?? '-'}) ไม่ตรงกับบัญชีบริษัทที่เลือก (${preview.expectedAccountNo ?? '-'}) — โปรดเลือกบัญชีให้ถูกต้องก่อนบันทึก`)
+      return
+    }
+    setErr(''); setBusy(true)
+    try {
+      const res = await bankApi.upload(companyId, accountId, file,
+        opening ? Number(opening) : undefined, closing ? Number(closing) : undefined)
+      setFile(null); setPreview(null); setOpening(''); setClosing('')
+      await qc.invalidateQueries({ queryKey: ['bank-stmt-imports', companyId] })
+      setOpenImportId(res.id)
+    } catch (e: any) {
+      setErr(e?.response?.data?.detail ?? e?.response?.data?.title ?? 'บันทึกไม่สำเร็จ')
+    } finally { setBusy(false) }
+  }
+
+  async function downloadTemplate() {
+    const blob = await bankApi.template()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'bank-statement-template.xlsx'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  if (!companyId) return <Card><StateMessage centered>เลือกบริษัทที่ header ก่อน</StateMessage></Card>
+
+  return (
+    <div>
+      {/* ตั้งค่า + อัปโหลด */}
+      <Card className="mb-4 p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">บัญชีธนาคาร</label>
+            <select value={accountId} onChange={(e) => { setAccountId(Number(e.target.value)); setOpenImportId(0) }}
+              className="w-72 rounded border border-gray-300 px-3 py-2 text-sm">
+              <option value={0}>-- เลือกบัญชี --</option>
+              {(accounts ?? []).map((a) => (
+                <option key={a.id} value={a.id}>{a.bankName} {a.accountNumber ?? a.bankAccountCode}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">ไฟล์ statement (PDF / Excel / CSV)</label>
+            <input type="file" accept=".pdf,.xlsx,.xls,.csv"
+              onChange={(e) => { setFile(e.target.files?.[0] ?? null); setPreview(null) }}
+              className="text-sm" />
+          </div>
+          <Button type="button" variant="secondary" onClick={doPreview} disabled={!file || !accountId || busy}>
+            {busy ? 'กำลังอ่าน...' : 'อ่าน/พรีวิว'}
+          </Button>
+          <button type="button" onClick={downloadTemplate}
+            className="rounded border border-slate-300 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50">
+            ⬇ ดาวน์โหลดเทมเพลต Excel
+          </button>
+        </div>
+        {err && <p className="mt-2 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{err}</p>}
+        <p className="mt-2 text-xs text-gray-400">
+          รองรับ PDF ของ SCB / KBANK / TTB / กรุงศรี-BAY (อ่านอัตโนมัติ) — ธนาคารอื่น/สแกน (GSB/KTB/BBL) ใช้เทมเพลต Excel/CSV หรือกรอกมือ
+        </p>
+      </Card>
+
+      {/* preview ก่อนบันทึก */}
+      {preview && (
+        <Card className="mb-4 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-800">
+              พรีวิว: ธนาคาร <span className="font-mono">{preview.bankCode}</span>
+              {preview.accountNo && <span className="ml-2 text-gray-500">บัญชี {preview.accountNo}</span>}
+              <span className="ml-2 text-gray-500">{preview.lines.length} รายการ</span>
+            </p>
+          </div>
+          <div className={`mb-3 rounded-lg border px-3 py-2 text-sm ${preview.balanceCheckPasses ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+            {preview.balanceCheckPasses
+              ? `✓ ตรวจยอดผ่าน: ยอดต้น ${fmt(preview.openingBalance)} + ฝาก − ถอน = ยอดปลาย ${fmt(preview.closingBalance)} (ตรงกับ statement)`
+              : `⚠ ${preview.warning ?? 'ตรวจยอดไม่ผ่าน — โปรดตรวจ/แก้ยอดต้น-ปลาย'} (คำนวณได้ ${fmt(preview.computedClosing)})`}
+          </div>
+          {preview.accountMatches === false && (
+            <div className="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+              ⚠ เลขบัญชีไม่ตรงกัน: statement = <span className="font-mono">{preview.accountNo ?? '-'}</span> แต่บัญชีบริษัทที่เลือก = <span className="font-mono">{preview.expectedAccountNo ?? '-'}</span>
+              <span className="block text-xs text-red-500">บันทึกไม่ได้จนกว่าจะเลือกบัญชีบริษัทให้ตรงกับ statement</span>
+            </div>
+          )}
+          {preview.accountMatches === true && (
+            <div className="mb-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+              ✓ เลขบัญชีตรงกับบัญชีบริษัท (<span className="font-mono">{preview.accountNo}</span>)
+            </div>
+          )}
+          <div className="mb-3 flex flex-wrap gap-3">
+            <label className="text-xs text-gray-600">ยอดต้นงวด
+              <input value={opening} onChange={(e) => setOpening(e.target.value)} className="ml-2 w-36 rounded border border-gray-300 px-2 py-1 text-right font-mono text-sm" />
+            </label>
+            <label className="text-xs text-gray-600">ยอดปลายงวด
+              <input value={closing} onChange={(e) => setClosing(e.target.value)} className="ml-2 w-36 rounded border border-gray-300 px-2 py-1 text-right font-mono text-sm" />
+            </label>
+            <Button type="button" onClick={doUpload} disabled={busy || preview.accountMatches === false}>{busy ? 'กำลังบันทึก...' : 'ยืนยันบันทึก + จับคู่อัตโนมัติ'}</Button>
+          </div>
+          <div className="max-h-60 overflow-auto rounded border border-gray-100">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-slate-50 text-gray-600"><tr>
+                <th className="px-2 py-1 text-left">วันที่</th><th className="px-2 py-1 text-left">รายละเอียด</th>
+                <th className="px-2 py-1 text-right">ถอน</th><th className="px-2 py-1 text-right">ฝาก</th><th className="px-2 py-1 text-right">คงเหลือ</th>
+              </tr></thead>
+              <tbody>
+                {preview.lines.map((l, i) => (
+                  <tr key={i} className="border-t border-gray-100">
+                    <td className="px-2 py-1">{d(l.date)}</td>
+                    <td className="px-2 py-1 text-gray-600">{l.description}</td>
+                    <td className="px-2 py-1 text-right font-mono">{l.withdrawal ? fmt(l.withdrawal) : ''}</td>
+                    <td className="px-2 py-1 text-right font-mono text-sky-700">{l.deposit ? fmt(l.deposit) : ''}</td>
+                    <td className="px-2 py-1 text-right font-mono text-gray-500">{l.balance != null ? fmt(l.balance) : ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* รายการรอบนำเข้า */}
+      {accountId > 0 && (
+        <Card className="mb-4 overflow-hidden">
+          <div className="border-b px-4 py-2 text-sm font-semibold text-slate-800">รอบนำเข้า statement</div>
+          {(imports ?? []).length === 0 ? (
+            <div className="px-4 py-3 text-xs text-gray-400">ยังไม่มี — อัปโหลด statement ด้านบน</div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead className="bg-slate-50 text-gray-600"><tr>
+                <th className="px-3 py-2 text-left">ธนาคาร</th><th className="px-3 py-2 text-left">งวด</th>
+                <th className="px-3 py-2 text-right">รายการ</th><th className="px-3 py-2 text-right">จับคู่</th>
+                <th className="px-3 py-2 text-center">ตรวจยอด</th><th className="px-3 py-2"></th>
+              </tr></thead>
+              <tbody>
+                {(imports ?? []).map((im) => (
+                  <tr key={im.id} className={`border-t border-gray-100 ${openImportId === im.id ? 'bg-sky-50' : ''}`}>
+                    <td className="px-3 py-1.5 font-mono">
+                      {im.bankCode}
+                      {im.accountMatches === false && (
+                        <span className="ml-1 text-red-500" title={`เลขบัญชีไม่ตรง: statement ${im.statementAccountNo ?? '-'} ≠ บริษัท ${im.expectedAccountNo ?? '-'}`}>⚠</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5">{d(im.periodStart)}–{d(im.periodEnd)}</td>
+                    <td className="px-3 py-1.5 text-right">{im.lineCount}</td>
+                    <td className="px-3 py-1.5 text-right">{im.matchedCount}/{im.lineCount}</td>
+                    <td className="px-3 py-1.5 text-center">{im.parsedOk ? '✓' : '⚠'}</td>
+                    <td className="px-3 py-1.5 text-right">
+                      <button type="button" onClick={() => setOpenImportId(openImportId === im.id ? 0 : im.id)} className="rounded border border-slate-200 px-2 py-0.5 text-sky-600 hover:bg-slate-100">
+                        {openImportId === im.id ? 'ปิด' : 'กระทบยอด'}
+                      </button>
+                      <button type="button" onClick={() => { if (confirm('ลบรอบนี้?')) { m.remove.mutate(im.id); if (openImportId === im.id) setOpenImportId(0) } }} className="ml-2 text-red-500 hover:text-red-600">ลบ</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
+      )}
+
+      {recon && openImportId > 0 && (
+        <ReconView recon={recon} glOptions={glOptions} mutations={m} />
+      )}
+    </div>
+  )
+}
+
+function ReconView({ recon, glOptions, mutations }: { recon: any; glOptions: { id: number; label: string }[]; mutations: any }) {
+  const [selStmt, setSelStmt] = useState<number>(0) // statement line เลือกไว้สำหรับจับคู่เอง
+  const [genIds, setGenIds] = useState<Set<number>>(new Set())
+  const [bankGl, setBankGl] = useState(0)
+  const [counterpart, setCounterpart] = useState(0)
+  const [msg, setMsg] = useState('')
+  const fiscalYear = new Date(recon.periodEnd).getFullYear()
+
+  function toggleGen(id: number) {
+    setGenIds((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  async function generate() {
+    setMsg('')
+    try {
+      const adj = await mutations.generateAdjustment.mutateAsync({
+        importId: recon.importId, fiscalYear, statementLineIds: [...genIds], bankGlAccountId: bankGl, counterpartAccountId: counterpart,
+      })
+      setMsg(`สร้างรายการปรับปรุง ${adj.documentNo} แล้ว — ดูที่หน้า "กระดาษทำการปิดงบ"`)
+      setGenIds(new Set())
+    } catch (e: any) {
+      setMsg(e?.response?.data?.detail ?? e?.response?.data?.title ?? 'สร้างไม่สำเร็จ')
+    }
+  }
+
+  return (
+    <>
+      <div className={`mb-4 rounded-lg border px-4 py-3 text-sm ${recon.isBalanced ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+        <div className="flex flex-wrap gap-x-6 gap-y-1">
+          <span>ยอดปลายสมุด (book): <b className="font-mono">{fmt(recon.bookClosingBalance)}</b></span>
+          <span>ยอดปลาย statement: <b className="font-mono">{fmt(recon.statementClosingBalance)}</b></span>
+          <span>ผลต่างหลังกระทบยอด: <b className="font-mono">{fmt(recon.reconciledDifference)}</b></span>
+          <span className="font-semibold">{recon.isBalanced ? '✓ กระทบยอดลงตัว' : '⚠ ยังไม่ลงตัว — ตรวจรายการที่ยังไม่จับคู่'}</span>
+        </div>
+      </div>
+
+      {/* matched */}
+      <Card className="mb-4 overflow-hidden">
+        <div className="border-b px-4 py-2 text-sm font-semibold text-slate-800">จับคู่แล้ว ({recon.matchedCount}) — รวม {fmt(recon.matchedAmount)}</div>
+        <div className="max-h-60 overflow-auto">
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 bg-slate-50 text-gray-600"><tr>
+              <th className="px-3 py-1.5 text-left">วันที่ statement</th><th className="px-3 py-1.5 text-left">รายละเอียด</th>
+              <th className="px-3 py-1.5 text-right">จำนวน</th><th className="px-3 py-1.5 text-left">คู่ในสมุด</th><th className="px-3 py-1.5"></th>
+            </tr></thead>
+            <tbody>
+              {recon.matched.map((mm: any) => (
+                <tr key={mm.statementLineId} className="border-t border-gray-100">
+                  <td className="px-3 py-1.5">{d(mm.date)}</td>
+                  <td className="px-3 py-1.5 text-gray-600">{mm.description}</td>
+                  <td className={`px-3 py-1.5 text-right font-mono ${mm.isDeposit ? 'text-sky-700' : ''}`}>{mm.isDeposit ? '+' : '−'}{fmt(mm.amount)}</td>
+                  <td className="px-3 py-1.5 text-gray-500">{d(mm.bookDate)} {mm.bookCounterparty}</td>
+                  <td className="px-3 py-1.5 text-right"><button type="button" onClick={() => mutations.unmatch.mutate({ importId: recon.importId, statementLineId: mm.statementLineId })} className="text-amber-600 hover:underline">ปลดคู่</button></td>
+                </tr>
+              ))}
+              {recon.matched.length === 0 && <tr><td colSpan={5} className="px-3 py-2 text-gray-400">— ไม่มี</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* unmatched statement */}
+        <Card className="overflow-hidden">
+          <div className="border-b px-4 py-2 text-sm font-semibold text-slate-800">ในธนาคาร ไม่อยู่ในสมุด ({recon.unmatchedStatementCount})</div>
+          <p className="px-4 py-1 text-[11px] text-gray-400">เช่น ค่าธรรมเนียม/ดอกเบี้ย → เลือกเพื่อสร้างรายการปรับปรุง</p>
+          <div className="max-h-60 overflow-auto">
+            <table className="w-full text-xs">
+              <tbody>
+                {recon.unmatchedStatement.map((s: any) => (
+                  <tr key={s.statementLineId} className={`border-t border-gray-100 ${selStmt === s.statementLineId ? 'bg-sky-50' : ''}`}>
+                    <td className="px-2 py-1.5"><input type="checkbox" checked={genIds.has(s.statementLineId)} onChange={() => toggleGen(s.statementLineId)} /></td>
+                    <td className="px-2 py-1.5">{d(s.date)}</td>
+                    <td className="px-2 py-1.5 text-gray-600">{s.description}</td>
+                    <td className={`px-2 py-1.5 text-right font-mono ${s.deposit ? 'text-sky-700' : ''}`}>{s.deposit ? '+' + fmt(s.deposit) : '−' + fmt(s.withdrawal)}</td>
+                    <td className="px-2 py-1.5 text-right"><button type="button" onClick={() => setSelStmt(selStmt === s.statementLineId ? 0 : s.statementLineId)} className="text-sky-600 hover:underline">{selStmt === s.statementLineId ? 'เลือกอยู่' : 'เลือกจับคู่'}</button></td>
+                  </tr>
+                ))}
+                {recon.unmatchedStatement.length === 0 && <tr><td className="px-3 py-2 text-gray-400">— ไม่มี</td></tr>}
+              </tbody>
+            </table>
+          </div>
+          {/* generate adjustment */}
+          <div className="border-t px-4 py-3">
+            <p className="mb-2 text-xs font-semibold text-slate-700">สร้างรายการปรับปรุง ({genIds.size} รายการที่เลือก)</p>
+            <div className="flex flex-col gap-2">
+              <select value={bankGl} onChange={(e) => setBankGl(Number(e.target.value))} className="rounded border border-gray-300 px-2 py-1 text-xs">
+                <option value={0}>-- บัญชี GL ธนาคาร --</option>
+                {glOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+              </select>
+              <select value={counterpart} onChange={(e) => setCounterpart(Number(e.target.value))} className="rounded border border-gray-300 px-2 py-1 text-xs">
+                <option value={0}>-- บัญชีคู่ (ค่าธรรมเนียม/ดอกเบี้ยรับ) --</option>
+                {glOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+              </select>
+              <Button type="button" onClick={generate} disabled={genIds.size === 0 || !bankGl || !counterpart || mutations.generateAdjustment.isPending}>
+                สร้างรายการปรับปรุงเข้า TB
+              </Button>
+            </div>
+            {msg && <p className="mt-2 rounded bg-slate-50 px-2 py-1 text-xs text-slate-700">{msg}</p>}
+          </div>
+        </Card>
+
+        {/* unmatched book */}
+        <Card className="overflow-hidden">
+          <div className="border-b px-4 py-2 text-sm font-semibold text-slate-800">ในสมุด ไม่อยู่ใน statement ({recon.unmatchedBookCount})</div>
+          <p className="px-4 py-1 text-[11px] text-gray-400">เช่น เงินฝากระหว่างทาง/เช็คค้างจ่าย {selStmt > 0 && '— กด "จับคู่" เพื่อจับกับรายการ statement ที่เลือก'}</p>
+          <div className="max-h-60 overflow-auto">
+            <table className="w-full text-xs">
+              <tbody>
+                {recon.unmatchedBook.map((b: any) => (
+                  <tr key={b.bankTransactionId} className="border-t border-gray-100">
+                    <td className="px-2 py-1.5">{d(b.date)}</td>
+                    <td className="px-2 py-1.5 text-gray-600">{b.counterparty ?? b.remark}</td>
+                    <td className={`px-2 py-1.5 text-right font-mono ${b.deposit ? 'text-sky-700' : ''}`}>{b.deposit ? '+' + fmt(b.deposit) : '−' + fmt(b.withdrawal)}</td>
+                    <td className="px-2 py-1.5 text-right">
+                      {selStmt > 0 && <button type="button" onClick={() => { mutations.match.mutate({ importId: recon.importId, statementLineId: selStmt, bankTransactionId: b.bankTransactionId }); setSelStmt(0) }} className="text-green-600 hover:underline">จับคู่</button>}
+                    </td>
+                  </tr>
+                ))}
+                {recon.unmatchedBook.length === 0 && <tr><td className="px-3 py-2 text-gray-400">— ไม่มี</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+    </>
+  )
+}
+</file>
+
 <file path="src/frontend/src/features/bank-reconciliation/services/bankApi.ts">
 import apiClient from '../../../shared/services/apiClient'
 import type {
@@ -125730,6 +126825,145 @@ export const bankApi = {
     clientCompanyId: number; importId: number; fiscalYear: number
     statementLineIds: number[]; bankGlAccountId: number; counterpartAccountId: number; entryDate?: string | null
   }) => apiClient.post<AdjustmentEntryDto>(`${RECON}/generate-adjustment`, input).then((r) => r.data),
+}
+</file>
+
+<file path="src/frontend/src/features/bank-reconciliation/types/bank.types.ts">
+export interface BankAccount {
+  id: number
+  bankAccountCode: string
+  bankName: string
+  branch?: string
+  accountNumber?: string
+  glAccountCode?: string
+  balanceForward: number
+  currentBalance: number
+  transactionCount: number
+}
+
+export interface BankBookRow {
+  id: number
+  transactionDate: string
+  transactionType?: string
+  chequeNo?: string
+  counterpartyName?: string
+  remark?: string
+  deposit: number
+  withdrawal: number
+  balance: number
+}
+
+export interface BankBook {
+  clientCompanyId: number
+  clientName: string
+  bankAccountCode: string
+  bankName: string
+  accountNumber?: string
+  year: number
+  openingBalance: number
+  rows: BankBookRow[]
+  totalDeposit: number
+  totalWithdrawal: number
+  closingBalance: number
+  dataAsOf?: string
+}
+
+// ── Reconciliation (กระทบยอด statement) ───────────────────────────────────────
+export interface StatementParsePreviewLine {
+  date: string
+  description?: string | null
+  withdrawal: number
+  deposit: number
+  balance?: number | null
+}
+
+export interface StatementParsePreview {
+  bankCode: string
+  accountNo?: string | null
+  periodStart?: string | null
+  periodEnd?: string | null
+  openingBalance: number
+  closingBalance: number
+  computedClosing: number
+  balanceCheckPasses: boolean
+  warning?: string | null
+  expectedAccountNo?: string | null
+  accountMatches?: boolean | null
+  lines: StatementParsePreviewLine[]
+}
+
+export interface BankStatementImportListItem {
+  id: number
+  bankAccountId: number
+  bankCode: string
+  statementAccountNo?: string | null
+  periodStart: string
+  periodEnd: string
+  openingBalance: number
+  closingBalance: number
+  parsedOk: boolean
+  status: number
+  lineCount: number
+  matchedCount: number
+  createdAt: string
+  createdBy: string
+  expectedAccountNo?: string | null
+  accountMatches?: boolean | null
+}
+
+export interface ReconMatchedPair {
+  statementLineId: number
+  date: string
+  description?: string | null
+  amount: number
+  isDeposit: boolean
+  bankTransactionId: number
+  bookDate: string
+  bookCounterparty?: string | null
+}
+
+export interface ReconStatementLine {
+  statementLineId: number
+  date: string
+  description?: string | null
+  withdrawal: number
+  deposit: number
+  balance?: number | null
+}
+
+export interface ReconBookTxn {
+  bankTransactionId: number
+  date: string
+  counterparty?: string | null
+  remark?: string | null
+  deposit: number
+  withdrawal: number
+}
+
+export interface BankReconciliation {
+  importId: number
+  clientCompanyId: number
+  clientName: string
+  bankAccountId: number
+  bankAccountCode: string
+  bankName: string
+  bankCode: string
+  periodStart: string
+  periodEnd: string
+  statementOpeningBalance: number
+  statementClosingBalance: number
+  bookClosingBalance: number
+  reconciledDifference: number
+  isBalanced: boolean
+  parsedOk: boolean
+  matched: ReconMatchedPair[]
+  unmatchedStatement: ReconStatementLine[]
+  unmatchedBook: ReconBookTxn[]
+  dataAsOf?: string | null
+  matchedCount: number
+  matchedAmount: number
+  unmatchedStatementCount: number
+  unmatchedBookCount: number
 }
 </file>
 
@@ -140988,125 +142222,6 @@ node tools/verify-site.mjs
 พอดี 1 รายการ และไม่มี JS error (ภาพผลลัพธ์เก็บที่ `_preview/`)
 </file>
 
-<file path="manual/site/assets/nav.js">
-/* เมนูคู่มือ — โครงเดียวใช้ทุกหน้า (แก้ที่ไฟล์นี้ไฟล์เดียว ทุกหน้าอัปเดตตาม)
- *
- * โครงเมนูสะท้อนเมนูจริงของระบบ (src/frontend/src/shared/components/layout/Sidebar.tsx)
- * เพื่อให้ผู้ใช้หาหน้าคู่มือได้ด้วยชื่อเมนูเดียวกับที่เห็นในโปรแกรม
- * รายการที่ยังไม่มี href = ยังไม่ได้เขียนคู่มือ จะแสดงเป็น "เร็วๆ นี้"
- *
- * วิธีใช้ในแต่ละหน้า:
- *   <aside class="sidebar" data-nav></aside>
- *   <script src="assets/nav.js" data-root="" data-current="index.html"></script>
- *   (หน้าใน pages/ ใช้ data-root="../" และ data-current="pages/xxx.html")
- */
-(function () {
-  var NAV = [
-    {
-      title: 'เริ่มต้น',
-      items: [
-        { label: 'ภาพรวมระบบ', href: 'index.html' },
-      ],
-    },
-    {
-      title: 'ภาพรวม',
-      items: [
-        { label: 'Dashboard', href: 'pages/dashboard.html' },
-        { label: 'ปฏิทินงาน' },
-        { label: 'งาน / มอบหมายงาน' },
-      ],
-    },
-    {
-      title: 'ข้อมูลและนำเข้า',
-      items: [
-        { label: 'ลูกค้า', href: 'pages/clients.html' },
-        { label: 'นำเข้าข้อมูล', href: 'pages/import.html' },
-      ],
-    },
-    {
-      title: 'บัญชี',
-      items: [
-        { label: 'งบทดลอง', href: 'pages/trial-balance.html' },
-        { label: 'บัญชีแยกประเภท', href: 'pages/general-ledger.html' },
-        { label: 'ลูกหนี้' },
-        { label: 'เจ้าหนี้' },
-        { label: 'สินค้าคงคลัง' },
-        { label: 'ธนาคาร / สมุดเงินฝาก' },
-      ],
-    },
-    {
-      title: 'เงินเดือน',
-      items: [
-        { label: 'เงินเดือน' },
-        { label: 'ภ.ง.ด.1' },
-        { label: 'ประกันสังคม' },
-      ],
-    },
-    {
-      title: 'ภาษี',
-      items: [
-        { label: 'ภาษีมูลค่าเพิ่ม' },
-        { label: 'ภ.ง.ด.50' },
-        { label: 'หัก ณ ที่จ่าย' },
-      ],
-    },
-    {
-      title: 'รายงานและปิดงวด',
-      items: [
-        { label: 'กระดาษทำการปิดงบ' },
-        { label: 'เช่าซื้อ / เงินกู้' },
-        { label: 'สินทรัพย์ถาวร' },
-        { label: 'ค่าใช้จ่ายจ่ายล่วงหน้า' },
-        { label: 'ตรวจนับเงินสด' },
-        { label: 'ดอกเบี้ยรับเงินให้กู้' },
-        { label: 'ตรวจจ่ายหลังปิดงบ' },
-        { label: 'งบการเงิน' },
-        { label: 'ปิดรอบบัญชี' },
-        { label: 'ชุดรายงานงบ' },
-        { label: 'คลังเอกสาร / หลักฐาน' },
-      ],
-    },
-    {
-      title: 'ระบบ',
-      items: [
-        { label: 'ผู้ใช้งานระบบ' },
-        { label: 'โปรไฟล์สำนักงานบัญชี' },
-        { label: 'ทะเบียนผู้สอบ / ผู้ทำบัญชี' },
-        { label: 'ประวัติการใช้งาน' },
-      ],
-    },
-  ]
-
-  var script = document.currentScript
-  var root = script.getAttribute('data-root') || ''
-  var current = script.getAttribute('data-current') || ''
-
-  var html = [
-    '<div class="brand">',
-    '<span class="logo">JS</span>',
-    '<span><b>Datacenter</b><small>คู่มือการใช้งาน</small></span>',
-    '</div>',
-  ]
-
-  NAV.forEach(function (group) {
-    html.push('<div class="nav-group"><div class="nav-title">' + group.title + '</div>')
-    group.items.forEach(function (item) {
-      if (!item.href) {
-        html.push('<span class="todo">' + item.label + '</span>')
-      } else if (item.href === current) {
-        html.push('<a href="' + root + item.href + '" class="active">' + item.label + '</a>')
-      } else {
-        html.push('<a href="' + root + item.href + '">' + item.label + '</a>')
-      }
-    })
-    html.push('</div>')
-  })
-
-  var mount = document.querySelector('[data-nav]')
-  if (mount) mount.innerHTML = html.join('')
-})()
-</file>
-
 <file path="manual/site/assets/style.css">
 /* JSP Datacenter — คู่มือการใช้งาน (static site) */
 :root {
@@ -141969,6 +143084,306 @@ hr { border: none; border-top: 1px solid var(--line); margin: 36px 0; }
 </html>
 </file>
 
+<file path="manual/site/pages/vat.html">
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ภาษีมูลค่าเพิ่ม (ภ.พ.30) — คู่มือการใช้งาน JSP Datacenter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<div class="wrap">
+  <!-- ===== Sidebar (สร้างจาก assets/nav.js) ===== -->
+  <aside class="sidebar" data-nav></aside>
+
+  <!-- ===== Content ===== -->
+  <main class="content">
+  <div class="content-inner">
+
+    <div class="crumbs"><a href="../index.html">คู่มือการใช้งาน</a> › ภาษี › ภาษีมูลค่าเพิ่ม (ภ.พ.30)</div>
+    <h1>ภาษีมูลค่าเพิ่ม (ภ.พ.30)</h1>
+    <p class="lead">
+      สรุปภาษีซื้อ–ภาษีขายรายเดือนจาก Express พร้อม <b>ใบช่วยกรอก ภ.พ.30</b> ที่เรียงช่องตรงกับหน้า e-Filing
+      ของกรมสรรพากร และ <b>ไฟล์โอนย้าย (.txt)</b> สำหรับอัปโหลดแทนการพิมพ์มือ
+    </p>
+
+    <div class="callout tip">
+      <span class="tag">หน้านี้ใช้ทำอะไร</span>
+      <p>ทั้งหน้าเป็น <b>รายงานอ่านอย่างเดียว</b> — ไม่ได้ยื่นแบบให้ แต่เตรียมตัวเลขทุกช่องให้พร้อมกรอก/อัปโหลด
+      ที่เว็บกรมสรรพากร ข้อมูลมาจากไฟล์ภาษีของ Express (ISVAT) ที่ดึงเข้าตอน
+      <a href="import.html">นำเข้าข้อมูล</a></p>
+    </div>
+
+    <h2>1. การเข้าใช้งาน</h2>
+    <ol class="steps">
+      <li><b>เลือกบริษัทลูกค้า</b> ที่แถบด้านบน</li>
+      <li>เปิดเมนู <b>ภาษี → ภาษีมูลค่าเพิ่ม</b></li>
+      <li>เลือก <b>ปีภาษี</b> แล้วเลือกแท็บที่ต้องการใช้งาน</li>
+    </ol>
+
+    <h3>ช่องปีภาษี</h3>
+    <table class="doc">
+      <tr><th style="width:200px">กรณี</th><th>สิ่งที่เห็น</th></tr>
+      <tr><td><b>บริษัทมีข้อมูลภาษีแล้ว</b></td>
+          <td>เป็นรายการให้เลือก แสดงเฉพาะ <b>ปีที่มีข้อมูลจริง</b> — ถ้าปีปัจจุบันยังไม่มีข้อมูล ระบบจะเลือกปีล่าสุดที่มีให้อัตโนมัติ</td></tr>
+      <tr><td><b>ยังไม่มีข้อมูลเลย</b></td><td>เป็นช่องพิมพ์ตัวเลข ให้กรอกปีเอง</td></tr>
+    </table>
+    <div class="callout warn">
+      <span class="tag">ปีที่นี่เป็น ค.ศ. แต่ใบกรอกแสดงเป็น พ.ศ.</span>
+      <p>ช่อง “ปีภาษี (AD)” ใช้ <b>ค.ศ.</b> เช่น <code>2025</code> ส่วนแท็บใบกรอกจะแสดงงวดเป็น <b>พ.ศ.</b>
+      (“มกราคม 2568”) ให้ตรงกับแบบของกรมสรรพากร — เป็นปีเดียวกัน แค่คนละรูปแบบ</p>
+    </div>
+    <div class="callout note">
+      <span class="tag">งวดภาษีคิดตามปฏิทิน</span>
+      <p>งวด ภ.พ.30 เป็นรายเดือน ม.ค.–ธ.ค. เสมอ <b>ไม่ผูกกับรอบปีบัญชี</b>ของบริษัท
+      (ดึงจากเดือนภาษี VATPRD ใน Express) บริษัทที่รอบบัญชีไม่ตรงปีปฏิทินก็ใช้หน้านี้ได้ตามปกติ</p>
+    </div>
+
+    <h3>แถบเตือน “ข้อมูลเป็น snapshot”</h3>
+    <div class="callout warn">
+      <span class="tag">ตรวจวันที่นำเข้าล่าสุดก่อนยื่นทุกครั้ง</span>
+      <p>แถบสีเหลืองบอกว่า <b>นำเข้าล่าสุดเมื่อไร</b> — ตัวเลขบนหน้าจอคือภาพนิ่ง ณ ตอนนำเข้า ไม่ใช่ข้อมูลสดจาก Express
+      ถ้ามีการแก้ใบกำกับใน Express หลังจากนั้น ต้องกด “นำเข้าข้อมูลใหม่” ก่อน ไม่งั้นยอดที่ยื่นจะไม่ตรง</p>
+    </div>
+
+    <h2>2. แท็บ “ภ.พ.30 รายเดือน”</h2>
+    <p>ภาพรวมทั้งปี 12 เดือน ใช้ตรวจว่าเดือนไหนต้องชำระเพิ่ม เดือนไหนชำระเกิน และยอดรวมทั้งปีเป็นเท่าไร</p>
+    <figure>
+      <img src="../assets/img/vat-report.png" alt="แท็บ ภ.พ.30 รายเดือน แสดงตารางภาษีซื้อขาย 12 เดือน" />
+      <figcaption>ภ.พ.30 รายเดือน — ยอดขาย/ภาษีขาย, ยอดซื้อ/ภาษีซื้อ และภาษีสุทธิของแต่ละเดือน พร้อมแถวรวมทั้งปี</figcaption>
+    </figure>
+    <table class="doc">
+      <tr><th style="width:170px">คอลัมน์</th><th>ความหมาย</th></tr>
+      <tr><td><b>เดือนภาษี</b></td><td>งวดภาษีรายเดือน — เดือนที่ไม่มีรายการจะเป็นสีเทาจาง</td></tr>
+      <tr><td><b>ยอดขาย</b></td><td>มูลค่าขายที่ต้องเสียภาษี (ฐานภาษีขาย)</td></tr>
+      <tr><td><b>ภาษีขาย</b></td><td>ภาษีมูลค่าเพิ่มจากการขายในเดือนนั้น</td></tr>
+      <tr><td><b>ยอดซื้อ</b></td><td>มูลค่าซื้อที่มีสิทธินำภาษีซื้อมาหัก</td></tr>
+      <tr><td><b>ภาษีซื้อ</b></td><td>ภาษีมูลค่าเพิ่มจากการซื้อในเดือนนั้น</td></tr>
+      <tr><td><b>ภาษีสุทธิ</b></td><td>ภาษีขาย − ภาษีซื้อ (ดูการอ่านสีด้านล่าง)</td></tr>
+    </table>
+    <div class="callout tip">
+      <span class="tag">อ่านสีของ “ภาษีสุทธิ”</span>
+      <p><b style="color:#dc2626">สีแดง (มากกว่า 0)</b> = ต้องชำระเพิ่ม ·
+      <b style="color:#16a34a">สีเขียว (ติดลบ)</b> = ชำระเกิน ยกไปหักเดือนถัดไปได้</p>
+    </div>
+
+    <h3>ปุ่มดาวน์โหลดในแท็บนี้</h3>
+    <table class="doc">
+      <tr><th style="width:200px">ปุ่ม</th><th>ได้อะไร</th></tr>
+      <tr><td><b>⬇ รายงานภาษีขาย</b></td>
+          <td>ไฟล์ Excel รายงานภาษีขายทั้งปี (ชื่อไฟล์ <code>vat-sales-{ปี พ.ศ.}.xlsx</code>) — แสดงเมื่อมีรายการภาษีขาย</td></tr>
+      <tr><td><b>⬇ รายงานภาษีซื้อ</b></td>
+          <td>ไฟล์ Excel รายงานภาษีซื้อทั้งปี (<code>vat-purchase-{ปี พ.ศ.}.xlsx</code>) — แสดงเมื่อมีรายการภาษีซื้อ</td></tr>
+      <tr><td><b>ส่งออก</b></td>
+          <td>ส่งออก <b>ตารางสรุป 12 เดือน</b> ที่เห็นบนหน้าจอ เป็น Excel / CSV / PDF</td></tr>
+    </table>
+    <div class="callout note">
+      <span class="tag">2 ปุ่มนี้ต่างกัน</span>
+      <p>“รายงานภาษีขาย/ซื้อ” = รายงานภาษีตามรูปแบบที่ต้องเก็บไว้ให้สรรพากรตรวจ (รายใบกำกับ) ·
+      “ส่งออก” = ตารางสรุปรายเดือนที่เห็นบนหน้าจอ</p>
+    </div>
+
+    <h2>3. แท็บ “ใบกรอก ภ.พ.30 (e-Filing)”</h2>
+    <p>แท็บหลักที่ใช้ตอนยื่นจริง — เรียงช่องตรงตามหน้า <b>“ข้อมูลการคำนวณภาษี”</b> ของเว็บกรมสรรพากร
+    เปิดคู่กันสองจอแล้วพิมพ์ตามทีละช่องได้เลย</p>
+    <figure>
+      <img src="../assets/img/vat-filing.png" alt="ใบช่วยกรอก ภ.พ.30 สำหรับยื่น e-Filing" />
+      <figcaption>ใบช่วยกรอก ภ.พ.30 — ช่องพื้นฟ้าคือค่าที่ดึงมาให้, ช่องพื้นเทาคือค่าที่ระบบคำนวณ, ช่องขาวคือค่าที่ต้องกรอกเอง</figcaption>
+    </figure>
+
+    <h3>เลือกงวดเดือน</h3>
+    <p>ช่อง <b>เดือนภาษี</b> แสดงเป็น พ.ศ. เช่น “มกราคม 2568” — เดือนที่ไม่มีข้อมูลจะเลือกไม่ได้และต่อท้ายว่า
+    <code>(ไม่มีข้อมูล)</code> ระบบเลือกเดือนแรกที่มีข้อมูลให้อัตโนมัติ</p>
+
+    <h3>ความหมายของสีช่อง</h3>
+    <table class="doc">
+      <tr><th style="width:200px">ลักษณะช่อง</th><th>หมายความว่า</th></tr>
+      <tr><td><b>พื้นฟ้า ตัวหนา</b> + มี <span style="color:#ef4444">*</span></td>
+          <td>ค่าที่ดึงจาก Express ให้แล้ว — ช่องบังคับกรอกในแบบ ภ.พ.30</td></tr>
+      <tr><td><b>พื้นเทา ตัวจาง</b></td><td>ค่าที่ระบบคำนวณให้ดูเทียบ — เว็บสรรพากรจะคำนวณเองอยู่แล้ว ไม่ต้องพิมพ์</td></tr>
+      <tr><td><b>ช่องขาว พิมพ์ได้</b></td><td>ค่าที่ระบบไม่รู้ ต้องกรอกเอง (มีช่องเดียว ดูด้านล่าง)</td></tr>
+    </table>
+
+    <h3>ช่องทั้งหมดในใบกรอก</h3>
+    <table class="doc">
+      <tr><th style="width:290px">ช่อง</th><th>ที่มาของตัวเลข</th></tr>
+      <tr><td><b>ยอดขายในเดือนนี้</b></td>
+          <td>ยอดขายที่ต้องเสียภาษี + ยอดขายอัตราร้อยละ 0 (จาก Express)</td></tr>
+      <tr><td><b>ยอดขายที่เสียภาษีในอัตรา ร้อยละ 0</b></td><td>ยอดขายส่งออก/อัตรา 0 จาก Express</td></tr>
+      <tr><td><b>ยอดขายที่ได้รับยกเว้น</b></td>
+          <td><b>เป็น 0.00 เสมอ</b> — Express (ISVAT) ไม่เก็บยอดขายยกเว้นไว้ ต้องตรวจและบวกเองถ้ากิจการมี</td></tr>
+      <tr><td><b>ยอดซื้อที่มีสิทธินำภาษีซื้อมาหัก</b></td><td>ฐานภาษีซื้อของเดือนนั้น</td></tr>
+      <tr><td><b>ภาษีขายเดือนนี้</b></td><td>ภาษีขายรวมของเดือนนั้น</td></tr>
+      <tr><td><b>ภาษีซื้อเดือนนี้</b></td><td>ภาษีซื้อรวมของเดือนนั้น</td></tr>
+      <tr><td><b>ภาษีเดือนนี้ (รอคำนวณ)</b></td>
+          <td>ระบบคำนวณ = ภาษีขาย − ภาษีซื้อ · บวก = ต้องชำระ, ลบ = ชำระเกิน</td></tr>
+      <tr><td><b>ภาษีชำระเกินยกมา</b></td>
+          <td><b>ต้องกรอกเอง</b> — ยอดชำระเกินจากเดือนก่อน ระบบไม่เก็บยอดสะสมให้</td></tr>
+      <tr><td><b>ภาษีสุทธิ (รอคำนวณ)</b></td>
+          <td>ระบบคำนวณ = ภาษีเดือนนี้ − ภาษีชำระเกินยกมา</td></tr>
+    </table>
+    <div class="callout danger">
+      <span class="tag">2 จุดที่ต้องระวังที่สุด</span>
+      <ol>
+        <li><b>ยอดขายที่ได้รับยกเว้น</b> ขึ้น 0.00 เสมอ ถ้ากิจการมีรายได้ยกเว้น VAT ต้องหายอดเองแล้วกรอกที่เว็บสรรพากร</li>
+        <li><b>ภาษีชำระเกินยกมา</b> ที่พิมพ์ไว้จะ <b>ถูกล้างทันทีเมื่อเปลี่ยนเดือน ปี หรือบริษัท</b> —
+        ให้พิมพ์ตอนที่จะใช้ค่าเลย และอย่าถือว่าระบบจำไว้ให้</li>
+      </ol>
+    </div>
+
+    <h3>ปุ่มในแท็บนี้</h3>
+    <table class="doc">
+      <tr><th style="width:200px">ปุ่ม</th><th>หน้าที่</th></tr>
+      <tr><td><b>แมพเลขสาขา</b></td><td>ตั้งเลขสาขาที่ใช้ในไฟล์โอนย้าย (ดูข้อ 4)</td></tr>
+      <tr><td><b>⬇ ไฟล์โอนย้าย (.txt)</b></td><td>ดาวน์โหลดไฟล์สำหรับอัปโหลดที่เว็บสรรพากร (ดูด้านล่าง)</td></tr>
+      <tr><td><b>ส่งออก</b></td><td>ส่งออกใบกรอกงวดนั้นเป็น Excel / CSV / PDF ไว้เก็บเป็นหลักฐานการยื่น</td></tr>
+    </table>
+
+    <h3>ไฟล์โอนย้ายข้อมูล (.txt)</h3>
+    <p>แทนการพิมพ์ทีละช่อง สามารถอัปโหลดไฟล์เข้าเว็บกรมสรรพากรได้เลย</p>
+    <ol class="steps">
+      <li>เลือกเดือนภาษีให้ถูกต้อง แล้วกด <b>⬇ ไฟล์โอนย้าย (.txt)</b> — ได้ไฟล์ชื่อ
+        <code>pp30-transfer-{ปี พ.ศ.}-{เดือน}.txt</code></li>
+      <li>ที่เว็บสรรพากร เปิดหน้า <b>“โอนย้ายข้อมูล ภ.พ.30”</b> แล้วเลือกไฟล์นี้</li>
+      <li>ตั้งค่า <b>“แบ่งด้วยสัญลักษณ์ = |”</b> (ขีดตั้ง)</li>
+      <li>เปิดตัวเลือก <b>“บรรทัดแรกคือชื่อคอลัมน์”</b></li>
+      <li><b>แมพคอลัมน์</b> ตามชื่อหัวคอลัมน์ที่มีอยู่ในไฟล์</li>
+      <li><b>เดือน / สาขา / ประเภทการยื่น</b> ยังต้องเลือกบนฟอร์มของเว็บเองตามปกติ</li>
+    </ol>
+    <div class="callout note">
+      <span class="tag">โครงสร้างไฟล์</span>
+      <p>1 สาขา = 1 บรรทัด · คั่นด้วย <code>|</code> · มีบรรทัดหัวคอลัมน์ · บริษัทสาขาเดียวจะได้ไฟล์ 1 บรรทัด</p>
+    </div>
+
+    <h2>4. บริษัทที่มีหลายสาขา</h2>
+    <p>ถ้าบริษัทมีรหัสแผนก/สาขา (DEPCOD) มากกว่า 1 ค่าใน Express ระบบจะแสดงตารางแยกสาขาเพิ่มใต้ใบกรอก
+    และไฟล์โอนย้ายจะมี 1 บรรทัดต่อสาขา</p>
+    <figure>
+      <img src="../assets/img/vat-branches.png" alt="ตารางยอด ภ.พ.30 แยกตามสาขา" />
+      <figcaption>ตารางแยกสาขา — ยอดของแต่ละสาขาในงวดเดือนนั้น สาขา 00000 คือสำนักงานใหญ่</figcaption>
+    </figure>
+    <div class="callout note">
+      <span class="tag">ตารางนี้ขึ้นเฉพาะบางเดือน</span>
+      <p>ตารางแยกสาขาจะแสดงเมื่องวดเดือนนั้นมีข้อมูลจาก <b>มากกว่า 1 สาขา</b> —
+      เดือนที่มีเฉพาะสาขาเดียวจะไม่เห็นตารางนี้ ถือว่าปกติ</p>
+    </div>
+
+    <h3>การแปลงรหัสสาขาอัตโนมัติ</h3>
+    <table class="doc">
+      <tr><th style="width:200px">DEPCOD ใน Express</th><th>เลขสาขาที่ระบบใช้</th></tr>
+      <tr><td><code>HO…</code> หรือเว้นว่าง</td><td><code>00000</code> (สำนักงานใหญ่)</td></tr>
+      <tr><td><code>BR01</code></td><td><code>00001</code></td></tr>
+    </table>
+    <div class="callout warn">
+      <span class="tag">ตรวจเลขสาขาก่อนใช้ไฟล์โอนย้าย</span>
+      <p>กฎอัตโนมัติเป็นแค่การเดาจากรหัสแผนก — <b>เลขสาขาที่จดทะเบียนจริงกับสรรพากรอาจไม่ตรง</b>
+      ให้เปิด “แมพเลขสาขา” ตรวจและแก้ก่อนอัปโหลดไฟล์</p>
+    </div>
+
+    <h3>หน้าต่าง “แมพเลขสาขา”</h3>
+    <figure>
+      <img src="../assets/img/vat-branch-mapping.png" alt="หน้าต่างแมพเลขสาขา DEPCOD เป็นเลขสาขา ภ.พ.30" />
+      <figcaption>แมพเลขสาขา — ใส่เลขสาขาตามที่จดทะเบียนจริง แล้วกดบันทึกทีละแถว</figcaption>
+    </figure>
+    <table class="doc">
+      <tr><th style="width:200px">ส่วนที่แสดง</th><th>ความหมาย / วิธีใช้</th></tr>
+      <tr><td><b>DEPCOD</b></td>
+          <td>รหัสแผนกจาก Express (ว่างจะขึ้นว่า “ไม่ระบุ”) — ป้าย <b style="color:#d97706">(อัตโนมัติ)</b> แปลว่ายังไม่ได้ตั้งเอง ใช้กฎเดาอยู่</td></tr>
+      <tr><td><b>รายการ</b></td><td>จำนวนรายการภาษีที่อยู่ใต้รหัสนั้น ใช้ดูว่าสาขาไหนมีปริมาณเท่าไร</td></tr>
+      <tr><td><b>เลขสาขา RD</b></td><td>เลขสาขาที่จดทะเบียนกับสรรพากร — สำนักงานใหญ่ใช้ <code>00000</code> (พิมพ์ได้เฉพาะตัวเลข)</td></tr>
+      <tr><td><b>สนญ.</b></td><td>ติ๊กถ้ารหัสนั้นคือสำนักงานใหญ่</td></tr>
+      <tr><td><b>บันทึก</b></td><td>บันทึกการแมพของแถวนั้น (บันทึกทีละแถว)</td></tr>
+      <tr><td><b>คืนค่า</b></td><td>ลบการแมพที่ตั้งเอง กลับไปใช้กฎอัตโนมัติ — แสดงเฉพาะแถวที่เคยตั้งไว้</td></tr>
+      <tr><td><b>⟳ ดึง DEPCOD ใหม่จาก Express</b></td>
+          <td>อ่านรหัสแผนกใหม่จาก Express ใช้เมื่อเพิ่งเปิดสาขาใหม่แล้วยังไม่เห็นในรายการ</td></tr>
+    </table>
+    <div class="callout note">
+      <span class="tag">การแมพผูกกับบริษัท</span>
+      <p>ตั้งครั้งเดียวใช้ได้ตลอด ไม่ต้องตั้งใหม่ทุกเดือน และเป็นค่าเฉพาะของบริษัทนั้น</p>
+    </div>
+
+    <h2>5. แท็บ “รายละเอียดภาษีซื้อ/ขาย”</h2>
+    <p>ดูรายใบกำกับภาษี ใช้ตอนหาที่มาของยอด หรือตรวจหาใบที่ผิดปกติ</p>
+    <figure>
+      <img src="../assets/img/vat-entries.png" alt="แท็บรายละเอียดภาษีซื้อ/ขาย รายใบกำกับภาษี" />
+      <figcaption>รายละเอียดภาษีซื้อ/ขาย — กรองตามเดือนและประเภทได้ พร้อมยอดรวมท้ายตาราง</figcaption>
+    </figure>
+    <table class="doc">
+      <tr><th style="width:170px">ตัวกรอง</th><th>ค่าที่เลือกได้</th></tr>
+      <tr><td><b>เดือนภาษี</b></td><td><b>ทั้งปี</b> (ค่าตั้งต้น) หรือเลือกเดือนใดเดือนหนึ่ง</td></tr>
+      <tr><td><b>ประเภท</b></td><td><b>ทั้งหมด</b> / <b>ภาษีขาย</b> / <b>ภาษีซื้อ</b></td></tr>
+    </table>
+    <table class="doc">
+      <tr><th style="width:170px">คอลัมน์</th><th>ความหมาย</th></tr>
+      <tr><td><b>เดือนภาษี</b></td><td>งวดภาษีของรายการ (ปี-เดือน)</td></tr>
+      <tr><td><b>ประเภท</b></td>
+          <td><b style="color:#0369a1">ภาษีขาย</b> (สีฟ้า) หรือ <b style="color:#b45309">ภาษีซื้อ</b> (สีเหลือง)</td></tr>
+      <tr><td><b>วันที่</b></td><td>วันที่ในเอกสาร</td></tr>
+      <tr><td><b>เลขที่เอกสาร</b></td><td>เลขที่ใบกำกับภาษี ใช้ตามกลับไปหาเอกสารจริง</td></tr>
+      <tr><td><b>คู่ค้า / รายละเอียด</b></td><td>ชื่อคู่ค้า พร้อมเลขผู้เสียภาษีตัวเล็กต่อท้าย</td></tr>
+      <tr><td><b>มูลค่า</b></td><td>ฐานภาษีของใบนั้น</td></tr>
+      <tr><td><b>ภาษี</b></td><td>ภาษีมูลค่าเพิ่มของใบนั้น</td></tr>
+    </table>
+    <div class="callout warn">
+      <span class="tag">ป้าย “(ล่าช้า)” สีแดง</span>
+      <p>รายการที่ต่อท้ายด้วย <b style="color:#dc2626">(ล่าช้า)</b> คือใบกำกับที่นำมาใช้ข้ามงวด
+      (เช่น วันที่เอกสารเป็นปีก่อน แต่ยื่นในงวดนี้) — ควรตรวจว่ายังใช้สิทธิได้จริงตามกฎหมาย</p>
+    </div>
+    <p>แถวสุดท้ายสรุป <b>จำนวนรายการ</b> พร้อม <b>ยอดรวมมูลค่า</b> และ <b>ยอดรวมภาษี</b> ตามเงื่อนไขที่กรองอยู่</p>
+
+    <h2>6. ขั้นตอนยื่น ภ.พ.30 แบบครบวงจร</h2>
+    <ol class="steps">
+      <li><b>นำเข้าข้อมูลจาก Express</b> ให้ครอบคลุมเดือนที่จะยื่น (<a href="import.html">เมนูนำเข้าข้อมูล</a>)</li>
+      <li><b>เปิดแท็บ ภ.พ.30 รายเดือน</b> ดูว่าเดือนนั้นมียอดและภาษีสุทธิเป็นเท่าไร</li>
+      <li><b>ตรวจแถบวันที่นำเข้าล่าสุด</b> ว่าใหม่พอ ครอบคลุมเอกสารทั้งเดือนแล้ว</li>
+      <li><b>เปิดแท็บใบกรอก</b> เลือกเดือน กรอก “ภาษีชำระเกินยกมา” (ถ้ามี) และตรวจยอดขายยกเว้น</li>
+      <li><b>ยื่นที่เว็บสรรพากร</b> — พิมพ์ตามใบกรอก หรือใช้ไฟล์โอนย้าย (.txt)</li>
+      <li><b>เก็บหลักฐาน</b> — ส่งออกใบกรอกเป็นไฟล์เก็บไว้คู่กับใบเสร็จการยื่น</li>
+      <li><b>ปิดงานในระบบ</b> — กลับไปที่ <a href="dashboard.html">Dashboard</a> แล้วกด “ทำเสร็จ” ที่งาน ภ.พ.30 ของเดือนนั้น</li>
+    </ol>
+
+    <h2>7. ปัญหาที่พบบ่อย</h2>
+    <table class="doc">
+      <tr><th style="width:260px">อาการ</th><th>สาเหตุและวิธีแก้</th></tr>
+      <tr><td><b>ขึ้น “ไม่มีข้อมูลภาษีมูลค่าเพิ่มสำหรับปี …”</b></td>
+          <td>ยังไม่ได้นำเข้าไฟล์ภาษี (ISVAT) ของปีนั้น — ไปที่เมนูนำเข้าข้อมูลแล้วนำเข้าปีนั้น</td></tr>
+      <tr><td><b>เดือนที่ต้องการเลือกไม่ได้ ขึ้น “(ไม่มีข้อมูล)”</b></td>
+          <td>เดือนนั้นไม่มีรายการภาษีในข้อมูลที่นำเข้า — ตรวจใน Express ว่าคีย์เอกสารครบหรือยัง แล้วนำเข้าใหม่</td></tr>
+      <tr><td><b>ยอดไม่ตรงกับที่คำนวณเอง</b></td>
+          <td>ดูวันที่นำเข้าล่าสุดที่แถบสีเหลืองก่อน — ถ้าเก่ากว่าที่แก้ Express ให้นำเข้าใหม่
+          จากนั้นใช้แท็บรายละเอียดกรองเดือนนั้นเทียบรายใบ</td></tr>
+      <tr><td><b>ค่า “ภาษีชำระเกินยกมา” ที่กรอกไว้หายไป</b></td>
+          <td>ระบบล้างค่านี้ทุกครั้งที่เปลี่ยนเดือน/ปี/บริษัท (ตั้งใจให้ไม่เอาค่าเดือนก่อนมาปนกัน) — กรอกใหม่ตอนใช้งาน</td></tr>
+      <tr><td><b>ไฟล์โอนย้ายอัปโหลดแล้วคอลัมน์เพี้ยน</b></td>
+          <td>ที่เว็บสรรพากรยังไม่ได้ตั้ง “แบ่งด้วยสัญลักษณ์ = |” หรือไม่ได้เปิด “บรรทัดแรกคือชื่อคอลัมน์”</td></tr>
+      <tr><td><b>เลขสาขาในไฟล์ไม่ตรงกับที่จดทะเบียน</b></td>
+          <td>แก้ที่ปุ่ม “แมพเลขสาขา” แล้วดาวน์โหลดไฟล์ใหม่</td></tr>
+      <tr><td><b>เปิดสาขาใหม่แล้วไม่เห็นในรายการแมพ</b></td>
+          <td>กด “⟳ ดึง DEPCOD ใหม่จาก Express” ในหน้าต่างแมพเลขสาขา</td></tr>
+    </table>
+
+    <div class="callout note">
+      <span class="tag">ถัดไป</span>
+      <p>งานภาษีที่เกี่ยวข้อง — <span class="todo" style="display:inline;padding:0;color:#64748b">หัก ณ ที่จ่าย (ภ.ง.ด.3/53)</span>
+      และ <span class="todo" style="display:inline;padding:0;color:#64748b">ภ.ง.ด.50</span> (คู่มือกำลังจัดทำ)</p>
+    </div>
+
+    <div class="footer-note">
+      คู่มือการใช้งาน JSP Datacenter — ภาษีมูลค่าเพิ่ม (ภ.พ.30) · ภาพประกอบจากระบบจริง
+    </div>
+
+  </div>
+  </main>
+</div>
+<script src="../assets/nav.js" data-root="../" data-current="pages/vat.html"></script>
+</body>
+</html>
+</file>
+
 <file path="manual/tools/capture-nav.mjs">
 import { chromium } from 'playwright'
 import { fileURLToPath } from 'node:url'
@@ -142217,98 +143632,6 @@ public class AuthController(IMediator mediator) : ControllerBase
 
     public record RefreshTokenRequest(string RefreshToken);
     public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
-}
-</file>
-
-<file path="src/backend/Datacenter.Api/Controllers/BankReconciliationController.cs">
-using Datacenter.Application.Features.Bank.Commands;
-using Datacenter.Application.Features.Bank.Queries;
-using MediatR;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-
-namespace Datacenter.Api.Controllers;
-
-[Authorize]
-[ApiController]
-[Route("api/v1/bank-reconciliation")]
-public class BankReconciliationController(IMediator mediator) : ControllerBase
-{
-    /// <summary>GET /template — เทมเพลต Excel สำหรับกรอก statement</summary>
-    [HttpGet("template")]
-    public async Task<IActionResult> GetTemplate(CancellationToken ct)
-    {
-        var bytes = await mediator.Send(new GetBankStatementTemplateQuery(), ct);
-        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "bank-statement-template.xlsx");
-    }
-
-    /// <summary>POST /upload?clientCompanyId=&amp;bankAccountId=&amp;previewOnly= — อัปโหลด statement (PDF/Excel/CSV)</summary>
-    [HttpPost("upload")]
-    [RequestSizeLimit(20 * 1024 * 1024)]
-    public async Task<IActionResult> Upload(
-        [FromQuery] int clientCompanyId,
-        [FromQuery] int bankAccountId,
-        [FromQuery] bool previewOnly,
-        IFormFile file,
-        [FromForm] decimal? openingBalance,
-        [FromForm] decimal? closingBalance,
-        [FromForm] string? note,
-        CancellationToken ct)
-    {
-        if (file is null || file.Length == 0) return BadRequest("ไฟล์ว่าง");
-        using var ms = new MemoryStream();
-        await file.CopyToAsync(ms, ct);
-        var bytes = ms.ToArray();
-
-        if (previewOnly)
-            return Ok(await mediator.Send(new ParseBankStatementPreviewCommand(clientCompanyId, bankAccountId, file.FileName, bytes), ct));
-
-        var id = await mediator.Send(new UploadBankStatementCommand(
-            clientCompanyId, bankAccountId, file.FileName, bytes, openingBalance, closingBalance, note), ct);
-        return Ok(new { id });
-    }
-
-    /// <summary>GET /imports?clientCompanyId=&amp;bankAccountId=</summary>
-    [HttpGet("imports")]
-    public async Task<IActionResult> GetImports([FromQuery] int clientCompanyId, [FromQuery] int? bankAccountId, CancellationToken ct)
-        => Ok(await mediator.Send(new GetBankStatementImportsQuery(clientCompanyId, bankAccountId), ct));
-
-    /// <summary>GET /{importId}?clientCompanyId= — รายงานกระทบยอด</summary>
-    [HttpGet("{importId:int}")]
-    public async Task<IActionResult> GetReconciliation(int importId, [FromQuery] int clientCompanyId, CancellationToken ct)
-        => Ok(await mediator.Send(new GetBankReconciliationQuery(clientCompanyId, importId), ct));
-
-    /// <summary>POST /{importId}/match — จับคู่บรรทัดกับรายการในสมุดเอง</summary>
-    [HttpPost("{importId:int}/match")]
-    public async Task<IActionResult> Match(int importId, [FromBody] MatchBankLineBody body, CancellationToken ct)
-    {
-        await mediator.Send(new MatchBankLineCommand(body.ClientCompanyId, importId, body.StatementLineId, body.BankTransactionId), ct);
-        return NoContent();
-    }
-
-    /// <summary>POST /{importId}/unmatch — ปลดคู่</summary>
-    [HttpPost("{importId:int}/unmatch")]
-    public async Task<IActionResult> Unmatch(int importId, [FromBody] UnmatchBankLineBody body, CancellationToken ct)
-    {
-        await mediator.Send(new UnmatchBankLineCommand(body.ClientCompanyId, importId, body.StatementLineId), ct);
-        return NoContent();
-    }
-
-    /// <summary>DELETE /imports/{id}?clientCompanyId=</summary>
-    [HttpDelete("imports/{id:int}")]
-    public async Task<IActionResult> Delete(int id, [FromQuery] int clientCompanyId, CancellationToken ct)
-    {
-        await mediator.Send(new DeleteBankStatementImportCommand(clientCompanyId, id), ct);
-        return NoContent();
-    }
-
-    /// <summary>POST /generate-adjustment — สร้างรายการปรับปรุงจากรายการ statement ที่สมุดยังไม่ลง</summary>
-    [HttpPost("generate-adjustment")]
-    public async Task<IActionResult> GenerateAdjustment([FromBody] GenerateBankReconciliationAdjustmentCommand command, CancellationToken ct)
-        => Ok(await mediator.Send(command, ct));
-
-    public record MatchBankLineBody(int ClientCompanyId, int StatementLineId, int BankTransactionId);
-    public record UnmatchBankLineBody(int ClientCompanyId, int StatementLineId);
 }
 </file>
 
@@ -143667,290 +144990,6 @@ public class RefreshTokenCommandHandler(
             RefreshToken: refreshToken,
             ExpiresAt:    expiresAt,
             MustChangePassword: user.MustChangePassword);
-    }
-}
-</file>
-
-<file path="src/backend/Datacenter.Application/Features/Bank/Commands/UploadBankStatementCommand.cs">
-using System.Security.Cryptography;
-using Datacenter.Application.Common.Exceptions;
-using Datacenter.Application.Common.Interfaces;
-using Datacenter.Application.Common.Security;
-using Datacenter.Application.Features.Bank.DTOs;
-using Datacenter.Application.Features.Bank.Services;
-using Datacenter.Domain.Entities;
-using Datacenter.Domain.Enums;
-using Datacenter.Domain.Exceptions;
-using MediatR;
-using Microsoft.EntityFrameworkCore;
-
-namespace Datacenter.Application.Features.Bank.Commands;
-
-// ── preview (parse อย่างเดียว ไม่บันทึก) ─────────────────────────────────────────
-public record ParseBankStatementPreviewCommand(int ClientCompanyId, int BankAccountId, string FileName, byte[] Content)
-    : IRequest<BankStatementParsePreviewDto>, IRequireCompanyAccess;
-
-public class ParseBankStatementPreviewCommandHandler(IApplicationDbContext db, IBankStatementParser parser)
-    : IRequestHandler<ParseBankStatementPreviewCommand, BankStatementParsePreviewDto>
-{
-    public async Task<BankStatementParsePreviewDto> Handle(ParseBankStatementPreviewCommand request, CancellationToken ct)
-    {
-        if (request.Content is not { Length: > 0 }) throw new DomainException("ไฟล์ว่าง");
-        var r = parser.Parse(request.Content, request.FileName);
-
-        // เทียบเลขบัญชีใน statement กับบัญชีบริษัทที่เลือก (Express)
-        string? expected = null;
-        if (request.BankAccountId > 0)
-            expected = await db.BankAccounts.AsNoTracking()
-                .Where(b => b.Id == request.BankAccountId && b.ClientCompanyId == request.ClientCompanyId)
-                .Select(b => b.AccountNumber)
-                .FirstOrDefaultAsync(ct);
-        var matches = BankAccountNumberComparer.Matches(r.AccountNo, expected);
-
-        var dto = new BankStatementParsePreviewDto(
-            r.BankCode, r.AccountNo, r.PeriodStart, r.PeriodEnd,
-            r.OpeningBalance, r.ClosingBalance, r.ComputedClosing, r.BalanceCheckPasses, r.Warning,
-            expected, matches,
-            r.Lines.Select(l => new BankStatementParsePreviewLineDto(
-                l.Date, l.Description, l.Withdrawal, l.Deposit, l.Balance)).ToList());
-        return dto;
-    }
-}
-
-// ── upload (parse + บันทึก + auto-match) ─────────────────────────────────────────
-public record UploadBankStatementCommand(
-    int ClientCompanyId, int BankAccountId, string FileName, byte[] Content,
-    decimal? OpeningBalance, decimal? ClosingBalance, string? Note)
-    : IRequest<int>, IRequireCompanyAccess;
-
-public class UploadBankStatementCommandHandler(
-    IApplicationDbContext db, IBankStatementParser parser, ICurrentUserService currentUser, IAuditService audit)
-    : IRequestHandler<UploadBankStatementCommand, int>
-{
-    public async Task<int> Handle(UploadBankStatementCommand request, CancellationToken ct)
-    {
-        if (request.Content is not { Length: > 0 }) throw new DomainException("ไฟล์ว่าง");
-
-        var account = await db.BankAccounts.AsNoTracking()
-            .FirstOrDefaultAsync(b => b.Id == request.BankAccountId
-                                   && b.ClientCompanyId == request.ClientCompanyId, ct)
-            ?? throw new NotFoundException("BankAccount", request.BankAccountId);
-
-        var parsed = parser.Parse(request.Content, request.FileName);
-        if (parsed.Lines.Count == 0)
-            throw new DomainException(parsed.Warning ?? "ไม่พบรายการใน statement");
-
-        // เลขบัญชีใน statement ต้องตรงกับบัญชีบริษัทที่เลือก (ถ้าระบุได้) — กันอัปโหลดผิดบัญชี
-        if (BankAccountNumberComparer.Matches(parsed.AccountNo, account.AccountNumber) == false)
-            throw new DomainException(
-                $"เลขบัญชีใน statement ({parsed.AccountNo}) ไม่ตรงกับบัญชีบริษัทที่เลือก ({account.AccountNumber}) — โปรดเลือกบัญชีให้ถูกต้อง");
-
-        var ps = parsed.PeriodStart ?? parsed.Lines.Min(l => l.Date);
-        var pe = parsed.PeriodEnd ?? parsed.Lines.Max(l => l.Date);
-        var sha = Convert.ToHexString(SHA256.HashData(request.Content)).ToLowerInvariant();
-
-        var import = new BankStatementImport
-        {
-            ClientCompanyId = request.ClientCompanyId,
-            BankAccountId = account.Id,
-            BankCode = parsed.BankCode,
-            StatementAccountNo = parsed.AccountNo,
-            PeriodStart = ps,
-            PeriodEnd = pe,
-            OpeningBalance = request.OpeningBalance ?? parsed.OpeningBalance,
-            ClosingBalance = request.ClosingBalance ?? parsed.ClosingBalance,
-            ParsedOk = parsed.BalanceCheckPasses,
-            SourceFileName = request.FileName,
-            SourceContent = request.Content,
-            Sha256 = sha,
-            ByteSize = request.Content.LongLength,
-            Note = request.Note,
-            Status = BankStatementImportStatus.Draft,
-            CreatedBy = currentUser.Username,
-        };
-        foreach (var l in parsed.Lines)
-            import.Lines.Add(new BankStatementLine
-            {
-                LineDate = l.Date,
-                Description = l.Description,
-                Withdrawal = Math.Round(l.Withdrawal, 2),
-                Deposit = Math.Round(l.Deposit, 2),
-                Balance = l.Balance,
-                MatchStatus = BankLineMatchStatus.Unmatched,
-                CreatedBy = currentUser.Username,
-            });
-
-        db.BankStatementImports.Add(import);
-        await db.SaveChangesAsync(ct); // ได้ Id ของ import + lines
-
-        await AutoMatchAsync(db, import, account.BankAccountCode, ct);
-        await db.SaveChangesAsync(ct);
-
-        await audit.LogAsync("ImportBankStatement", "BankStatementImport",
-            entityId: import.Id.ToString(),
-            afterValue: $"{parsed.BankCode} {ps:yyyy-MM-dd}..{pe:yyyy-MM-dd} lines={parsed.Lines.Count}",
-            companyId: request.ClientCompanyId, cancellationToken: ct);
-
-        return import.Id;
-    }
-
-    /// <summary>auto-match บรรทัด statement กับ BankTransaction ของบัญชีในช่วงงวด</summary>
-    internal static async Task AutoMatchAsync(
-        IApplicationDbContext db, BankStatementImport import, string bankAccountCode, CancellationToken ct)
-    {
-        var from = import.PeriodStart.Date.AddDays(-7);
-        var to = import.PeriodEnd.Date.AddDays(7);
-        var txns = await db.BankTransactions.AsNoTracking()
-            .Where(t => t.ClientCompanyId == import.ClientCompanyId
-                     && t.BankAccountCode == bankAccountCode
-                     && t.TransactionDate >= from && t.TransactionDate <= to)
-            .Select(t => new BankReconciliationMatcher.BookTxn(t.Id, t.TransactionDate, t.IsDeposit, t.Amount))
-            .ToListAsync(ct);
-
-        var stmt = import.Lines.Select(l =>
-            new BankReconciliationMatcher.StmtLine(l.Id, l.LineDate, l.Deposit, l.Withdrawal));
-
-        var map = BankReconciliationMatcher.Match(stmt, txns);
-        foreach (var line in import.Lines)
-            if (map.TryGetValue(line.Id, out var bid))
-            {
-                line.MatchedBankTransactionId = bid;
-                line.MatchStatus = BankLineMatchStatus.AutoMatched;
-            }
-    }
-}
-</file>
-
-<file path="src/backend/Datacenter.Application/Features/Bank/DTOs/BankReconciliationDtos.cs">
-namespace Datacenter.Application.Features.Bank.DTOs;
-
-// ── preview (ก่อน commit) ─────────────────────────────────────────────────────
-public record BankStatementParsePreviewLineDto(
-    DateTime Date, string? Description, decimal Withdrawal, decimal Deposit, decimal? Balance);
-
-public record BankStatementParsePreviewDto(
-    string BankCode, string? AccountNo, DateTime? PeriodStart, DateTime? PeriodEnd,
-    decimal OpeningBalance, decimal ClosingBalance, decimal ComputedClosing,
-    bool BalanceCheckPasses, string? Warning,
-    string? ExpectedAccountNo, bool? AccountMatches,
-    IReadOnlyList<BankStatementParsePreviewLineDto> Lines);
-
-// ── import list ───────────────────────────────────────────────────────────────
-public record BankStatementImportListDto(
-    int Id, int BankAccountId, string BankCode, string? StatementAccountNo,
-    DateTime PeriodStart, DateTime PeriodEnd, decimal OpeningBalance, decimal ClosingBalance,
-    bool ParsedOk, int Status, int LineCount, int MatchedCount, DateTime CreatedAt, string CreatedBy,
-    string? ExpectedAccountNo = null, bool? AccountMatches = null);
-
-// ── reconciliation report ───────────────────────────────────────────────────────
-public record ReconMatchedPairDto(
-    int StatementLineId, DateTime Date, string? Description, decimal Amount, bool IsDeposit,
-    int BankTransactionId, DateTime BookDate, string? BookCounterparty);
-
-public record ReconStatementLineDto(
-    int StatementLineId, DateTime Date, string? Description, decimal Withdrawal, decimal Deposit, decimal? Balance);
-
-public record ReconBookTxnDto(
-    int BankTransactionId, DateTime Date, string? Counterparty, string? Remark,
-    decimal Deposit, decimal Withdrawal);
-
-public record BankReconciliationDto(
-    int ImportId, int ClientCompanyId, string ClientName,
-    int BankAccountId, string BankAccountCode, string BankName, string BankCode,
-    DateTime PeriodStart, DateTime PeriodEnd,
-    decimal StatementOpeningBalance, decimal StatementClosingBalance, decimal BookClosingBalance,
-    decimal ReconciledDifference, bool IsBalanced, bool ParsedOk,
-    IReadOnlyList<ReconMatchedPairDto> Matched,
-    IReadOnlyList<ReconStatementLineDto> UnmatchedStatement,  // ในธนาคาร ไม่อยู่ในสมุด (เช่น ค่าธรรมเนียม/ดอกเบี้ย)
-    IReadOnlyList<ReconBookTxnDto> UnmatchedBook,             // ในสมุด ไม่อยู่ใน statement (deposit-in-transit/เช็คค้าง)
-    DateTime? DataAsOf)
-{
-    public int MatchedCount => Matched.Count;
-    public decimal MatchedAmount => Matched.Sum(m => m.Amount);
-    public int UnmatchedStatementCount => UnmatchedStatement.Count;
-    public int UnmatchedBookCount => UnmatchedBook.Count;
-}
-</file>
-
-<file path="src/backend/Datacenter.Application/Features/Bank/Queries/GetBankStatementImportsQuery.cs">
-using Datacenter.Application.Common.Interfaces;
-using Datacenter.Application.Common.Security;
-using Datacenter.Application.Features.Bank.DTOs;
-using Datacenter.Application.Features.Bank.Services;
-using MediatR;
-using Microsoft.EntityFrameworkCore;
-
-namespace Datacenter.Application.Features.Bank.Queries;
-
-/// <summary>รายการรอบนำเข้า statement ของบริษัท (กรองตามบัญชีได้)</summary>
-public record GetBankStatementImportsQuery(int ClientCompanyId, int? BankAccountId)
-    : IRequest<IReadOnlyList<BankStatementImportListDto>>, IRequireCompanyAccess;
-
-public class GetBankStatementImportsQueryHandler(IApplicationDbContext db)
-    : IRequestHandler<GetBankStatementImportsQuery, IReadOnlyList<BankStatementImportListDto>>
-{
-    public async Task<IReadOnlyList<BankStatementImportListDto>> Handle(GetBankStatementImportsQuery request, CancellationToken ct)
-    {
-        var q = db.BankStatementImports.AsNoTracking()
-            .Where(i => i.ClientCompanyId == request.ClientCompanyId);
-        if (request.BankAccountId is int bid) q = q.Where(i => i.BankAccountId == bid);
-
-        var rows = await q.OrderByDescending(i => i.PeriodStart).ThenByDescending(i => i.Id)
-            .Select(i => new
-            {
-                i.Id, i.BankAccountId, i.BankCode, i.StatementAccountNo,
-                i.PeriodStart, i.PeriodEnd, i.OpeningBalance, i.ClosingBalance,
-                i.ParsedOk, i.Status, LineCount = i.Lines.Count,
-                MatchedCount = i.Lines.Count(l => l.MatchedBankTransactionId != null),
-                i.CreatedAt, i.CreatedBy,
-                ExpectedAccountNo = db.BankAccounts
-                    .Where(b => b.Id == i.BankAccountId).Select(b => b.AccountNumber).FirstOrDefault(),
-            })
-            .ToListAsync(ct);
-
-        return rows.Select(i => new BankStatementImportListDto(
-                i.Id, i.BankAccountId, i.BankCode, i.StatementAccountNo,
-                i.PeriodStart, i.PeriodEnd, i.OpeningBalance, i.ClosingBalance,
-                i.ParsedOk, (int)i.Status, i.LineCount, i.MatchedCount,
-                i.CreatedAt, i.CreatedBy,
-                i.ExpectedAccountNo,
-                BankAccountNumberComparer.Matches(i.StatementAccountNo, i.ExpectedAccountNo)))
-            .ToList();
-    }
-}
-</file>
-
-<file path="src/backend/Datacenter.Application/Features/Bank/Services/BankAccountNumberComparer.cs">
-namespace Datacenter.Application.Features.Bank.Services;
-
-/// <summary>
-/// เทียบเลขบัญชีที่อ่านได้จาก statement กับเลขบัญชีของบริษัทใน Express (BankAccount.AccountNumber)
-/// โดยตัดอักขระที่ไม่ใช่ตัวเลขออกก่อน (รูปแบบ xxx-x-xxxxx-x vs xxxxxxxxxx).
-/// รองรับเลขบัญชีที่ถูกปิดบังบางส่วนใน statement ด้วยการเทียบส่วนท้าย (suffix) อย่างน้อย 4 หลัก.
-/// </summary>
-public static class BankAccountNumberComparer
-{
-    /// <summary>เหลือเฉพาะตัวเลข</summary>
-    public static string DigitsOnly(string? s)
-        => string.IsNullOrEmpty(s) ? string.Empty : new string(s.Where(char.IsDigit).ToArray());
-
-    /// <returns>
-    /// true = ตรงกัน, false = ไม่ตรง (ควรแจ้งเตือน),
-    /// null = ระบุไม่ได้ (ฝั่งใดฝั่งหนึ่งไม่มีเลขบัญชีให้เทียบ)
-    /// </returns>
-    public static bool? Matches(string? statementAccountNo, string? companyAccountNo)
-    {
-        var a = DigitsOnly(statementAccountNo);
-        var b = DigitsOnly(companyAccountNo);
-        if (a.Length == 0 || b.Length == 0) return null; // ไม่มีข้อมูลให้เทียบ
-
-        if (a == b) return true;
-
-        // รองรับเลขบัญชีที่ปิดบังบางส่วน / รูปแบบต่างกัน → เทียบส่วนท้าย ≥ 4 หลัก
-        int n = Math.Min(a.Length, b.Length);
-        if (n >= 4 && (a.EndsWith(b) || b.EndsWith(a))) return true;
-
-        return false;
     }
 }
 </file>
@@ -237046,145 +238085,6 @@ export default function LoginPage() {
 }
 </file>
 
-<file path="src/frontend/src/features/bank-reconciliation/types/bank.types.ts">
-export interface BankAccount {
-  id: number
-  bankAccountCode: string
-  bankName: string
-  branch?: string
-  accountNumber?: string
-  glAccountCode?: string
-  balanceForward: number
-  currentBalance: number
-  transactionCount: number
-}
-
-export interface BankBookRow {
-  id: number
-  transactionDate: string
-  transactionType?: string
-  chequeNo?: string
-  counterpartyName?: string
-  remark?: string
-  deposit: number
-  withdrawal: number
-  balance: number
-}
-
-export interface BankBook {
-  clientCompanyId: number
-  clientName: string
-  bankAccountCode: string
-  bankName: string
-  accountNumber?: string
-  year: number
-  openingBalance: number
-  rows: BankBookRow[]
-  totalDeposit: number
-  totalWithdrawal: number
-  closingBalance: number
-  dataAsOf?: string
-}
-
-// ── Reconciliation (กระทบยอด statement) ───────────────────────────────────────
-export interface StatementParsePreviewLine {
-  date: string
-  description?: string | null
-  withdrawal: number
-  deposit: number
-  balance?: number | null
-}
-
-export interface StatementParsePreview {
-  bankCode: string
-  accountNo?: string | null
-  periodStart?: string | null
-  periodEnd?: string | null
-  openingBalance: number
-  closingBalance: number
-  computedClosing: number
-  balanceCheckPasses: boolean
-  warning?: string | null
-  expectedAccountNo?: string | null
-  accountMatches?: boolean | null
-  lines: StatementParsePreviewLine[]
-}
-
-export interface BankStatementImportListItem {
-  id: number
-  bankAccountId: number
-  bankCode: string
-  statementAccountNo?: string | null
-  periodStart: string
-  periodEnd: string
-  openingBalance: number
-  closingBalance: number
-  parsedOk: boolean
-  status: number
-  lineCount: number
-  matchedCount: number
-  createdAt: string
-  createdBy: string
-  expectedAccountNo?: string | null
-  accountMatches?: boolean | null
-}
-
-export interface ReconMatchedPair {
-  statementLineId: number
-  date: string
-  description?: string | null
-  amount: number
-  isDeposit: boolean
-  bankTransactionId: number
-  bookDate: string
-  bookCounterparty?: string | null
-}
-
-export interface ReconStatementLine {
-  statementLineId: number
-  date: string
-  description?: string | null
-  withdrawal: number
-  deposit: number
-  balance?: number | null
-}
-
-export interface ReconBookTxn {
-  bankTransactionId: number
-  date: string
-  counterparty?: string | null
-  remark?: string | null
-  deposit: number
-  withdrawal: number
-}
-
-export interface BankReconciliation {
-  importId: number
-  clientCompanyId: number
-  clientName: string
-  bankAccountId: number
-  bankAccountCode: string
-  bankName: string
-  bankCode: string
-  periodStart: string
-  periodEnd: string
-  statementOpeningBalance: number
-  statementClosingBalance: number
-  bookClosingBalance: number
-  reconciledDifference: number
-  isBalanced: boolean
-  parsedOk: boolean
-  matched: ReconMatchedPair[]
-  unmatchedStatement: ReconStatementLine[]
-  unmatchedBook: ReconBookTxn[]
-  dataAsOf?: string | null
-  matchedCount: number
-  matchedAmount: number
-  unmatchedStatementCount: number
-  unmatchedBookCount: number
-}
-</file>
-
 <file path="src/frontend/src/features/compliance-calendar/api/complianceApi.ts">
 import apiClient from '../../../shared/services/apiClient'
 import type { ComplianceDashboardDto, ComplianceTaskDto, ComplianceTaskStatus, ComplianceTaskTemplateDto, ComplianceTaskType } from '../types/compliance.types'
@@ -241917,169 +242817,123 @@ log ไฟล์รายวัน เก็บ 90 วัน (ปรับที
 - `deploy/publish.ps1` — บรรจุสคริปต์ทั้งหมดไว้ใน `deploy\` ของชุดที่ publish ด้วย (เครื่อง server ใช้โฟลเดอร์เดียวจบ)
 </file>
 
-<file path="manual/site/index.html">
-<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>คู่มือการใช้งาน — JSP Datacenter</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/style.css" />
-</head>
-<body>
-<div class="wrap">
-  <!-- ===== Sidebar (สร้างจาก assets/nav.js) ===== -->
-  <aside class="sidebar" data-nav></aside>
+<file path="manual/site/assets/nav.js">
+/* เมนูคู่มือ — โครงเดียวใช้ทุกหน้า (แก้ที่ไฟล์นี้ไฟล์เดียว ทุกหน้าอัปเดตตาม)
+ *
+ * โครงเมนูสะท้อนเมนูจริงของระบบ (src/frontend/src/shared/components/layout/Sidebar.tsx)
+ * เพื่อให้ผู้ใช้หาหน้าคู่มือได้ด้วยชื่อเมนูเดียวกับที่เห็นในโปรแกรม
+ * รายการที่ยังไม่มี href = ยังไม่ได้เขียนคู่มือ จะแสดงเป็น "เร็วๆ นี้"
+ *
+ * วิธีใช้ในแต่ละหน้า:
+ *   <aside class="sidebar" data-nav></aside>
+ *   <script src="assets/nav.js" data-root="" data-current="index.html"></script>
+ *   (หน้าใน pages/ ใช้ data-root="../" และ data-current="pages/xxx.html")
+ */
+(function () {
+  var NAV = [
+    {
+      title: 'เริ่มต้น',
+      items: [
+        { label: 'ภาพรวมระบบ', href: 'index.html' },
+      ],
+    },
+    {
+      title: 'ภาพรวม',
+      items: [
+        { label: 'Dashboard', href: 'pages/dashboard.html' },
+        { label: 'ปฏิทินงาน' },
+        { label: 'งาน / มอบหมายงาน' },
+      ],
+    },
+    {
+      title: 'ข้อมูลและนำเข้า',
+      items: [
+        { label: 'ลูกค้า', href: 'pages/clients.html' },
+        { label: 'นำเข้าข้อมูล', href: 'pages/import.html' },
+      ],
+    },
+    {
+      title: 'บัญชี',
+      items: [
+        { label: 'งบทดลอง', href: 'pages/trial-balance.html' },
+        { label: 'บัญชีแยกประเภท', href: 'pages/general-ledger.html' },
+        { label: 'ลูกหนี้' },
+        { label: 'เจ้าหนี้' },
+        { label: 'สินค้าคงคลัง' },
+        { label: 'ธนาคาร / สมุดเงินฝาก' },
+      ],
+    },
+    {
+      title: 'เงินเดือน',
+      items: [
+        { label: 'เงินเดือน' },
+        { label: 'ภ.ง.ด.1' },
+        { label: 'ประกันสังคม' },
+      ],
+    },
+    {
+      title: 'ภาษี',
+      items: [
+        { label: 'ภาษีมูลค่าเพิ่ม', href: 'pages/vat.html' },
+        { label: 'ภ.ง.ด.50' },
+        { label: 'หัก ณ ที่จ่าย' },
+      ],
+    },
+    {
+      title: 'รายงานและปิดงวด',
+      items: [
+        { label: 'กระดาษทำการปิดงบ' },
+        { label: 'เช่าซื้อ / เงินกู้' },
+        { label: 'สินทรัพย์ถาวร' },
+        { label: 'ค่าใช้จ่ายจ่ายล่วงหน้า' },
+        { label: 'ตรวจนับเงินสด' },
+        { label: 'ดอกเบี้ยรับเงินให้กู้' },
+        { label: 'ตรวจจ่ายหลังปิดงบ' },
+        { label: 'งบการเงิน' },
+        { label: 'ปิดรอบบัญชี' },
+        { label: 'ชุดรายงานงบ' },
+        { label: 'คลังเอกสาร / หลักฐาน' },
+      ],
+    },
+    {
+      title: 'ระบบ',
+      items: [
+        { label: 'ผู้ใช้งานระบบ' },
+        { label: 'โปรไฟล์สำนักงานบัญชี' },
+        { label: 'ทะเบียนผู้สอบ / ผู้ทำบัญชี' },
+        { label: 'ประวัติการใช้งาน' },
+      ],
+    },
+  ]
 
-  <!-- ===== Content ===== -->
-  <main class="content">
-  <div class="content-inner">
+  var script = document.currentScript
+  var root = script.getAttribute('data-root') || ''
+  var current = script.getAttribute('data-current') || ''
 
-    <div class="crumbs">คู่มือการใช้งาน</div>
-    <h1>ภาพรวมระบบ JSP Datacenter</h1>
-    <p class="lead">
-      แพลตฟอร์มสำหรับ <b>สำนักงานบัญชี</b> ที่ดูแลลูกค้าหลายบริษัทในที่เดียว —
-      ตั้งแต่นำเข้าข้อมูลจากโปรแกรม Express, จัดการบัญชี/ภาษี/เงินเดือน ไปจนถึงปิดงบและออกงบการเงิน
-      คู่มือชุดนี้อธิบายการใช้งานทีละหน้าจอ พร้อมภาพประกอบจากระบบจริง
-    </p>
+  var html = [
+    '<div class="brand">',
+    '<span class="logo">JS</span>',
+    '<span><b>Datacenter</b><small>คู่มือการใช้งาน</small></span>',
+    '</div>',
+  ]
 
-    <div class="callout note">
-      <span class="tag">คู่มือชุดนี้ครอบคลุมอะไรบ้าง</span>
-      <p>แบ่งเป็น 2 ส่วน: <b>(1) ภาพรวมระบบ</b> (หน้านี้) อธิบายแนวคิด การเข้าใช้งาน และการนำทาง
-      และ <b>(2) คู่มือรายหน้า</b> อธิบายการใช้งานของแต่ละเมนูอย่างละเอียด
-      ขณะนี้จัดทำแล้ว: <a href="pages/dashboard.html">Dashboard</a> ·
-      <a href="pages/clients.html">ลูกค้า</a> ·
-      <a href="pages/import.html">นำเข้าข้อมูล</a> ·
-      <a href="pages/trial-balance.html">งบทดลอง</a> ·
-      <a href="pages/general-ledger.html">บัญชีแยกประเภท</a>
-      — เมนูที่เหลือจะทยอยเพิ่ม (ในเมนูซ้ายจะขึ้นว่า “เร็วๆ นี้”)</p>
-    </div>
+  NAV.forEach(function (group) {
+    html.push('<div class="nav-group"><div class="nav-title">' + group.title + '</div>')
+    group.items.forEach(function (item) {
+      if (!item.href) {
+        html.push('<span class="todo">' + item.label + '</span>')
+      } else if (item.href === current) {
+        html.push('<a href="' + root + item.href + '" class="active">' + item.label + '</a>')
+      } else {
+        html.push('<a href="' + root + item.href + '">' + item.label + '</a>')
+      }
+    })
+    html.push('</div>')
+  })
 
-    <h2>1. ระบบนี้ทำอะไร</h2>
-    <p>
-      JSP Datacenter เป็นระบบกลางของสำนักงานบัญชี ออกแบบมาเพื่อ:
-    </p>
-    <ul>
-      <li><b>รองรับลูกค้าได้ไม่จำกัดจำนวน</b> — แต่ละลูกค้าคือ 1 บริษัท (มีเลขผู้เสียภาษี/สาขาของตัวเอง) และข้อมูลถูกแยกกันเด็ดขาด</li>
-      <li><b>ดึงข้อมูลบัญชีจากโปรแกรม Express อัตโนมัติ</b> — ไม่ต้องคีย์ซ้ำ ลดความผิดพลาด</li>
-      <li><b>ทำงานปิดงบครบวงจร</b> — งบทดลอง, บัญชีแยกประเภท, กระดาษทำการปิดงบ, งบการเงิน, แบบภาษี</li>
-      <li><b>ติดตามงานตามกำหนด</b> — ปฏิทินยื่นภาษี/ประกันสังคม และงานที่มอบหมายข้ามบริษัท</li>
-    </ul>
-
-    <h2>2. หลักการสำคัญที่ต้องเข้าใจก่อนใช้งาน</h2>
-    <p>5 หลักการนี้เป็นรากฐานของทั้งระบบ เข้าใจแล้วจะใช้งานได้ถูกทาง:</p>
-
-    <div class="callout tip">
-      <span class="tag">① Express คือแหล่งข้อมูลตั้งต้น (Single Source of Truth)</span>
-      <p>ข้อมูลบัญชีทุกอย่างที่ Express มี จะ <b>ดึงจาก Express เท่านั้น</b> ผ่านเมนู “นำเข้าข้อมูล” ที่เดียว
-      (ดึงทุกอย่างครั้งเดียว) — ไม่มีการคีย์มือทับข้อมูลที่ Express ให้มา การป้อนมือทำได้เฉพาะข้อมูลที่ Express ไม่มี
-      เช่น เงินเดือน, ค่าใช้จ่ายจ่ายล่วงหน้า, รายการปรับปรุงปิดงบ, เอกสารแนบ</p>
-    </div>
-    <div class="callout note">
-      <span class="tag">② 1 ลูกค้า = 1 บริษัท และแยกข้อมูลกันเด็ดขาด</span>
-      <p>ทุกหน้าจอทำงานกับ “บริษัทที่เลือกอยู่” ด้านบนเสมอ — เปลี่ยนบริษัทเมื่อไร ข้อมูลทั้งหน้าจะเปลี่ยนตาม</p>
-    </div>
-    <div class="callout note">
-      <span class="tag">③ ลูกค้ามีหลายประเภทธุรกิจ</span>
-      <p>ระบบไม่ผูกกับอุตสาหกรรมใดอุตสาหกรรมหนึ่ง (ซื้อมา-ขายไป, ผลิต, บริการ, รับเหมา, ขนส่ง ฯลฯ)
-      ผังบัญชี/หมวดสินทรัพย์/รายงานยืดหยุ่นตามแต่ละบริษัท</p>
-    </div>
-    <div class="callout warn">
-      <span class="tag">④ ข้อมูลที่ปิดงวดแล้วต้องไม่เปลี่ยน</span>
-      <p>เมื่อปิดงบและ lock รอบบัญชีแล้ว ยอดจะถูกเก็บเป็น snapshot ถาวร — ตรวจย้อนหลังได้แม้ Express จะถูกแก้ภายหลัง
-      (เก็บหลักฐาน/บันทึกการใช้งานอย่างน้อย 10 ปีตามกฎหมาย)</p>
-    </div>
-    <div class="callout note">
-      <span class="tag">⑤ ทุกการแก้ไขถูกบันทึก (Audit Trail)</span>
-      <p>ผู้ใช้ที่มีสิทธิ์ในบริษัทนั้นแก้ไข/ลบข้อมูลได้ (ไม่มีขั้นตอนอนุมัติ) แต่ระบบบันทึกทุกการเปลี่ยนแปลง
-      (ค่าเดิม/ค่าใหม่/ผู้แก้/เวลา) ไว้ในประวัติการใช้งานเสมอ</p>
-    </div>
-
-    <h2>3. การเข้าสู่ระบบ</h2>
-    <p>เปิดเบราว์เซอร์ไปที่ที่อยู่ของระบบ จะพบหน้าเข้าสู่ระบบ กรอก <b>ชื่อผู้ใช้</b> และ <b>รหัสผ่าน</b> ที่ได้รับ แล้วกด “เข้าสู่ระบบ”</p>
-    <figure class="shot-narrow">
-      <img src="assets/img/login.png" alt="หน้าเข้าสู่ระบบ" />
-      <figcaption>หน้าเข้าสู่ระบบ — กรอกชื่อผู้ใช้และรหัสผ่าน</figcaption>
-    </figure>
-    <div class="callout note">
-      <span class="tag">หมายเหตุ</span>
-      <p>หากกรอกผิดจะขึ้นข้อความ “ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง” — เมื่อเข้าสำเร็จ ระบบจะพาไปที่หน้า Dashboard โดยอัตโนมัติ</p>
-    </div>
-
-    <h2>4. ส่วนประกอบหน้าจอและการนำทาง</h2>
-    <p>หลังเข้าสู่ระบบ หน้าจอแบ่งเป็น 3 ส่วนหลัก:</p>
-    <figure>
-      <img src="assets/img/dashboard.png" alt="หน้า Dashboard และองค์ประกอบหน้าจอ" />
-      <figcaption>หน้าหลักหลังเข้าสู่ระบบ — ① เมนูด้านซ้าย ② แถบเลือกบริษัทด้านบน ③ พื้นที่เนื้อหา</figcaption>
-    </figure>
-
-    <h3>① เมนูด้านซ้าย (Sidebar)</h3>
-    <p>เมนูจัดเป็น 7 กลุ่มตามลักษณะงาน กดที่กลุ่มเพื่อกางรายการเมนูย่อย ปุ่ม <code>‹</code>/<code>›</code> ด้านบนใช้ย่อ/ขยายเมนู</p>
-    <figure class="shot-narrow">
-      <img src="assets/img/sidebar-expanded.png" alt="เมนูด้านซ้ายเมื่อกางกลุ่มรายงานและปิดงวด" />
-      <figcaption>ตัวอย่างการกางกลุ่ม “รายงานและปิดงวด” เพื่อเข้าเมนูย่อย</figcaption>
-    </figure>
-
-    <h3>② แถบเลือกบริษัท (สำคัญที่สุด)</h3>
-    <div class="callout warn">
-      <span class="tag">ต้องเลือกบริษัทก่อนเสมอ</span>
-      <p>ช่องเลือกบริษัทด้านบนคือ “บริบท” ของทุกหน้าจอ ระบบจะแสดงข้อมูลของบริษัทที่เลือกอยู่เท่านั้น
-      พิมพ์ชื่อหรือรหัสเพื่อค้นหาได้ หากยังไม่เลือกบริษัท หลายหน้าจะยังไม่แสดงข้อมูล</p>
-    </div>
-
-    <h3>③ พื้นที่เนื้อหา</h3>
-    <p>แสดงหน้าจอของเมนูที่เลือก แต่ละหน้ามักมีหัวข้อหน้า (ชื่อเมนู) + ปุ่มการทำงานมุมขวาบน + ตัวกรอง + ตารางข้อมูล
-    บางหน้ามีแท็บย่อยด้านในเพื่อแยกมุมมอง</p>
-
-    <h2>5. ขั้นตอนการทำงานหลัก (ภาพรวม)</h2>
-    <p>สำหรับลูกค้าหนึ่งราย ลำดับการทำงานทั่วไปเป็นดังนี้:</p>
-    <ol class="steps">
-      <li><b>เลือก/สร้างบริษัทลูกค้า</b> — เลือกบริษัทจากแถบด้านบน (บริษัทที่มีข้อมูลใน Express จะถูกเตรียมไว้ให้) · <a href="pages/clients.html">คู่มือ</a></li>
-      <li><b>นำเข้าข้อมูลจาก Express</b> — เมนู “นำเข้าข้อมูล” ดึงผังบัญชี ยอดยกมา ความเคลื่อนไหว และรอบบัญชี เข้าระบบครั้งเดียว · <a href="pages/import.html">คู่มือ</a></li>
-      <li><b>ตรวจสอบข้อมูลบัญชี</b> — ดู <a href="pages/trial-balance.html">งบทดลอง</a> / <a href="pages/general-ledger.html">บัญชีแยกประเภท</a> ว่ายอดถูกต้องและสมดุล</li>
-      <li><b>ทำกระดาษทำการปิดงบ</b> — บันทึกรายการปรับปรุง, ค่าเสื่อม, ค่าใช้จ่ายจ่ายล่วงหน้า, เช่าซื้อ ฯลฯ</li>
-      <li><b>ออกงบการเงินและแบบภาษี</b> — งบฐานะการเงิน/กำไรขาดทุน, ภ.พ.30, ภ.ง.ด.50 และอื่นๆ</li>
-      <li><b>ปิดรอบบัญชีและล็อกงบ</b> — lock รอบบัญชี และจัดชุดรายงานที่ยื่นเป็นเวอร์ชันถาวร</li>
-    </ol>
-    <div class="callout tip">
-      <span class="tag">จำง่ายๆ</span>
-      <p>นำเข้า → ตรวจ → ปรับปรุง → ออกงบ → ปิดงวด — ข้อมูลไหลจาก Express มาเป็นงบการเงินและแบบภาษีโดยมีระบบช่วยตรวจความถูกต้องทุกขั้น</p>
-    </div>
-
-    <h2>6. แผนผังเมนูทั้งหมด</h2>
-    <p>ระบบมี 7 กลุ่มเมนู คู่มือรายหน้าจะทยอยจัดทำครบทุกเมนู:</p>
-    <div class="grid">
-      <div class="mcard"><b>ภาพรวม</b><small>Dashboard · ปฏิทินงาน · งาน/มอบหมายงาน</small></div>
-      <div class="mcard"><b>ข้อมูลและนำเข้า</b><small>ลูกค้า · นำเข้าข้อมูล</small></div>
-      <div class="mcard"><b>บัญชี</b><small>งบทดลอง · แยกประเภท · ลูกหนี้/เจ้าหนี้ · สินค้าคงคลัง · ธนาคาร</small></div>
-      <div class="mcard"><b>เงินเดือน</b><small>เงินเดือน · ภ.ง.ด.1 · ประกันสังคม</small></div>
-      <div class="mcard"><b>ภาษี</b><small>ภ.พ.30 · ภ.ง.ด.50 · หัก ณ ที่จ่าย</small></div>
-      <div class="mcard"><b>รายงานและปิดงวด</b><small>กระดาษทำการ · สินทรัพย์ · งบการเงิน · ปิดรอบ · ชุดรายงาน · หลักฐาน</small></div>
-      <div class="mcard"><b>ระบบ</b><small>ตั้งค่าสำนักงาน · ทะเบียนผู้สอบ/ผู้ทำบัญชี · ประวัติการใช้งาน</small></div>
-    </div>
-
-    <div class="callout note">
-      <span class="tag">ถัดไป</span>
-      <p>ถ้าเพิ่งเริ่มใช้ระบบ แนะนำให้อ่านตามลำดับนี้:
-      <a href="pages/dashboard.html">Dashboard</a> →
-      <a href="pages/clients.html">ลูกค้า</a> →
-      <a href="pages/import.html">นำเข้าข้อมูล</a> →
-      <a href="pages/trial-balance.html">งบทดลอง</a> →
-      <a href="pages/general-ledger.html">บัญชีแยกประเภท</a></p>
-    </div>
-
-    <div class="footer-note">
-      คู่มือการใช้งาน JSP Datacenter — ภาพประกอบจากระบบจริง (ข้อมูลตัวอย่าง: บริษัท JSP CONNX ปีบัญชี 2025)
-    </div>
-
-  </div>
-  </main>
-</div>
-<script src="assets/nav.js" data-root="" data-current="index.html"></script>
-</body>
-</html>
+  var mount = document.querySelector('[data-nav]')
+  if (mount) mount.innerHTML = html.join('')
+})()
 </file>
 
 <file path="manual/site/pages/import.html">
@@ -242236,113 +243090,6 @@ log ไฟล์รายวัน เก็บ 90 วัน (ปรับที
 <script src="../assets/nav.js" data-root="../" data-current="pages/import.html"></script>
 </body>
 </html>
-</file>
-
-<file path="manual/tools/capture.mjs">
-// Playwright screenshot capture for the JSP Datacenter user manual.
-// Logs in, selects a company, and captures full-page screenshots of the given routes.
-//
-// Usage: node tools/capture.mjs [name ...]
-//   no args = capture every route below; otherwise only the named ones
-//   env: MANUAL_BASE, MANUAL_USER, MANUAL_PASS, MANUAL_COMPANY_ID, MANUAL_YEAR
-import { chromium } from 'playwright'
-import { mkdir } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const OUT = join(__dirname, '..', 'site', 'assets', 'img')
-const BASE = process.env.MANUAL_BASE || 'http://localhost:5199'
-const USER = process.env.MANUAL_USER || 'admin'
-const PASS = process.env.MANUAL_PASS || 'admin1234'
-const COMPANY_ID = Number(process.env.MANUAL_COMPANY_ID || 226) // JSIT2016 = JSP CONNX (ดู tools/list-companies.mjs)
-const YEAR = process.env.MANUAL_YEAR || '2025'
-
-/** หน้ารายงาน (งบทดลอง/แยกประเภท) ไม่ดึงข้อมูลเอง — ต้องตั้งปีแล้วกด "แสดงรายงาน" ก่อนแคป */
-async function showReport(page) {
-  await page.fill('input[type="number"]', YEAR)
-  await page.getByRole('button', { name: 'แสดงรายงาน' }).click()
-  await page.waitForTimeout(2500)
-}
-
-// name = ไฟล์ผลลัพธ์ (name.png); path = route; wait = หน่วงเพิ่ม (ms); full = แคปทั้งหน้า
-const ROUTES = [
-  { name: 'login', path: '/login', auth: false, full: false },
-  { name: 'dashboard', path: '/dashboard' },
-  {
-    // โหมดภาพรวมทุกบริษัท = ยังไม่เลือกบริษัท (ล้าง companyId แล้วโหลดใหม่)
-    name: 'dashboard-all',
-    path: '/dashboard',
-    prepare: async (page) => {
-      await page.evaluate(() => localStorage.removeItem('companyId'))
-      await page.reload({ waitUntil: 'networkidle' })
-      await page.waitForTimeout(2000)
-    },
-    restoreCompany: true,
-  },
-  { name: 'clients', path: '/clients' },
-  { name: 'import', path: '/import' },
-  { name: 'import-validation', path: '/import/1/validation' },
-  // รายงานที่มีบัญชีเป็นร้อยแถว: แคปแค่ 1 viewport (fullPage จะยาวหมื่นพิกเซล ย่อลงคู่มือแล้วอ่านไม่ออก)
-  { name: 'trial-balance', path: '/trial-balance', prepare: showReport, full: false },
-  {
-    name: 'general-ledger',
-    path: '/general-ledger',
-    full: false,
-    prepare: async (page) => {
-      await showReport(page)
-      // กางการ์ดบัญชีใบแรกให้เห็นตารางรายการข้างใน (หัวการ์ดคือ button.w-full)
-      const firstCard = page.locator('main button.w-full').first()
-      if (await firstCard.count()) {
-        await firstCard.click()
-        await page.waitForTimeout(600)
-      }
-    },
-  },
-]
-
-const only = process.argv.slice(2)
-const routes = only.length ? ROUTES.filter((r) => only.includes(r.name)) : ROUTES
-if (!routes.length) {
-  console.error('ไม่พบ route ที่ระบุ — มีให้เลือก:', ROUTES.map((r) => r.name).join(', '))
-  process.exit(1)
-}
-
-await mkdir(OUT, { recursive: true })
-
-const browser = await chromium.launch()
-const ctx = await browser.newContext({
-  viewport: { width: 1440, height: 900 },
-  deviceScaleFactor: 2, // crisp screenshots
-  locale: 'th-TH',
-})
-const page = await ctx.newPage()
-
-// 1) login
-await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' })
-await page.fill('input[type="text"]', USER)
-await page.fill('input[type="password"]', PASS)
-await page.click('button[type="submit"]')
-await page.waitForURL('**/dashboard', { timeout: 20000 })
-
-// 2) select company (persisted in localStorage, read by CurrentCompanyProvider)
-await page.evaluate((id) => localStorage.setItem('companyId', String(id)), COMPANY_ID)
-
-// 3) capture each route
-for (const r of routes) {
-  const url = `${BASE}${r.path}`
-  await page.goto(url, { waitUntil: 'networkidle' })
-  await page.waitForTimeout(r.wait ?? 1200)
-  if (r.prepare) await r.prepare(page)
-  const file = join(OUT, `${r.name}.png`)
-  await page.screenshot({ path: file, fullPage: r.full !== false })
-  console.log('captured', r.name, '->', file)
-  // route ที่ล้างบริษัททิ้ง ต้องตั้งกลับก่อนไป route ถัดไป
-  if (r.restoreCompany) await page.evaluate((id) => localStorage.setItem('companyId', String(id)), COMPANY_ID)
-}
-
-await browser.close()
-console.log('DONE')
 </file>
 
 <file path="manual/tools/verify-site.mjs">
@@ -245735,364 +246482,6 @@ public class WorkTaskConfiguration : IEntityTypeConfiguration<WorkTask>
 }
 </file>
 
-<file path="src/backend/Datacenter.Infrastructure/Services/Bank/BankStatementParser.cs">
-using System.Globalization;
-using System.Text.RegularExpressions;
-using ClosedXML.Excel;
-using Datacenter.Application.Common.Interfaces;
-using UglyToad.PdfPig;
-using UglyToad.PdfPig.Content;
-
-namespace Datacenter.Infrastructure.Services.Bank;
-
-/// <summary>
-/// แปลงไฟล์ statement → บรรทัดมาตรฐาน.
-/// - PDF: coordinate-based (PdfPig) auto-detect SCB/KBANK/TTB/BAY → group แถวด้วย y, แยกคอลัมน์ด้วยช่วง x,
-///   ระบุทิศ (ฝาก/ถอน) จาก balance-delta แล้ว self-check (ยอดต้น + Σฝาก − Σถอน = ยอดปลาย).
-/// - Excel/CSV: คอลัมน์คงที่ A=วันที่ B=รายละเอียด C=ถอน D=ฝาก E=ยอดคงเหลือ (data เริ่มแถว 2).
-/// </summary>
-public class BankStatementParser : IBankStatementParser
-{
-    private static readonly Regex Num = new(@"^-?\d{1,3}(,\d{3})*\.\d{2}$", RegexOptions.Compiled);
-    private static readonly string[] OpeningKeywords =
-        { "BROUGHT FORWARD", "ยอดยกมา", "ยอดเงินยกมา", "ยอดคงเหลือยกมา" };
-
-    public BankStatementParseResult Parse(byte[] content, string fileName)
-    {
-        var ext = Path.GetExtension(fileName).ToLowerInvariant();
-        return ext switch
-        {
-            ".pdf" => ParsePdf(content),
-            ".xlsx" or ".xls" => ParseExcel(content),
-            ".csv" => ParseCsv(content),
-            _ => throw new InvalidOperationException($"ไม่รองรับไฟล์ชนิด {ext} (รองรับ .pdf, .xlsx, .csv)")
-        };
-    }
-
-    public byte[] BuildTemplate()
-    {
-        using var wb = new XLWorkbook();
-        var ws = wb.Worksheets.Add("Statement");
-        var headers = new[] { "วันที่ (dd/MM/yyyy)", "รายละเอียด", "เงินออก (ถอน)", "เงินเข้า (ฝาก)", "ยอดคงเหลือ" };
-        for (int c = 0; c < headers.Length; c++)
-        {
-            var cell = ws.Cell(1, c + 1);
-            cell.Value = headers[c];
-            cell.Style.Font.Bold = true;
-            cell.Style.Fill.BackgroundColor = XLColor.LightGray;
-        }
-        // ตัวอย่าง 1 แถว
-        ws.Cell(2, 1).Value = "01/05/2026";
-        ws.Cell(2, 2).Value = "โอนเงินรับจากลูกค้า";
-        ws.Cell(2, 3).Value = 0;
-        ws.Cell(2, 4).Value = 5000;
-        ws.Cell(2, 5).Value = 105000;
-        ws.Columns().AdjustToContents();
-        using var ms = new MemoryStream();
-        wb.SaveAs(ms);
-        return ms.ToArray();
-    }
-
-    // ─────────────────────────── PDF ───────────────────────────
-
-    private sealed record BankConfig(string Code, Regex DateRegex, string DateFormat, double MergeTol);
-
-    // เรียงตาม "ความเฉพาะเจาะจง" (specificity) — DetectBank assign แต่ละบรรทัดให้ config แรกที่ match
-    // จึงต้องวาง BAY (สแลช ปี 4 หลัก) ก่อน SCB (สแลช ปี 2 หลัก prefix) ไม่งั้น SCB จะกินวันที่ของ BAY
-    private static readonly BankConfig[] Configs =
-    {
-        // แยกธนาคารด้วยตัวคั่นวันที่: TTB=. KBANK=- BAY=/(ปี 4 หลัก) SCB=/(ปี 2 หลัก)
-        // ใช้ prefix match (ไม่ anchor ท้าย) เผื่อ PdfPig รวม date+time เป็น token เดียว เช่น "30-04-2602:49"
-        new("TTB",   new(@"^\d{2}\.\d{2}\.\d{4}"), "dd.MM.yyyy", 4.0),
-        new("KBANK", new(@"^\d{2}-\d{2}-\d{2}"),   "dd-MM-yy",   4.0),
-        new("BAY",   new(@"^\d{2}/\d{2}/\d{4}"),   "dd/MM/yyyy", 4.0),
-        new("SCB",   new(@"^\d{2}/\d{2}/\d{2}"),   "dd/MM/yy",   4.0),
-    };
-
-    private sealed class VLine { public int Page; public double Y; public List<(double X, string T)> W = new(); }
-
-    private BankStatementParseResult ParsePdf(byte[] content)
-    {
-        using var doc = PdfDocument.Open(content);
-        var allText = new System.Text.StringBuilder();
-        var lines = new List<VLine>();
-
-        foreach (var page in doc.GetPages())
-        {
-            // group words into visual lines (y top-down = Height - Top)
-            var words = page.GetWords()
-                .Select(w => (X: w.BoundingBox.Left, Y: page.Height - w.BoundingBox.Top, T: w.Text))
-                .Where(t => !string.IsNullOrWhiteSpace(t.T))
-                .ToList();
-            foreach (var w in words) allText.Append(w.T).Append(' ');
-
-            // จับ word เป็น "บรรทัด" ด้วย adaptive clustering: word เข้าบรรทัดเดิมถ้า Y ห่าง ≤ 2pt
-            // (แยกแถวที่ชิดกัน เช่น KBANK วันเดียวกันหลายรายการ ได้ดีกว่า bucket หยาบ)
-            VLine? acc = null;
-            foreach (var w in words.OrderBy(w => w.Y).ThenBy(w => w.X))
-            {
-                if (acc is null || Math.Abs(w.Y - acc.Y) > 3.0)
-                {
-                    acc = new VLine { Page = page.Number, Y = w.Y };
-                    lines.Add(acc);
-                }
-                acc.W.Add((w.X, w.T));
-            }
-        }
-        foreach (var l in lines) l.W = l.W.OrderBy(w => w.X).ToList();
-        lines = lines.OrderBy(l => l.Page).ThenBy(l => l.Y).ToList();
-
-        var cfg = DetectBank(lines);
-        if (cfg is null)
-            return new BankStatementParseResult("UNKNOWN", null, null, null, 0, 0, 0, false,
-                Array.Empty<ParsedStatementLine>(), "ไม่รองรับการ parse PDF ของธนาคารนี้ — โปรดใช้เทมเพลต Excel/CSV");
-
-        decimal? opening = null, pendingSingle = null;
-        bool seenTxn = false;
-        var raw = new List<(DateTime Date, decimal Amount, decimal Balance, string Desc)>();
-        // cur: วันที่ + ตัวเลขสะสม (x,value) + คำอธิบาย
-        (DateTime Date, List<(double X, decimal V)> Nums, string Desc)? cur = null;
-        double curY = 0;
-
-        void Flush()
-        {
-            if (cur is { } c && c.Nums.Count >= 2)
-            {
-                var ns = c.Nums.OrderBy(n => n.X).ToList();
-                raw.Add((c.Date, ns[^2].V, ns[^1].V, c.Desc)); // ท้ายสุด = ยอดคงเหลือ, ก่อนหน้า = จำนวนเงิน
-            }
-            cur = null;
-        }
-
-        foreach (var line in lines)
-        {
-            var joined = string.Join(' ', line.W.Select(w => w.T));
-            var nums = line.W.Where(w => Num.IsMatch(w.T))
-                .Select(w => (w.X, V: decimal.Parse(w.T.Replace(",", ""), CultureInfo.InvariantCulture))).ToList();
-            bool isKeyword = OpeningKeywords.Any(k => joined.Contains(k, StringComparison.OrdinalIgnoreCase));
-            // หา date token ในคอลัมน์ซ้าย (x < 120) — ธุรกรรมจริงวันที่อยู่ซ้ายสุด,
-            // ส่วนบรรทัดสรุปมีวันที่ฝังในข้อความ (x มาก) จะไม่ถูกจับ; เผื่อ PdfPig merge footer (x น้อย) เข้ามา
-            var dateTok = line.W.Where(w => w.X < 120 && cfg.DateRegex.IsMatch(w.T))
-                .Select(w => w.T).FirstOrDefault();
-
-            if (isKeyword)
-            {
-                if (opening is null && nums.Count > 0) opening = nums.OrderBy(n => n.X).Last().V;
-                Flush(); // page-boundary / brought-forward marker — ไม่ใช่ธุรกรรม
-                continue;
-            }
-
-            if (dateTok is not null)
-            {
-                Flush();
-                var dt = ParseDate(cfg.DateRegex.Match(dateTok).Value, cfg.DateFormat);
-                cur = dt is null ? null : (dt.Value, new List<(double, decimal)>(nums), joined);
-                curY = line.Y;
-                seenTxn = true;
-            }
-            else if (cur is not null && line.Y - curY <= cfg.MergeTol && nums.Count < 3)
-            {
-                cur.Value.Nums.AddRange(nums);
-            }
-            else if (!seenTxn && opening is null && nums.Count == 1)
-            {
-                pendingSingle = nums[0].V; // ผู้สมัครยอดยกมา (บรรทัดก่อนธุรกรรมแรก)
-            }
-        }
-        Flush();
-
-        opening ??= pendingSingle;
-
-        // direction via balance-delta
-        decimal open = opening ?? 0m;
-        decimal prev = open, dep = 0m, wd = 0m;
-        var outLines = new List<ParsedStatementLine>(raw.Count);
-        bool allDeltaOk = true;
-        foreach (var r in raw)
-        {
-            decimal delta = Math.Round(r.Balance - prev, 2);
-            decimal amt = Math.Round(r.Amount, 2);
-            if (Math.Abs(Math.Abs(delta) - amt) > 0.009m) allDeltaOk = false;
-            bool isDeposit = delta >= 0;
-            outLines.Add(new ParsedStatementLine(r.Date, CleanDesc(r.Desc, cfg),
-                isDeposit ? 0m : amt, isDeposit ? amt : 0m, r.Balance));
-            if (isDeposit) dep += amt; else wd += amt;
-            prev = r.Balance;
-        }
-
-        decimal closing = raw.Count > 0 ? raw[^1].Balance : open;
-        decimal computed = Math.Round(open + dep - wd, 2);
-        bool ok = opening is not null && raw.Count > 0 && allDeltaOk && Math.Abs(computed - closing) < 0.01m;
-
-        var (accNo, ps, pe) = ParseHeader(allText.ToString());
-        string? warn = ok ? null
-            : opening is null ? "หายอดยกมาไม่พบ — โปรดตรวจ/แก้บรรทัดใน preview"
-            : "balance self-check ไม่ผ่าน — โปรดตรวจ/แก้บรรทัดใน preview";
-
-        return new BankStatementParseResult(cfg.Code, accNo, ps, pe, open, closing, computed, ok, outLines, warn);
-    }
-
-    /// <summary>
-    /// เลือกธนาคารจากความถี่ของรูปแบบวันที่ (ตัวคั่น / - . แยกแบงก์ได้ชัด ไม่ปนกับชื่อคู่ค้า).
-    /// assign แต่ละบรรทัดให้ config แรกที่ match (เรียงตาม specificity ใน Configs) — กัน SCB(ปี 2 หลัก)
-    /// กินวันที่ของ BAY(ปี 4 หลัก) ที่ใช้สแลชเหมือนกัน เพราะ prefix regex ของ SCB ก็ match ปี 4 หลักได้.
-    /// </summary>
-    private static BankConfig? DetectBank(List<VLine> lines)
-    {
-        var counts = new int[Configs.Length];
-        foreach (var l in lines)
-            for (int i = 0; i < Configs.Length; i++)
-                if (l.W.Any(w => w.X < 120 && Configs[i].DateRegex.IsMatch(w.T)))
-                { counts[i]++; break; } // นับให้ config ที่เฉพาะเจาะจงสุดที่ match บรรทัดนี้
-
-        int bestIdx = -1, bestCount = 0;
-        for (int i = 0; i < counts.Length; i++)
-            if (counts[i] > bestCount) { bestCount = counts[i]; bestIdx = i; }
-        return bestIdx >= 0 ? Configs[bestIdx] : null;
-    }
-
-    private static DateTime? ParseDate(string s, string fmt)
-        => DateTime.TryParseExact(s, fmt, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
-
-    private static string? CleanDesc(string joined, BankConfig cfg)
-    {
-        // ตัดวันที่/เวลา/ตัวเลขจำนวนเงินออก เหลือคำอธิบาย (best-effort)
-        var parts = joined.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Where(p => !cfg.DateRegex.IsMatch(p) && !Num.IsMatch(p)
-                     && !Regex.IsMatch(p, @"^\d{2}:\d{2}(:\d{2})?$"))
-            .ToList();
-        var d = string.Join(' ', parts).Trim();
-        return d.Length == 0 ? null : (d.Length > 250 ? d[..250] : d);
-    }
-
-    private static (string? AccountNo, DateTime? Start, DateTime? End) ParseHeader(string text)
-    {
-        string? acc = null;
-        // รูปแบบเลขบัญชีตามธนาคาร (ลองทีละแบบ): KBANK ddd-d-ddddd-d, SCB ddd-dddddd-d, TTB ddd d ddddd d (เว้นวรรค)
-        foreach (var pat in new[]
-        {
-            @"\d{3}-\d-\d{5}-\d",        // KBANK 040-8-58386-1
-            @"\d{3}-\d{6}-\d",           // SCB   409-160519-2
-            @"\d{3}\s\d\s\d{5}\s\d",     // TTB   694 2 14261 0
-            @"\d{3}-\d{4}-\d{4}-\d",     // (สำรอง) ddd-dddd-dddd-d
-        })
-        {
-            var m = Regex.Match(text, pat);
-            if (m.Success) { acc = m.Value; break; }
-        }
-
-        DateTime? ps = null, pe = null;
-        var pm = Regex.Match(text, @"(\d{2}[/.]\d{2}[/.]\d{4})\s*-\s*(\d{2}[/.]\d{2}[/.]\d{4})");
-        if (pm.Success)
-        {
-            ps = TryDate(pm.Groups[1].Value);
-            pe = TryDate(pm.Groups[2].Value);
-        }
-        return (acc, ps, pe);
-    }
-
-    private static DateTime? TryDate(string s)
-    {
-        foreach (var f in new[] { "dd/MM/yyyy", "dd.MM.yyyy" })
-            if (DateTime.TryParseExact(s, f, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return d;
-        return null;
-    }
-
-    // ─────────────────────────── Excel / CSV (เทมเพลต) ───────────────────────────
-
-    private BankStatementParseResult ParseExcel(byte[] content)
-    {
-        using var ms = new MemoryStream(content);
-        using var wb = new XLWorkbook(ms);
-        var ws = wb.Worksheets.First();
-        int last = ws.LastRowUsed()?.RowNumber() ?? 0;
-        var rows = new List<ParsedStatementLine>();
-        for (int r = 2; r <= last; r++)
-        {
-            var dateCell = ws.Cell(r, 1);
-            if (dateCell.IsEmpty()) continue;
-            DateTime? dt = null;
-            if (dateCell.TryGetValue<DateTime>(out var dv)) dt = dv;
-            else dt = TryDateFlexible(dateCell.GetString().Trim());
-            if (dt is null) continue;
-            var desc = ws.Cell(r, 2).GetString().Trim();
-            decimal wd = DecCell(ws.Cell(r, 3)), dep = DecCell(ws.Cell(r, 4));
-            decimal? bal = ws.Cell(r, 5).IsEmpty() ? null : DecCell(ws.Cell(r, 5));
-            if (wd == 0 && dep == 0) continue;
-            rows.Add(new ParsedStatementLine(dt.Value, string.IsNullOrEmpty(desc) ? null : desc, wd, dep, bal));
-        }
-        return BuildTabularResult("EXCEL", rows);
-    }
-
-    private BankStatementParseResult ParseCsv(byte[] content)
-    {
-        var text = new System.Text.StringBuilder();
-        // strip UTF-8 BOM
-        int start = content.Length >= 3 && content[0] == 0xEF && content[1] == 0xBB && content[2] == 0xBF ? 3 : 0;
-        var s = System.Text.Encoding.UTF8.GetString(content, start, content.Length - start);
-        var rows = new List<ParsedStatementLine>();
-        var allLines = s.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
-        for (int i = 1; i < allLines.Length; i++) // skip header
-        {
-            var line = allLines[i];
-            if (string.IsNullOrWhiteSpace(line)) continue;
-            var f = SplitCsv(line);
-            if (f.Count < 4) continue;
-            var dt = TryDateFlexible(f[0].Trim());
-            if (dt is null) continue;
-            decimal wd = ParseDec(f[2]), dep = ParseDec(f[3]);
-            decimal? bal = f.Count > 4 && !string.IsNullOrWhiteSpace(f[4]) ? ParseDec(f[4]) : null;
-            if (wd == 0 && dep == 0) continue;
-            rows.Add(new ParsedStatementLine(dt.Value, string.IsNullOrWhiteSpace(f[1]) ? null : f[1].Trim(), wd, dep, bal));
-        }
-        return BuildTabularResult("CSV", rows);
-    }
-
-    private static BankStatementParseResult BuildTabularResult(string code, List<ParsedStatementLine> rows)
-    {
-        decimal dep = rows.Sum(r => r.Deposit), wd = rows.Sum(r => r.Withdrawal);
-        var ps = rows.Count > 0 ? rows.Min(r => r.Date) : (DateTime?)null;
-        var pe = rows.Count > 0 ? rows.Max(r => r.Date) : (DateTime?)null;
-        decimal closing = rows.LastOrDefault(r => r.Balance is not null)?.Balance ?? 0m;
-        // เทมเพลตไม่บังคับ balance ทุกแถว → opening/closing best-effort, self-check ปล่อยให้ผู้ใช้กรอกยอดเอง
-        return new BankStatementParseResult(code, null, ps, pe, 0m, closing, Math.Round(dep - wd, 2),
-            false, rows, "นำเข้าจากเทมเพลต — โปรดตรวจ/กรอกยอดต้น-ปลายงวดเพื่อกระทบยอด");
-    }
-
-    private static List<string> SplitCsv(string line)
-    {
-        var res = new List<string>();
-        var sb = new System.Text.StringBuilder();
-        bool q = false;
-        foreach (var ch in line)
-        {
-            if (ch == '"') q = !q;
-            else if (ch == ',' && !q) { res.Add(sb.ToString()); sb.Clear(); }
-            else sb.Append(ch);
-        }
-        res.Add(sb.ToString());
-        return res;
-    }
-
-    private static decimal DecCell(IXLCell c)
-    {
-        if (c.IsEmpty()) return 0m;
-        if (c.TryGetValue<decimal>(out var d)) return d;
-        return ParseDec(c.GetString());
-    }
-
-    private static decimal ParseDec(string s)
-        => decimal.TryParse(s.Replace(",", "").Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0m;
-
-    private static DateTime? TryDateFlexible(string s)
-    {
-        foreach (var f in new[] { "dd/MM/yyyy", "dd-MM-yyyy", "dd.MM.yyyy", "yyyy-MM-dd", "d/M/yyyy" })
-            if (DateTime.TryParseExact(s, f, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return d;
-        return DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var g) ? g : null;
-    }
-}
-</file>
-
 <file path="src/backend/Datacenter.Infrastructure/Services/ExpressDbfAdapter.cs">
 using System.Globalization;
 using System.Text;
@@ -246890,361 +247279,6 @@ public class VatPp30TransferExportService : IVatPp30TransferExportService
 
         return Encoding.GetEncoding(874).GetBytes(sb.ToString());
     }
-}
-</file>
-
-<file path="src/frontend/src/features/bank-reconciliation/pages/tabs/ReconciliationTab.tsx">
-import { useMemo, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import Button from '../../../../shared/components/ui/Button'
-import Card from '../../../../shared/components/ui/Card'
-import StateMessage from '../../../../shared/components/ui/StateMessage'
-import { useAccountList } from '../../../trial-balance/hooks/useTrialBalance'
-import { bankApi } from '../../services/bankApi'
-import {
-  useBankAccounts, useBankReconciliation, useBankStatementImports, useReconMutations,
-} from '../../hooks/useBank'
-import type { StatementParsePreview } from '../../types/bank.types'
-
-function fmt(n: number) {
-  return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-function d(s?: string | null) {
-  if (!s) return '-'
-  const iso = /[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : s + 'Z'
-  return new Date(iso).toLocaleDateString('th-TH', { dateStyle: 'short' })
-}
-
-interface Props { companyId: number }
-
-export default function ReconciliationTab({ companyId }: Props) {
-  const { data: accounts } = useBankAccounts(companyId)
-  const { data: glAccounts } = useAccountList(companyId)
-  const [accountId, setAccountId] = useState(0)
-  const { data: imports } = useBankStatementImports(companyId, accountId || undefined, accountId > 0)
-
-  const [file, setFile] = useState<File | null>(null)
-  const [preview, setPreview] = useState<StatementParsePreview | null>(null)
-  const [opening, setOpening] = useState<string>('')
-  const [closing, setClosing] = useState<string>('')
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState('')
-  const [openImportId, setOpenImportId] = useState(0)
-
-  const { data: recon } = useBankReconciliation(companyId, openImportId, openImportId > 0)
-  const m = useReconMutations(companyId)
-  const qc = useQueryClient()
-
-  const glOptions = useMemo(
-    () => (glAccounts ?? []).filter((a: any) => a.isPostable).map((a: any) => ({ id: a.id, label: `${a.accountCode} — ${a.accountName}` })),
-    [glAccounts],
-  )
-
-  async function doPreview() {
-    if (!file || !accountId) { setErr('เลือกบัญชีและไฟล์ก่อน'); return }
-    setErr(''); setBusy(true); setPreview(null)
-    try {
-      const p = await bankApi.preview(companyId, accountId, file)
-      setPreview(p)
-      setOpening(String(p.openingBalance || ''))
-      setClosing(String(p.closingBalance || ''))
-    } catch (e: any) {
-      setErr(e?.response?.data?.detail ?? e?.response?.data?.title ?? 'อ่านไฟล์ไม่สำเร็จ')
-    } finally { setBusy(false) }
-  }
-
-  async function doUpload() {
-    if (!file || !accountId) return
-    if (preview?.accountMatches === false) {
-      setErr(`เลขบัญชีใน statement (${preview.accountNo ?? '-'}) ไม่ตรงกับบัญชีบริษัทที่เลือก (${preview.expectedAccountNo ?? '-'}) — โปรดเลือกบัญชีให้ถูกต้องก่อนบันทึก`)
-      return
-    }
-    setErr(''); setBusy(true)
-    try {
-      const res = await bankApi.upload(companyId, accountId, file,
-        opening ? Number(opening) : undefined, closing ? Number(closing) : undefined)
-      setFile(null); setPreview(null); setOpening(''); setClosing('')
-      await qc.invalidateQueries({ queryKey: ['bank-stmt-imports', companyId] })
-      setOpenImportId(res.id)
-    } catch (e: any) {
-      setErr(e?.response?.data?.detail ?? e?.response?.data?.title ?? 'บันทึกไม่สำเร็จ')
-    } finally { setBusy(false) }
-  }
-
-  async function downloadTemplate() {
-    const blob = await bankApi.template()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = 'bank-statement-template.xlsx'; a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  if (!companyId) return <Card><StateMessage centered>เลือกบริษัทที่ header ก่อน</StateMessage></Card>
-
-  return (
-    <div>
-      {/* ตั้งค่า + อัปโหลด */}
-      <Card className="mb-4 p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">บัญชีธนาคาร</label>
-            <select value={accountId} onChange={(e) => { setAccountId(Number(e.target.value)); setOpenImportId(0) }}
-              className="w-72 rounded border border-gray-300 px-3 py-2 text-sm">
-              <option value={0}>-- เลือกบัญชี --</option>
-              {(accounts ?? []).map((a) => (
-                <option key={a.id} value={a.id}>{a.bankName} {a.accountNumber ?? a.bankAccountCode}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">ไฟล์ statement (PDF / Excel / CSV)</label>
-            <input type="file" accept=".pdf,.xlsx,.xls,.csv"
-              onChange={(e) => { setFile(e.target.files?.[0] ?? null); setPreview(null) }}
-              className="text-sm" />
-          </div>
-          <Button type="button" variant="secondary" onClick={doPreview} disabled={!file || !accountId || busy}>
-            {busy ? 'กำลังอ่าน...' : 'อ่าน/พรีวิว'}
-          </Button>
-          <button type="button" onClick={downloadTemplate}
-            className="rounded border border-slate-300 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50">
-            ⬇ ดาวน์โหลดเทมเพลต Excel
-          </button>
-        </div>
-        {err && <p className="mt-2 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{err}</p>}
-        <p className="mt-2 text-xs text-gray-400">
-          รองรับ PDF ของ SCB / KBANK / TTB / กรุงศรี-BAY (อ่านอัตโนมัติ) — ธนาคารอื่น/สแกน (GSB/KTB/BBL) ใช้เทมเพลต Excel/CSV หรือกรอกมือ
-        </p>
-      </Card>
-
-      {/* preview ก่อนบันทึก */}
-      {preview && (
-        <Card className="mb-4 p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-800">
-              พรีวิว: ธนาคาร <span className="font-mono">{preview.bankCode}</span>
-              {preview.accountNo && <span className="ml-2 text-gray-500">บัญชี {preview.accountNo}</span>}
-              <span className="ml-2 text-gray-500">{preview.lines.length} รายการ</span>
-            </p>
-          </div>
-          <div className={`mb-3 rounded-lg border px-3 py-2 text-sm ${preview.balanceCheckPasses ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
-            {preview.balanceCheckPasses
-              ? `✓ ตรวจยอดผ่าน: ยอดต้น ${fmt(preview.openingBalance)} + ฝาก − ถอน = ยอดปลาย ${fmt(preview.closingBalance)} (ตรงกับ statement)`
-              : `⚠ ${preview.warning ?? 'ตรวจยอดไม่ผ่าน — โปรดตรวจ/แก้ยอดต้น-ปลาย'} (คำนวณได้ ${fmt(preview.computedClosing)})`}
-          </div>
-          {preview.accountMatches === false && (
-            <div className="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
-              ⚠ เลขบัญชีไม่ตรงกัน: statement = <span className="font-mono">{preview.accountNo ?? '-'}</span> แต่บัญชีบริษัทที่เลือก = <span className="font-mono">{preview.expectedAccountNo ?? '-'}</span>
-              <span className="block text-xs text-red-500">บันทึกไม่ได้จนกว่าจะเลือกบัญชีบริษัทให้ตรงกับ statement</span>
-            </div>
-          )}
-          {preview.accountMatches === true && (
-            <div className="mb-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-              ✓ เลขบัญชีตรงกับบัญชีบริษัท (<span className="font-mono">{preview.accountNo}</span>)
-            </div>
-          )}
-          <div className="mb-3 flex flex-wrap gap-3">
-            <label className="text-xs text-gray-600">ยอดต้นงวด
-              <input value={opening} onChange={(e) => setOpening(e.target.value)} className="ml-2 w-36 rounded border border-gray-300 px-2 py-1 text-right font-mono text-sm" />
-            </label>
-            <label className="text-xs text-gray-600">ยอดปลายงวด
-              <input value={closing} onChange={(e) => setClosing(e.target.value)} className="ml-2 w-36 rounded border border-gray-300 px-2 py-1 text-right font-mono text-sm" />
-            </label>
-            <Button type="button" onClick={doUpload} disabled={busy || preview.accountMatches === false}>{busy ? 'กำลังบันทึก...' : 'ยืนยันบันทึก + จับคู่อัตโนมัติ'}</Button>
-          </div>
-          <div className="max-h-60 overflow-auto rounded border border-gray-100">
-            <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-slate-50 text-gray-600"><tr>
-                <th className="px-2 py-1 text-left">วันที่</th><th className="px-2 py-1 text-left">รายละเอียด</th>
-                <th className="px-2 py-1 text-right">ถอน</th><th className="px-2 py-1 text-right">ฝาก</th><th className="px-2 py-1 text-right">คงเหลือ</th>
-              </tr></thead>
-              <tbody>
-                {preview.lines.map((l, i) => (
-                  <tr key={i} className="border-t border-gray-100">
-                    <td className="px-2 py-1">{d(l.date)}</td>
-                    <td className="px-2 py-1 text-gray-600">{l.description}</td>
-                    <td className="px-2 py-1 text-right font-mono">{l.withdrawal ? fmt(l.withdrawal) : ''}</td>
-                    <td className="px-2 py-1 text-right font-mono text-sky-700">{l.deposit ? fmt(l.deposit) : ''}</td>
-                    <td className="px-2 py-1 text-right font-mono text-gray-500">{l.balance != null ? fmt(l.balance) : ''}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
-
-      {/* รายการรอบนำเข้า */}
-      {accountId > 0 && (
-        <Card className="mb-4 overflow-hidden">
-          <div className="border-b px-4 py-2 text-sm font-semibold text-slate-800">รอบนำเข้า statement</div>
-          {(imports ?? []).length === 0 ? (
-            <div className="px-4 py-3 text-xs text-gray-400">ยังไม่มี — อัปโหลด statement ด้านบน</div>
-          ) : (
-            <table className="w-full text-xs">
-              <thead className="bg-slate-50 text-gray-600"><tr>
-                <th className="px-3 py-2 text-left">ธนาคาร</th><th className="px-3 py-2 text-left">งวด</th>
-                <th className="px-3 py-2 text-right">รายการ</th><th className="px-3 py-2 text-right">จับคู่</th>
-                <th className="px-3 py-2 text-center">ตรวจยอด</th><th className="px-3 py-2"></th>
-              </tr></thead>
-              <tbody>
-                {(imports ?? []).map((im) => (
-                  <tr key={im.id} className={`border-t border-gray-100 ${openImportId === im.id ? 'bg-sky-50' : ''}`}>
-                    <td className="px-3 py-1.5 font-mono">
-                      {im.bankCode}
-                      {im.accountMatches === false && (
-                        <span className="ml-1 text-red-500" title={`เลขบัญชีไม่ตรง: statement ${im.statementAccountNo ?? '-'} ≠ บริษัท ${im.expectedAccountNo ?? '-'}`}>⚠</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-1.5">{d(im.periodStart)}–{d(im.periodEnd)}</td>
-                    <td className="px-3 py-1.5 text-right">{im.lineCount}</td>
-                    <td className="px-3 py-1.5 text-right">{im.matchedCount}/{im.lineCount}</td>
-                    <td className="px-3 py-1.5 text-center">{im.parsedOk ? '✓' : '⚠'}</td>
-                    <td className="px-3 py-1.5 text-right">
-                      <button type="button" onClick={() => setOpenImportId(openImportId === im.id ? 0 : im.id)} className="rounded border border-slate-200 px-2 py-0.5 text-sky-600 hover:bg-slate-100">
-                        {openImportId === im.id ? 'ปิด' : 'กระทบยอด'}
-                      </button>
-                      <button type="button" onClick={() => { if (confirm('ลบรอบนี้?')) { m.remove.mutate(im.id); if (openImportId === im.id) setOpenImportId(0) } }} className="ml-2 text-red-500 hover:text-red-600">ลบ</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </Card>
-      )}
-
-      {recon && openImportId > 0 && (
-        <ReconView recon={recon} glOptions={glOptions} mutations={m} />
-      )}
-    </div>
-  )
-}
-
-function ReconView({ recon, glOptions, mutations }: { recon: any; glOptions: { id: number; label: string }[]; mutations: any }) {
-  const [selStmt, setSelStmt] = useState<number>(0) // statement line เลือกไว้สำหรับจับคู่เอง
-  const [genIds, setGenIds] = useState<Set<number>>(new Set())
-  const [bankGl, setBankGl] = useState(0)
-  const [counterpart, setCounterpart] = useState(0)
-  const [msg, setMsg] = useState('')
-  const fiscalYear = new Date(recon.periodEnd).getFullYear()
-
-  function toggleGen(id: number) {
-    setGenIds((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-  }
-  async function generate() {
-    setMsg('')
-    try {
-      const adj = await mutations.generateAdjustment.mutateAsync({
-        importId: recon.importId, fiscalYear, statementLineIds: [...genIds], bankGlAccountId: bankGl, counterpartAccountId: counterpart,
-      })
-      setMsg(`สร้างรายการปรับปรุง ${adj.documentNo} แล้ว — ดูที่หน้า "กระดาษทำการปิดงบ"`)
-      setGenIds(new Set())
-    } catch (e: any) {
-      setMsg(e?.response?.data?.detail ?? e?.response?.data?.title ?? 'สร้างไม่สำเร็จ')
-    }
-  }
-
-  return (
-    <>
-      <div className={`mb-4 rounded-lg border px-4 py-3 text-sm ${recon.isBalanced ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
-        <div className="flex flex-wrap gap-x-6 gap-y-1">
-          <span>ยอดปลายสมุด (book): <b className="font-mono">{fmt(recon.bookClosingBalance)}</b></span>
-          <span>ยอดปลาย statement: <b className="font-mono">{fmt(recon.statementClosingBalance)}</b></span>
-          <span>ผลต่างหลังกระทบยอด: <b className="font-mono">{fmt(recon.reconciledDifference)}</b></span>
-          <span className="font-semibold">{recon.isBalanced ? '✓ กระทบยอดลงตัว' : '⚠ ยังไม่ลงตัว — ตรวจรายการที่ยังไม่จับคู่'}</span>
-        </div>
-      </div>
-
-      {/* matched */}
-      <Card className="mb-4 overflow-hidden">
-        <div className="border-b px-4 py-2 text-sm font-semibold text-slate-800">จับคู่แล้ว ({recon.matchedCount}) — รวม {fmt(recon.matchedAmount)}</div>
-        <div className="max-h-60 overflow-auto">
-          <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-slate-50 text-gray-600"><tr>
-              <th className="px-3 py-1.5 text-left">วันที่ statement</th><th className="px-3 py-1.5 text-left">รายละเอียด</th>
-              <th className="px-3 py-1.5 text-right">จำนวน</th><th className="px-3 py-1.5 text-left">คู่ในสมุด</th><th className="px-3 py-1.5"></th>
-            </tr></thead>
-            <tbody>
-              {recon.matched.map((mm: any) => (
-                <tr key={mm.statementLineId} className="border-t border-gray-100">
-                  <td className="px-3 py-1.5">{d(mm.date)}</td>
-                  <td className="px-3 py-1.5 text-gray-600">{mm.description}</td>
-                  <td className={`px-3 py-1.5 text-right font-mono ${mm.isDeposit ? 'text-sky-700' : ''}`}>{mm.isDeposit ? '+' : '−'}{fmt(mm.amount)}</td>
-                  <td className="px-3 py-1.5 text-gray-500">{d(mm.bookDate)} {mm.bookCounterparty}</td>
-                  <td className="px-3 py-1.5 text-right"><button type="button" onClick={() => mutations.unmatch.mutate({ importId: recon.importId, statementLineId: mm.statementLineId })} className="text-amber-600 hover:underline">ปลดคู่</button></td>
-                </tr>
-              ))}
-              {recon.matched.length === 0 && <tr><td colSpan={5} className="px-3 py-2 text-gray-400">— ไม่มี</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* unmatched statement */}
-        <Card className="overflow-hidden">
-          <div className="border-b px-4 py-2 text-sm font-semibold text-slate-800">ในธนาคาร ไม่อยู่ในสมุด ({recon.unmatchedStatementCount})</div>
-          <p className="px-4 py-1 text-[11px] text-gray-400">เช่น ค่าธรรมเนียม/ดอกเบี้ย → เลือกเพื่อสร้างรายการปรับปรุง</p>
-          <div className="max-h-60 overflow-auto">
-            <table className="w-full text-xs">
-              <tbody>
-                {recon.unmatchedStatement.map((s: any) => (
-                  <tr key={s.statementLineId} className={`border-t border-gray-100 ${selStmt === s.statementLineId ? 'bg-sky-50' : ''}`}>
-                    <td className="px-2 py-1.5"><input type="checkbox" checked={genIds.has(s.statementLineId)} onChange={() => toggleGen(s.statementLineId)} /></td>
-                    <td className="px-2 py-1.5">{d(s.date)}</td>
-                    <td className="px-2 py-1.5 text-gray-600">{s.description}</td>
-                    <td className={`px-2 py-1.5 text-right font-mono ${s.deposit ? 'text-sky-700' : ''}`}>{s.deposit ? '+' + fmt(s.deposit) : '−' + fmt(s.withdrawal)}</td>
-                    <td className="px-2 py-1.5 text-right"><button type="button" onClick={() => setSelStmt(selStmt === s.statementLineId ? 0 : s.statementLineId)} className="text-sky-600 hover:underline">{selStmt === s.statementLineId ? 'เลือกอยู่' : 'เลือกจับคู่'}</button></td>
-                  </tr>
-                ))}
-                {recon.unmatchedStatement.length === 0 && <tr><td className="px-3 py-2 text-gray-400">— ไม่มี</td></tr>}
-              </tbody>
-            </table>
-          </div>
-          {/* generate adjustment */}
-          <div className="border-t px-4 py-3">
-            <p className="mb-2 text-xs font-semibold text-slate-700">สร้างรายการปรับปรุง ({genIds.size} รายการที่เลือก)</p>
-            <div className="flex flex-col gap-2">
-              <select value={bankGl} onChange={(e) => setBankGl(Number(e.target.value))} className="rounded border border-gray-300 px-2 py-1 text-xs">
-                <option value={0}>-- บัญชี GL ธนาคาร --</option>
-                {glOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-              </select>
-              <select value={counterpart} onChange={(e) => setCounterpart(Number(e.target.value))} className="rounded border border-gray-300 px-2 py-1 text-xs">
-                <option value={0}>-- บัญชีคู่ (ค่าธรรมเนียม/ดอกเบี้ยรับ) --</option>
-                {glOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-              </select>
-              <Button type="button" onClick={generate} disabled={genIds.size === 0 || !bankGl || !counterpart || mutations.generateAdjustment.isPending}>
-                สร้างรายการปรับปรุงเข้า TB
-              </Button>
-            </div>
-            {msg && <p className="mt-2 rounded bg-slate-50 px-2 py-1 text-xs text-slate-700">{msg}</p>}
-          </div>
-        </Card>
-
-        {/* unmatched book */}
-        <Card className="overflow-hidden">
-          <div className="border-b px-4 py-2 text-sm font-semibold text-slate-800">ในสมุด ไม่อยู่ใน statement ({recon.unmatchedBookCount})</div>
-          <p className="px-4 py-1 text-[11px] text-gray-400">เช่น เงินฝากระหว่างทาง/เช็คค้างจ่าย {selStmt > 0 && '— กด "จับคู่" เพื่อจับกับรายการ statement ที่เลือก'}</p>
-          <div className="max-h-60 overflow-auto">
-            <table className="w-full text-xs">
-              <tbody>
-                {recon.unmatchedBook.map((b: any) => (
-                  <tr key={b.bankTransactionId} className="border-t border-gray-100">
-                    <td className="px-2 py-1.5">{d(b.date)}</td>
-                    <td className="px-2 py-1.5 text-gray-600">{b.counterparty ?? b.remark}</td>
-                    <td className={`px-2 py-1.5 text-right font-mono ${b.deposit ? 'text-sky-700' : ''}`}>{b.deposit ? '+' + fmt(b.deposit) : '−' + fmt(b.withdrawal)}</td>
-                    <td className="px-2 py-1.5 text-right">
-                      {selStmt > 0 && <button type="button" onClick={() => { mutations.match.mutate({ importId: recon.importId, statementLineId: selStmt, bankTransactionId: b.bankTransactionId }); setSelStmt(0) }} className="text-green-600 hover:underline">จับคู่</button>}
-                    </td>
-                  </tr>
-                ))}
-                {recon.unmatchedBook.length === 0 && <tr><td className="px-3 py-2 text-gray-400">— ไม่มี</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
-    </>
-  )
 }
 </file>
 
@@ -249843,6 +249877,347 @@ def main():
 
 if __name__ == "__main__":
     main()
+</file>
+
+<file path="manual/site/index.html">
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>คู่มือการใช้งาน — JSP Datacenter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<div class="wrap">
+  <!-- ===== Sidebar (สร้างจาก assets/nav.js) ===== -->
+  <aside class="sidebar" data-nav></aside>
+
+  <!-- ===== Content ===== -->
+  <main class="content">
+  <div class="content-inner">
+
+    <div class="crumbs">คู่มือการใช้งาน</div>
+    <h1>ภาพรวมระบบ JSP Datacenter</h1>
+    <p class="lead">
+      แพลตฟอร์มสำหรับ <b>สำนักงานบัญชี</b> ที่ดูแลลูกค้าหลายบริษัทในที่เดียว —
+      ตั้งแต่นำเข้าข้อมูลจากโปรแกรม Express, จัดการบัญชี/ภาษี/เงินเดือน ไปจนถึงปิดงบและออกงบการเงิน
+      คู่มือชุดนี้อธิบายการใช้งานทีละหน้าจอ พร้อมภาพประกอบจากระบบจริง
+    </p>
+
+    <div class="callout note">
+      <span class="tag">คู่มือชุดนี้ครอบคลุมอะไรบ้าง</span>
+      <p>แบ่งเป็น 2 ส่วน: <b>(1) ภาพรวมระบบ</b> (หน้านี้) อธิบายแนวคิด การเข้าใช้งาน และการนำทาง
+      และ <b>(2) คู่มือรายหน้า</b> อธิบายการใช้งานของแต่ละเมนูอย่างละเอียด
+      ขณะนี้จัดทำแล้ว: <a href="pages/dashboard.html">Dashboard</a> ·
+      <a href="pages/clients.html">ลูกค้า</a> ·
+      <a href="pages/import.html">นำเข้าข้อมูล</a> ·
+      <a href="pages/trial-balance.html">งบทดลอง</a> ·
+      <a href="pages/general-ledger.html">บัญชีแยกประเภท</a> ·
+      <a href="pages/vat.html">ภาษีมูลค่าเพิ่ม (ภ.พ.30)</a>
+      — เมนูที่เหลือจะทยอยเพิ่ม (ในเมนูซ้ายจะขึ้นว่า “เร็วๆ นี้”)</p>
+    </div>
+
+    <h2>1. ระบบนี้ทำอะไร</h2>
+    <p>
+      JSP Datacenter เป็นระบบกลางของสำนักงานบัญชี ออกแบบมาเพื่อ:
+    </p>
+    <ul>
+      <li><b>รองรับลูกค้าได้ไม่จำกัดจำนวน</b> — แต่ละลูกค้าคือ 1 บริษัท (มีเลขผู้เสียภาษี/สาขาของตัวเอง) และข้อมูลถูกแยกกันเด็ดขาด</li>
+      <li><b>ดึงข้อมูลบัญชีจากโปรแกรม Express อัตโนมัติ</b> — ไม่ต้องคีย์ซ้ำ ลดความผิดพลาด</li>
+      <li><b>ทำงานปิดงบครบวงจร</b> — งบทดลอง, บัญชีแยกประเภท, กระดาษทำการปิดงบ, งบการเงิน, แบบภาษี</li>
+      <li><b>ติดตามงานตามกำหนด</b> — ปฏิทินยื่นภาษี/ประกันสังคม และงานที่มอบหมายข้ามบริษัท</li>
+    </ul>
+
+    <h2>2. หลักการสำคัญที่ต้องเข้าใจก่อนใช้งาน</h2>
+    <p>5 หลักการนี้เป็นรากฐานของทั้งระบบ เข้าใจแล้วจะใช้งานได้ถูกทาง:</p>
+
+    <div class="callout tip">
+      <span class="tag">① Express คือแหล่งข้อมูลตั้งต้น (Single Source of Truth)</span>
+      <p>ข้อมูลบัญชีทุกอย่างที่ Express มี จะ <b>ดึงจาก Express เท่านั้น</b> ผ่านเมนู “นำเข้าข้อมูล” ที่เดียว
+      (ดึงทุกอย่างครั้งเดียว) — ไม่มีการคีย์มือทับข้อมูลที่ Express ให้มา การป้อนมือทำได้เฉพาะข้อมูลที่ Express ไม่มี
+      เช่น เงินเดือน, ค่าใช้จ่ายจ่ายล่วงหน้า, รายการปรับปรุงปิดงบ, เอกสารแนบ</p>
+    </div>
+    <div class="callout note">
+      <span class="tag">② 1 ลูกค้า = 1 บริษัท และแยกข้อมูลกันเด็ดขาด</span>
+      <p>ทุกหน้าจอทำงานกับ “บริษัทที่เลือกอยู่” ด้านบนเสมอ — เปลี่ยนบริษัทเมื่อไร ข้อมูลทั้งหน้าจะเปลี่ยนตาม</p>
+    </div>
+    <div class="callout note">
+      <span class="tag">③ ลูกค้ามีหลายประเภทธุรกิจ</span>
+      <p>ระบบไม่ผูกกับอุตสาหกรรมใดอุตสาหกรรมหนึ่ง (ซื้อมา-ขายไป, ผลิต, บริการ, รับเหมา, ขนส่ง ฯลฯ)
+      ผังบัญชี/หมวดสินทรัพย์/รายงานยืดหยุ่นตามแต่ละบริษัท</p>
+    </div>
+    <div class="callout warn">
+      <span class="tag">④ ข้อมูลที่ปิดงวดแล้วต้องไม่เปลี่ยน</span>
+      <p>เมื่อปิดงบและ lock รอบบัญชีแล้ว ยอดจะถูกเก็บเป็น snapshot ถาวร — ตรวจย้อนหลังได้แม้ Express จะถูกแก้ภายหลัง
+      (เก็บหลักฐาน/บันทึกการใช้งานอย่างน้อย 10 ปีตามกฎหมาย)</p>
+    </div>
+    <div class="callout note">
+      <span class="tag">⑤ ทุกการแก้ไขถูกบันทึก (Audit Trail)</span>
+      <p>ผู้ใช้ที่มีสิทธิ์ในบริษัทนั้นแก้ไข/ลบข้อมูลได้ (ไม่มีขั้นตอนอนุมัติ) แต่ระบบบันทึกทุกการเปลี่ยนแปลง
+      (ค่าเดิม/ค่าใหม่/ผู้แก้/เวลา) ไว้ในประวัติการใช้งานเสมอ</p>
+    </div>
+
+    <h2>3. การเข้าสู่ระบบ</h2>
+    <p>เปิดเบราว์เซอร์ไปที่ที่อยู่ของระบบ จะพบหน้าเข้าสู่ระบบ กรอก <b>ชื่อผู้ใช้</b> และ <b>รหัสผ่าน</b> ที่ได้รับ แล้วกด “เข้าสู่ระบบ”</p>
+    <figure class="shot-narrow">
+      <img src="assets/img/login.png" alt="หน้าเข้าสู่ระบบ" />
+      <figcaption>หน้าเข้าสู่ระบบ — กรอกชื่อผู้ใช้และรหัสผ่าน</figcaption>
+    </figure>
+    <div class="callout note">
+      <span class="tag">หมายเหตุ</span>
+      <p>หากกรอกผิดจะขึ้นข้อความ “ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง” — เมื่อเข้าสำเร็จ ระบบจะพาไปที่หน้า Dashboard โดยอัตโนมัติ</p>
+    </div>
+
+    <h2>4. ส่วนประกอบหน้าจอและการนำทาง</h2>
+    <p>หลังเข้าสู่ระบบ หน้าจอแบ่งเป็น 3 ส่วนหลัก:</p>
+    <figure>
+      <img src="assets/img/dashboard.png" alt="หน้า Dashboard และองค์ประกอบหน้าจอ" />
+      <figcaption>หน้าหลักหลังเข้าสู่ระบบ — ① เมนูด้านซ้าย ② แถบเลือกบริษัทด้านบน ③ พื้นที่เนื้อหา</figcaption>
+    </figure>
+
+    <h3>① เมนูด้านซ้าย (Sidebar)</h3>
+    <p>เมนูจัดเป็น 7 กลุ่มตามลักษณะงาน กดที่กลุ่มเพื่อกางรายการเมนูย่อย ปุ่ม <code>‹</code>/<code>›</code> ด้านบนใช้ย่อ/ขยายเมนู</p>
+    <figure class="shot-narrow">
+      <img src="assets/img/sidebar-expanded.png" alt="เมนูด้านซ้ายเมื่อกางกลุ่มรายงานและปิดงวด" />
+      <figcaption>ตัวอย่างการกางกลุ่ม “รายงานและปิดงวด” เพื่อเข้าเมนูย่อย</figcaption>
+    </figure>
+
+    <h3>② แถบเลือกบริษัท (สำคัญที่สุด)</h3>
+    <div class="callout warn">
+      <span class="tag">ต้องเลือกบริษัทก่อนเสมอ</span>
+      <p>ช่องเลือกบริษัทด้านบนคือ “บริบท” ของทุกหน้าจอ ระบบจะแสดงข้อมูลของบริษัทที่เลือกอยู่เท่านั้น
+      พิมพ์ชื่อหรือรหัสเพื่อค้นหาได้ หากยังไม่เลือกบริษัท หลายหน้าจะยังไม่แสดงข้อมูล</p>
+    </div>
+
+    <h3>③ พื้นที่เนื้อหา</h3>
+    <p>แสดงหน้าจอของเมนูที่เลือก แต่ละหน้ามักมีหัวข้อหน้า (ชื่อเมนู) + ปุ่มการทำงานมุมขวาบน + ตัวกรอง + ตารางข้อมูล
+    บางหน้ามีแท็บย่อยด้านในเพื่อแยกมุมมอง</p>
+
+    <h2>5. ขั้นตอนการทำงานหลัก (ภาพรวม)</h2>
+    <p>สำหรับลูกค้าหนึ่งราย ลำดับการทำงานทั่วไปเป็นดังนี้:</p>
+    <ol class="steps">
+      <li><b>เลือก/สร้างบริษัทลูกค้า</b> — เลือกบริษัทจากแถบด้านบน (บริษัทที่มีข้อมูลใน Express จะถูกเตรียมไว้ให้) · <a href="pages/clients.html">คู่มือ</a></li>
+      <li><b>นำเข้าข้อมูลจาก Express</b> — เมนู “นำเข้าข้อมูล” ดึงผังบัญชี ยอดยกมา ความเคลื่อนไหว และรอบบัญชี เข้าระบบครั้งเดียว · <a href="pages/import.html">คู่มือ</a></li>
+      <li><b>ตรวจสอบข้อมูลบัญชี</b> — ดู <a href="pages/trial-balance.html">งบทดลอง</a> / <a href="pages/general-ledger.html">บัญชีแยกประเภท</a> ว่ายอดถูกต้องและสมดุล</li>
+      <li><b>ทำกระดาษทำการปิดงบ</b> — บันทึกรายการปรับปรุง, ค่าเสื่อม, ค่าใช้จ่ายจ่ายล่วงหน้า, เช่าซื้อ ฯลฯ</li>
+      <li><b>ออกงบการเงินและแบบภาษี</b> — งบฐานะการเงิน/กำไรขาดทุน, <a href="pages/vat.html">ภ.พ.30</a>, ภ.ง.ด.50 และอื่นๆ</li>
+      <li><b>ปิดรอบบัญชีและล็อกงบ</b> — lock รอบบัญชี และจัดชุดรายงานที่ยื่นเป็นเวอร์ชันถาวร</li>
+    </ol>
+    <div class="callout tip">
+      <span class="tag">จำง่ายๆ</span>
+      <p>นำเข้า → ตรวจ → ปรับปรุง → ออกงบ → ปิดงวด — ข้อมูลไหลจาก Express มาเป็นงบการเงินและแบบภาษีโดยมีระบบช่วยตรวจความถูกต้องทุกขั้น</p>
+    </div>
+
+    <h2>6. แผนผังเมนูทั้งหมด</h2>
+    <p>ระบบมี 7 กลุ่มเมนู คู่มือรายหน้าจะทยอยจัดทำครบทุกเมนู:</p>
+    <div class="grid">
+      <div class="mcard"><b>ภาพรวม</b><small>Dashboard · ปฏิทินงาน · งาน/มอบหมายงาน</small></div>
+      <div class="mcard"><b>ข้อมูลและนำเข้า</b><small>ลูกค้า · นำเข้าข้อมูล</small></div>
+      <div class="mcard"><b>บัญชี</b><small>งบทดลอง · แยกประเภท · ลูกหนี้/เจ้าหนี้ · สินค้าคงคลัง · ธนาคาร</small></div>
+      <div class="mcard"><b>เงินเดือน</b><small>เงินเดือน · ภ.ง.ด.1 · ประกันสังคม</small></div>
+      <div class="mcard"><b>ภาษี</b><small>ภ.พ.30 · ภ.ง.ด.50 · หัก ณ ที่จ่าย</small></div>
+      <div class="mcard"><b>รายงานและปิดงวด</b><small>กระดาษทำการ · สินทรัพย์ · งบการเงิน · ปิดรอบ · ชุดรายงาน · หลักฐาน</small></div>
+      <div class="mcard"><b>ระบบ</b><small>ตั้งค่าสำนักงาน · ทะเบียนผู้สอบ/ผู้ทำบัญชี · ประวัติการใช้งาน</small></div>
+    </div>
+
+    <div class="callout note">
+      <span class="tag">ถัดไป</span>
+      <p>ถ้าเพิ่งเริ่มใช้ระบบ แนะนำให้อ่านตามลำดับนี้:
+      <a href="pages/dashboard.html">Dashboard</a> →
+      <a href="pages/clients.html">ลูกค้า</a> →
+      <a href="pages/import.html">นำเข้าข้อมูล</a> →
+      <a href="pages/trial-balance.html">งบทดลอง</a> →
+      <a href="pages/general-ledger.html">บัญชีแยกประเภท</a></p>
+    </div>
+
+    <div class="footer-note">
+      คู่มือการใช้งาน JSP Datacenter — ภาพประกอบจากระบบจริง (ข้อมูลตัวอย่าง: บริษัท JSP CONNX ปีบัญชี 2025)
+    </div>
+
+  </div>
+  </main>
+</div>
+<script src="assets/nav.js" data-root="" data-current="index.html"></script>
+</body>
+</html>
+</file>
+
+<file path="manual/tools/capture.mjs">
+// Playwright screenshot capture for the JSP Datacenter user manual.
+// Logs in, selects a company, and captures full-page screenshots of the given routes.
+//
+// Usage: node tools/capture.mjs [name ...]
+//   no args = capture every route below; otherwise only the named ones
+//   env: MANUAL_BASE, MANUAL_USER, MANUAL_PASS, MANUAL_COMPANY_ID, MANUAL_YEAR
+import { chromium } from 'playwright'
+import { mkdir } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const OUT = join(__dirname, '..', 'site', 'assets', 'img')
+const BASE = process.env.MANUAL_BASE || 'http://localhost:5199'
+const USER = process.env.MANUAL_USER || 'admin'
+const PASS = process.env.MANUAL_PASS || 'admin1234'
+const COMPANY_ID = Number(process.env.MANUAL_COMPANY_ID || 226) // JSIT2016 = JSP CONNX (ดู tools/list-companies.mjs)
+const YEAR = process.env.MANUAL_YEAR || '2025'
+
+/** หน้ารายงาน (งบทดลอง/แยกประเภท) ไม่ดึงข้อมูลเอง — ต้องตั้งปีแล้วกด "แสดงรายงาน" ก่อนแคป */
+async function showReport(page) {
+  await page.fill('input[type="number"]', YEAR)
+  await page.getByRole('button', { name: 'แสดงรายงาน' }).click()
+  await page.waitForTimeout(2500)
+}
+
+// name = ไฟล์ผลลัพธ์ (name.png); path = route; wait = หน่วงเพิ่ม (ms); full = แคปทั้งหน้า
+const ROUTES = [
+  { name: 'login', path: '/login', auth: false, full: false },
+  { name: 'dashboard', path: '/dashboard' },
+  {
+    // โหมดภาพรวมทุกบริษัท = ยังไม่เลือกบริษัท (ล้าง companyId แล้วโหลดใหม่)
+    name: 'dashboard-all',
+    path: '/dashboard',
+    prepare: async (page) => {
+      await page.evaluate(() => localStorage.removeItem('companyId'))
+      await page.reload({ waitUntil: 'networkidle' })
+      await page.waitForTimeout(2000)
+    },
+    restoreCompany: true,
+  },
+  { name: 'clients', path: '/clients' },
+  { name: 'import', path: '/import' },
+  { name: 'import-validation', path: '/import/1/validation' },
+  // รายงานที่มีบัญชีเป็นร้อยแถว: แคปแค่ 1 viewport (fullPage จะยาวหมื่นพิกเซล ย่อลงคู่มือแล้วอ่านไม่ออก)
+  { name: 'trial-balance', path: '/trial-balance', prepare: showReport, full: false },
+  {
+    name: 'general-ledger',
+    path: '/general-ledger',
+    full: false,
+    prepare: async (page) => {
+      await showReport(page)
+      // กางการ์ดบัญชีใบแรกให้เห็นตารางรายการข้างใน (หัวการ์ดคือ button.w-full)
+      const firstCard = page.locator('main button.w-full').first()
+      if (await firstCard.count()) {
+        await firstCard.click()
+        await page.waitForTimeout(600)
+      }
+    },
+  },
+]
+
+// ── ภ.พ.30 ──
+const VAT_YEAR = process.env.MANUAL_VAT_YEAR || '2025'
+const MULTI_BRANCH_COMPANY_ID = Number(process.env.MANUAL_MULTIBRANCH_COMPANY_ID || 287) // บริษัทที่มีหลายสาขาใน Express
+
+/** ตั้งปีภาษีที่ select ตัวแรกของหน้า /vat (ปีจะ auto เลือกปีล่าสุดที่มีข้อมูล ถ้าไม่ตั้งเอง) */
+async function setVatYear(page) {
+  await page.locator('main select').first().selectOption(VAT_YEAR)
+  await page.waitForTimeout(1500)
+}
+
+async function openVatTab(page, label) {
+  await setVatYear(page)
+  await page.getByRole('button', { name: label }).click()
+  await page.waitForTimeout(2000)
+}
+
+ROUTES.push(
+  { name: 'vat-report', path: '/vat', prepare: setVatYear, full: false },
+  {
+    // ใบช่วยกรอกเป็นฟอร์ม ไม่ยาวมาก — แคปเต็มหน้าให้เห็นครบทุกช่องจนถึง "ภาษีสุทธิ"
+    name: 'vat-filing',
+    path: '/vat',
+    prepare: (page) => openVatTab(page, 'ใบกรอก ภ.พ.30 (e-Filing)'),
+  },
+  {
+    name: 'vat-entries',
+    path: '/vat',
+    full: false,
+    prepare: (page) => openVatTab(page, 'รายละเอียดภาษีซื้อ/ขาย'),
+  },
+  {
+    // ตารางแยกสาขาจะขึ้นเฉพาะบริษัทที่มีหลาย DEPCOD ใน Express — แคปเฉพาะการ์ดใบนั้น
+    name: 'vat-branches',
+    path: '/vat',
+    companyId: MULTI_BRANCH_COMPANY_ID,
+    element: (page) => page.locator('div.overflow-x-auto').filter({ hasText: 'แยกตามสาขา' }).first(),
+    prepare: async (page) => {
+      await openVatTab(page, 'ใบกรอก ภ.พ.30 (e-Filing)')
+      // ต้องเลือกเดือนที่มีข้อมูลมากกว่า 1 สาขา ไม่งั้นการ์ด "แยกตามสาขา" จะไม่ขึ้น
+      await page.locator('main select').nth(1).selectOption(process.env.MANUAL_BRANCH_MONTH || '3')
+      await page.waitForTimeout(2000)
+    },
+  },
+  {
+    name: 'vat-branch-mapping',
+    path: '/vat',
+    companyId: MULTI_BRANCH_COMPANY_ID,
+    full: false,
+    prepare: async (page) => {
+      await openVatTab(page, 'ใบกรอก ภ.พ.30 (e-Filing)')
+      await page.getByRole('button', { name: 'แมพเลขสาขา' }).click()
+      await page.waitForTimeout(1500)
+    },
+  },
+)
+
+const only = process.argv.slice(2)
+const routes = only.length ? ROUTES.filter((r) => only.includes(r.name)) : ROUTES
+if (!routes.length) {
+  console.error('ไม่พบ route ที่ระบุ — มีให้เลือก:', ROUTES.map((r) => r.name).join(', '))
+  process.exit(1)
+}
+
+await mkdir(OUT, { recursive: true })
+
+const browser = await chromium.launch()
+const ctx = await browser.newContext({
+  viewport: { width: 1440, height: 900 },
+  deviceScaleFactor: 2, // crisp screenshots
+  locale: 'th-TH',
+})
+const page = await ctx.newPage()
+
+// 1) login
+await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' })
+await page.fill('input[type="text"]', USER)
+await page.fill('input[type="password"]', PASS)
+await page.click('button[type="submit"]')
+await page.waitForURL('**/dashboard', { timeout: 20000 })
+
+// 2) select company (persisted in localStorage, read by CurrentCompanyProvider)
+await page.evaluate((id) => localStorage.setItem('companyId', String(id)), COMPANY_ID)
+
+// 3) capture each route
+for (const r of routes) {
+  const url = `${BASE}${r.path}`
+  // route ที่ต้องใช้บริษัทอื่น (เช่น ตัวอย่างบริษัทหลายสาขา)
+  if (r.companyId) await page.evaluate((id) => localStorage.setItem('companyId', String(id)), r.companyId)
+  await page.goto(url, { waitUntil: 'networkidle' })
+  await page.waitForTimeout(r.wait ?? 1200)
+  if (r.prepare) await r.prepare(page)
+  const file = join(OUT, `${r.name}.png`)
+  if (r.element) {
+    // แคปเฉพาะส่วนที่ต้องการ (เช่น การ์ดใบเดียวกลางหน้ายาว ๆ)
+    const el = r.element(page)
+    await el.scrollIntoViewIfNeeded()
+    await page.waitForTimeout(400)
+    await el.screenshot({ path: file })
+  } else {
+    await page.screenshot({ path: file, fullPage: r.full !== false })
+  }
+  console.log('captured', r.name, '->', file)
+  // route ที่เปลี่ยน/ล้างบริษัท ต้องตั้งกลับก่อนไป route ถัดไป
+  if (r.restoreCompany || r.companyId) {
+    await page.evaluate((id) => localStorage.setItem('companyId', String(id)), COMPANY_ID)
+  }
+}
+
+await browser.close()
+console.log('DONE')
 </file>
 
 <file path="src/backend/Datacenter.Api/Program.cs">
