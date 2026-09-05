@@ -13,6 +13,7 @@ public class GetClientDetailQueryHandler(IApplicationDbContext db)
     {
         var c = await db.ClientCompanies
             .AsNoTracking()
+            .Include(x => x.DefaultAssignee)
             .FirstOrDefaultAsync(x => x.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(ClientDetailDto), request.Id);
 
@@ -20,6 +21,7 @@ public class GetClientDetailQueryHandler(IApplicationDbContext db)
             c.SsoAccountNo, c.SsoBranchCode, c.Phone, c.PostalCode,
             new ClientAddressDto(c.AddrBuilding, c.AddrRoomNo, c.AddrFloor, c.AddrVillage, c.AddrHouseNo,
                 c.AddrMoo, c.AddrSoi, c.AddrRoad, c.AddrSubDistrict, c.AddrDistrict, c.AddrProvince),
-            c.BusinessActivity, c.IsicCode, c.Email);
+            c.BusinessActivity, c.IsicCode, c.Email,
+            c.DefaultAssigneeUserId, c.DefaultAssignee?.DisplayName);
     }
 }

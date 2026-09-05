@@ -30,6 +30,10 @@ public class ClientCompanyConfiguration : IEntityTypeConfiguration<ClientCompany
         builder.HasOne(x => x.DefaultBookkeeper)
             .WithMany().HasForeignKey(x => x.DefaultBookkeeperId).OnDelete(DeleteBehavior.SetNull);
 
+        // เจ้าหน้าที่บัญชีที่รับผิดชอบบริษัทนี้ประจำ (ใช้ auto-assign งานประจำ)
+        builder.HasOne(x => x.DefaultAssignee)
+            .WithMany().HasForeignKey(x => x.DefaultAssigneeUserId).OnDelete(DeleteBehavior.SetNull);
+
         // business key สำหรับ match ตอน import (filtered: เฉพาะ active ที่มี TaxId — เว้น onboard ที่ยังไม่กรอก/สำเนาที่ปิดใช้งาน)
         builder.HasIndex(x => new { x.TaxId, x.BranchCode })
             .IsUnique()

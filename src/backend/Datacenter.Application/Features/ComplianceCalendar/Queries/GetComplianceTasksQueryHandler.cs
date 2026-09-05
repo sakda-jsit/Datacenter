@@ -1,5 +1,6 @@
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Features.ComplianceCalendar.DTOs;
+using Datacenter.Application.Features.ComplianceCalendar.Services;
 using Datacenter.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,23 @@ public class GetComplianceTasksQueryHandler(IApplicationDbContext db)
             query = query.Where(t => t.Status == request.Status.Value);
 
         var tasks = await query.OrderBy(t => t.Month).ThenBy(t => t.TaskType).ToListAsync(ct);
+
+        // จำนวนหลักฐานที่แนบกับแต่ละงาน (query เดียวสำหรับทุกงาน)
+        var taskIds = tasks.Select(t => t.Id).ToList();
+        var evidenceCounts = await db.Attachments
+            .Where(a => a.ModuleName == ComplianceEvidence.ModuleName
+                     && a.RecordId != null && taskIds.Contains(a.RecordId.Value))
+            .GroupBy(a => a.RecordId!.Value)
+            .Select(g => new { TaskId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.TaskId, x => x.Count, ct);
+
+        // กฎ "ต้องมีหลักฐาน" ต่อประเภทงาน (resolve template 2 ระดับ ครั้งเดียว)
+        var globalRules = await db.ComplianceTaskTemplates.AsNoTracking()
+            .Where(t => t.ClientCompanyId == null).ToListAsync(ct);
+        var companyRules = await db.ComplianceTaskTemplates.AsNoTracking()
+            .Where(t => t.ClientCompanyId == request.ClientCompanyId).ToListAsync(ct);
+        var effective = ComplianceTemplateResolver.Resolve(globalRules, companyRules);
+
         var now = DateTime.UtcNow.Date;
 
         return tasks.Select(t => new ComplianceTaskDto(
@@ -44,7 +62,9 @@ public class GetComplianceTasksQueryHandler(IApplicationDbContext db)
             t.CompletedAt,
             t.CompletedByUserId,
             t.CompletedByUser?.DisplayName,
-            t.Status != ComplianceTaskStatus.Completed && t.DueDate.Date < now
+            t.Status != ComplianceTaskStatus.Completed && t.DueDate.Date < now,
+            evidenceCounts.GetValueOrDefault(t.Id),
+            effective[t.TaskType].RequireEvidence
         )).ToList();
     }
 }

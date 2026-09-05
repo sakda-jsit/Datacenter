@@ -27,6 +27,12 @@ public class GenerateMonthlyTasksCommandHandler(IApplicationDbContext db, IAudit
             .Where(t => t.ClientCompanyId == request.ClientCompanyId).ToListAsync(ct);
         var effective = ComplianceTemplateResolver.Resolve(globalRules, companyRules);
 
+        // ผู้รับผิดชอบประจำบริษัท → ตั้งเป็นผู้รับผิดชอบงานที่สร้างใหม่ (มอบหมายใหม่รายงานได้ภายหลัง)
+        var defaultAssigneeId = await db.ClientCompanies
+            .Where(c => c.Id == request.ClientCompanyId)
+            .Select(c => c.DefaultAssigneeUserId)
+            .FirstOrDefaultAsync(ct);
+
         var toCreate = ComplianceTemplateResolver.AllTypes
             .Where(type => !existingSet.Contains(type) && effective[type].Enabled)
             .Select(type => new ComplianceTask
@@ -37,6 +43,7 @@ public class GenerateMonthlyTasksCommandHandler(IApplicationDbContext db, IAudit
                 Month = request.Month,
                 DueDate = ComplianceDueDateCalculator.Calculate(type, request.Year, request.Month, effective[type].DueDay),
                 Status = ComplianceTaskStatus.Pending,
+                AssignedUserId = defaultAssigneeId,
             })
             .ToList();
 

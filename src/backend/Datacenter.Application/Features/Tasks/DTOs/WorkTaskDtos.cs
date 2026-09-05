@@ -48,6 +48,17 @@ public record WorkItemDto(
     bool IsOverdue,
     int? DaysToDue);
 
+/// <summary>ภาระงานของผู้รับผิดชอบ 1 คน (UserId = null → งานที่ยังไม่มอบหมาย)</summary>
+public record UserWorkloadDto(
+    int? UserId,
+    string DisplayName,
+    int OpenCount,          // งานค้างทั้งหมด
+    int OverdueCount,       // เกินกำหนด
+    int DueSoonCount,       // ใกล้ครบกำหนด (ยังไม่เกิน)
+    int NoDueDateCount,     // ไม่ได้ตั้งกำหนดส่ง
+    int CompanyCount,       // กระจายอยู่กี่บริษัท
+    DateTime? EarliestDueDate);
+
 public record WorkTaskItemInput(string Text, bool IsDone);
 
 /// <summary>สรุปผลส่งอีเมลเตือนงาน</summary>

@@ -39,6 +39,8 @@ public class GetComplianceTaskTemplatesQueryHandler(IApplicationDbContext db)
                     type, ComplianceTaskHelpers.TaskTypeName(type),
                     gr?.Enabled ?? true, gr?.DueDay,
                     ComplianceDueDateCalculator.DefaultDueDay(type),
+                    gr?.RequireEvidence ?? ComplianceTemplateResolver.DefaultRequireEvidence(type),
+                    ComplianceTemplateResolver.DefaultRequireEvidence(type),
                     gr is null ? "default" : "global");
             }).ToList();
         }
@@ -52,6 +54,8 @@ public class GetComplianceTaskTemplatesQueryHandler(IApplicationDbContext db)
                 type, ComplianceTaskHelpers.TaskTypeName(type),
                 e.Enabled, e.DueDay,
                 ComplianceDueDateCalculator.DefaultDueDay(type),
+                e.RequireEvidence,
+                ComplianceTemplateResolver.DefaultRequireEvidence(type),
                 e.Source);
         }).ToList();
     }

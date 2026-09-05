@@ -43,6 +43,10 @@ export interface ComplianceTaskDto {
   completedByUserId: number | null
   completedByUserName: string | null
   isOverdue: boolean
+  /** จำนวนหลักฐาน (แบบที่ยื่น/ใบเสร็จ) ที่แนบกับงานงวดนี้ */
+  evidenceCount: number
+  /** งานประเภทนี้ต้องมีหลักฐานก่อนปิดเป็น "เสร็จสิ้น" หรือไม่ */
+  requireEvidence: boolean
 }
 
 export interface ComplianceTaskTemplateDto {
@@ -51,6 +55,8 @@ export interface ComplianceTaskTemplateDto {
   enabled: boolean
   dueDay: number | null
   defaultDueDay: number
+  requireEvidence: boolean
+  defaultRequireEvidence: boolean
   source: 'default' | 'global' | 'company'
 }
 

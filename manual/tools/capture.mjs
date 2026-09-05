@@ -196,6 +196,7 @@ ROUTES.push(
   },
   { name: 'tasks-company', path: '/tasks', full: false },
   { name: 'tasks-board', path: '/tasks', full: false, prepare: tab('งานข้ามบริษัท (workboard)') },
+  { name: 'tasks-workload', path: '/tasks', full: false, prepare: tab('ภาระงานรายคน') },
 )
 
 // ── กลุ่ม "เงินเดือน" (ต้องใช้บริษัทที่มีข้อมูลเงินเดือน) ──

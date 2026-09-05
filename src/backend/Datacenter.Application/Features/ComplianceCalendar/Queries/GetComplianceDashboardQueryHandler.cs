@@ -69,5 +69,6 @@ public class GetComplianceDashboardQueryHandler(IApplicationDbContext db)
             t.Status, ComplianceTaskHelpers.StatusName(t.Status),
             t.AssignedUserId, t.AssignedUser?.DisplayName,
             t.Note, t.CompletedAt, t.CompletedByUserId, t.CompletedByUser?.DisplayName,
-            t.Status != ComplianceTaskStatus.Completed && t.DueDate.Date < now);
+            t.Status != ComplianceTaskStatus.Completed && t.DueDate.Date < now,
+            0, false); // widget "ครบกำหนดใน 7 วัน" ไม่ใช้ข้อมูลหลักฐาน
 }

@@ -11,7 +11,7 @@ namespace Datacenter.Application.Features.ComplianceCalendar.Commands;
 /// DueDay: null = ใช้ค่าเริ่มต้น; ค่า ≤ 0 = สิ้นเดือนถัดไป.
 /// </summary>
 public record UpsertComplianceTaskTemplateCommand(
-    int? ClientCompanyId, ComplianceTaskType TaskType, bool Enabled, int? DueDay)
+    int? ClientCompanyId, ComplianceTaskType TaskType, bool Enabled, int? DueDay, bool? RequireEvidence = null)
     : IRequest<Unit>;
 
 public class UpsertComplianceTaskTemplateCommandHandler(IApplicationDbContext db, IAuditService audit)
@@ -35,10 +35,11 @@ public class UpsertComplianceTaskTemplateCommandHandler(IApplicationDbContext db
         }
         row.Enabled = request.Enabled;
         row.DueDay = request.DueDay is > 0 ? request.DueDay : (request.DueDay is null ? null : 0);
+        row.RequireEvidence = request.RequireEvidence;
 
         await audit.LogAsync("UpsertTaskTemplate", "ComplianceTaskTemplate",
             entityId: $"{companyId?.ToString() ?? "GLOBAL"}:{request.TaskType}",
-            afterValue: $"enabled={request.Enabled} dueDay={request.DueDay}",
+            afterValue: $"enabled={request.Enabled} dueDay={request.DueDay} requireEvidence={request.RequireEvidence}",
             companyId: companyId, cancellationToken: ct);
 
         await db.SaveChangesAsync(ct);

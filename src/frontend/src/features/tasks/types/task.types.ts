@@ -105,6 +105,18 @@ export interface WorkItemDto {
   daysToDue?: number | null
 }
 
+/** ภาระงานของผู้รับผิดชอบ 1 คน (userId = null → งานที่ยังไม่มอบหมาย) */
+export interface UserWorkloadDto {
+  userId: number | null
+  displayName: string
+  openCount: number
+  overdueCount: number
+  dueSoonCount: number
+  noDueDateCount: number
+  companyCount: number
+  earliestDueDate: string | null
+}
+
 export interface AssignableUserDto {
   userId: number
   displayName: string

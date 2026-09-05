@@ -5,6 +5,7 @@ import type {
   TaskReminderResult,
   UpdateWorkTaskInput,
   WorkboardParams,
+  UserWorkloadDto,
   WorkItemDto,
   WorkTaskDto,
 } from '../types/task.types'
@@ -17,6 +18,11 @@ export const taskApi = {
 
   board: (params: WorkboardParams) =>
     apiClient.get<WorkItemDto[]>('/work-tasks/board', { params }).then((r) => r.data),
+
+  workload: (includeCompliance: boolean) =>
+    apiClient
+      .get<UserWorkloadDto[]>('/work-tasks/workload', { params: { includeCompliance } })
+      .then((r) => r.data),
 
   assignableUsers: (clientCompanyId: number) =>
     apiClient

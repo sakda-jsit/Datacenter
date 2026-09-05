@@ -53,6 +53,13 @@ public class ClientCompany : BaseEntity
     public int? DefaultBookkeeperId { get; set; }
     public Bookkeeper? DefaultBookkeeper { get; set; }
 
+    /// <summary>
+    /// เจ้าหน้าที่บัญชีที่รับผิดชอบบริษัทนี้ประจำ — ใช้ตั้ง AssignedUserId ให้งานประจำ (ComplianceTask)
+    /// อัตโนมัติตอน generate งานรายเดือน; มอบหมายใหม่รายงานได้ที่หน้าปฏิทินงาน
+    /// </summary>
+    public int? DefaultAssigneeUserId { get; set; }
+    public User? DefaultAssignee { get; set; }
+
     public int FiscalYearStartMonth { get; set; } = 1;
     public bool IsActive { get; set; } = true;
 

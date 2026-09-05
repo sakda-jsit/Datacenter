@@ -16,5 +16,11 @@ public class ComplianceTaskTemplate : BaseEntity
     public bool Enabled { get; set; } = true;
     public int? DueDay { get; set; }             // null = ใช้ค่า default ของ calculator (0/น้อยกว่า = สิ้นเดือนถัดไป)
 
+    /// <summary>
+    /// ต้องแนบหลักฐาน (แบบที่ยื่น/ใบเสร็จ) ก่อนจึงจะปิดงานเป็น "เสร็จสิ้น" ได้.
+    /// null = ใช้ค่าเริ่มต้นตามประเภทงาน (งานยื่นแบบ = ต้องมี, ปิดบัญชี = ไม่ต้อง)
+    /// </summary>
+    public bool? RequireEvidence { get; set; }
+
     public ClientCompany? ClientCompany { get; set; }
 }

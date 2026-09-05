@@ -20,7 +20,11 @@ public record ComplianceTaskDto(
     DateTime? CompletedAt,
     int? CompletedByUserId,
     string? CompletedByUserName,
-    bool IsOverdue
+    bool IsOverdue,
+    /// <summary>จำนวนหลักฐาน (แบบที่ยื่น/ใบเสร็จ) ที่แนบกับงานงวดนี้</summary>
+    int EvidenceCount,
+    /// <summary>งานประเภทนี้ต้องมีหลักฐานก่อนปิดเป็น "เสร็จสิ้น" หรือไม่</summary>
+    bool RequireEvidence
 );
 
 public record MonthSummaryDto(
@@ -39,6 +43,8 @@ public record ComplianceTaskTemplateDto(
     bool Enabled,
     int? DueDay,          // วันครบกำหนด (override); null = ใช้ค่าเริ่มต้น
     int DefaultDueDay,    // ค่าเริ่มต้นของประเภทนี้ (0 = สิ้นเดือนถัดไป)
+    bool RequireEvidence,        // ต้องแนบหลักฐานก่อนปิดงาน (effective)
+    bool DefaultRequireEvidence, // ค่าเริ่มต้นของประเภทนี้
     string Source         // "default" = ค่าเริ่มต้นระบบ, "global" = ตั้งระดับทุกบริษัท, "company" = ตั้งเฉพาะบริษัท (override)
 );
 

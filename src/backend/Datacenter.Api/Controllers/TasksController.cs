@@ -30,6 +30,13 @@ public class TasksController(IMediator mediator) : ControllerBase
         CancellationToken ct = default)
         => Ok(await mediator.Send(new GetWorkboardQuery(assignedUserId, openOnly, dueBefore, includeCompliance), ct));
 
+    /// <summary>ภาระงานรายคน — งานค้าง/เกินกำหนดของแต่ละผู้รับผิดชอบ ข้ามทุกบริษัทที่เข้าถึงได้</summary>
+    [HttpGet("workload")]
+    public async Task<IActionResult> GetWorkload(
+        [FromQuery] bool includeCompliance = true, [FromQuery] int dueSoonDays = 7,
+        CancellationToken ct = default)
+        => Ok(await mediator.Send(new GetWorkloadByUserQuery(includeCompliance, dueSoonDays), ct));
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateWorkTaskCommand command, CancellationToken ct)
         => Ok(await mediator.Send(command, ct));

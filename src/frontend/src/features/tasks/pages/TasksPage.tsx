@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import Button from '../../../shared/components/ui/Button'
 import Card from '../../../shared/components/ui/Card'
 import PageHeader from '../../../shared/components/ui/PageHeader'
@@ -11,16 +11,17 @@ import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import TaskFormModal from '../components/TaskFormModal'
 import {
   useAssignableUsers, useAssignTask, useDeleteTask, useSendReminders, useSetTaskStatus,
-  useToggleTaskItem, useWorkboard, useWorkTasks,
+  useToggleTaskItem, useWorkboard, useWorkload, useWorkTasks,
 } from '../hooks/useTasks'
 import { PRIORITY_LABEL, STATUS_OPTIONS, STATUS_TONE } from '../types/task.types'
-import type { WorkItemDto, WorkTaskDto } from '../types/task.types'
+import type { UserWorkloadDto, WorkItemDto, WorkTaskDto } from '../types/task.types'
 import type { ExportSection } from '../../../shared/utils/exportTable'
 
-type Tab = 'company' | 'board'
+type Tab = 'company' | 'board' | 'workload'
 const TABS: { key: Tab; label: string }[] = [
   { key: 'company', label: 'งานของบริษัท' },
   { key: 'board', label: 'งานข้ามบริษัท (workboard)' },
+  { key: 'workload', label: 'ภาระงานรายคน' },
 ]
 
 function fmtDate(d?: string | null) {
@@ -33,7 +34,9 @@ export default function TasksPage() {
     <div>
       <PageHeader title="งาน / มอบหมายงาน" description="งานทั่วไป (ad-hoc) ต่อบริษัท + ภาพรวมงานข้ามทุกบริษัท" />
       <Tabs items={TABS} activeKey={tab} onChange={setTab} />
-      {tab === 'company' ? <CompanyTasksTab /> : <WorkboardTab />}
+      {tab === 'company' && <CompanyTasksTab />}
+      {tab === 'board' && <WorkboardTab />}
+      {tab === 'workload' && <WorkloadTab />}
     </div>
   )
 }
@@ -196,7 +199,8 @@ function CompanyTasksTab() {
 function WorkboardTab() {
   const { user } = useAuth()
   const sendReminders = useSendReminders()
-  const [mineOnly, setMineOnly] = useState(false)
+  // 'all' = ทุกคน, 'unassigned' = ยังไม่มอบหมาย, ตัวเลข = userId คนนั้น
+  const [assignee, setAssignee] = useState<string>('all')
 
   async function handleSendReminders() {
     if (!window.confirm('ส่งอีเมลเตือนงานค้าง/ใกล้ครบกำหนดให้ผู้รับผิดชอบ (ทุกบริษัท)?')) return
@@ -212,21 +216,52 @@ function WorkboardTab() {
   const [includeCompliance, setIncludeCompliance] = useState(true)
   const [dueBefore, setDueBefore] = useState('')
 
-  const { data: items, isLoading, isError } = useWorkboard({
-    assignedUserId: mineOnly ? user?.userId ?? null : null,
+  // ดึงทุกคนมาก่อน แล้วกรองรายคนฝั่ง client — ได้รายชื่อผู้รับผิดชอบจากข้อมูลจริงโดยไม่ต้องเรียก endpoint เพิ่ม
+  const { data: allItems, isLoading, isError } = useWorkboard({
+    assignedUserId: null,
     openOnly,
     includeCompliance,
     dueBefore: dueBefore ? `${dueBefore}T00:00:00` : null,
   })
 
+  // รายชื่อผู้รับผิดชอบที่ปรากฏในงานชุดนี้ (เรียงตามชื่อ)
+  const assigneeOptions = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const i of allItems ?? []) {
+      if (i.assignedUserId != null) map.set(i.assignedUserId, i.assignedUserName ?? `ผู้ใช้ #${i.assignedUserId}`)
+    }
+    return [...map.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'th'))
+  }, [allItems])
+
+  const items = useMemo(() => {
+    if (!allItems) return allItems
+    if (assignee === 'all') return allItems
+    if (assignee === 'unassigned') return allItems.filter((i) => i.assignedUserId == null)
+    const uid = Number(assignee)
+    return allItems.filter((i) => i.assignedUserId === uid)
+  }, [allItems, assignee])
+
   return (
     <div>
       <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 px-6 py-4">
         <div className="flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-2 text-sm text-gray-600">
-            <input type="checkbox" checked={mineOnly} onChange={(e) => setMineOnly(e.target.checked)} className="rounded" />
-            เฉพาะของฉัน
-          </label>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">ผู้รับผิดชอบ</span>
+            <select
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value)}
+              className="rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+            >
+              <option value="all">— ทุกคน —</option>
+              {user?.userId != null && <option value={String(user.userId)}>เฉพาะของฉัน</option>}
+              <option value="unassigned">ยังไม่มอบหมาย</option>
+              {assigneeOptions
+                .filter((o) => o.id !== user?.userId)
+                .map((o) => <option key={o.id} value={String(o.id)}>{o.name}</option>)}
+            </select>
+          </div>
           <label className="flex items-center gap-2 text-sm text-gray-600">
             <input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} className="rounded" />
             เฉพาะที่ยังไม่เสร็จ
@@ -306,6 +341,94 @@ function WorkboardTab() {
                     </StatusBadge>
                   </td>
                   <td className="px-4 py-2.5 text-gray-600">{i.assignedUserName ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+// ── แท็บ 3: ภาระงานรายคน ─────────────────────────────────────────────────────
+function WorkloadTab() {
+  const [includeCompliance, setIncludeCompliance] = useState(true)
+  const { data: rows, isLoading, isError } = useWorkload(includeCompliance)
+
+  const totals = useMemo(() => ({
+    open: (rows ?? []).reduce((s, r) => s + r.openCount, 0),
+    overdue: (rows ?? []).reduce((s, r) => s + r.overdueCount, 0),
+    people: (rows ?? []).filter((r) => r.userId != null).length,
+    unassigned: (rows ?? []).find((r) => r.userId == null)?.openCount ?? 0,
+  }), [rows])
+
+  return (
+    <div>
+      <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 px-6 py-4">
+        <label className="flex items-center gap-2 text-sm text-gray-600">
+          <input type="checkbox" checked={includeCompliance} onChange={(e) => setIncludeCompliance(e.target.checked)} className="rounded" />
+          รวมงานภาษี (compliance)
+        </label>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-gray-500">
+            งานค้างรวม {totals.open} · เกินกำหนด {totals.overdue} · ผู้รับผิดชอบ {totals.people} คน
+            {totals.unassigned > 0 && ` · ยังไม่มอบหมาย ${totals.unassigned}`}
+          </p>
+          {rows && rows.length > 0 && (
+            <ExportMenu
+              meta={{ title: 'ภาระงานรายคน', fileName: 'workload-by-user' }}
+              getSections={(): ExportSection[] => [{
+                name: 'ภาระงาน',
+                columns: [
+                  { key: 'displayName', header: 'ผู้รับผิดชอบ' },
+                  { key: 'openCount', header: 'งานค้าง', align: 'right' },
+                  { key: 'overdueCount', header: 'เกินกำหนด', align: 'right' },
+                  { key: 'dueSoonCount', header: 'ใกล้ครบกำหนด', align: 'right' },
+                  { key: 'noDueDateCount', header: 'ไม่มีกำหนด', align: 'right' },
+                  { key: 'companyCount', header: 'จำนวนบริษัท', align: 'right' },
+                  { key: 'earliestDueDate', header: 'ครบกำหนดเร็วสุด', value: (r: UserWorkloadDto) => fmtDate(r.earliestDueDate) },
+                ],
+                rows,
+              }]}
+            />
+          )}
+        </div>
+      </Card>
+
+      {isError && <StateMessage tone="error">เกิดข้อผิดพลาด กรุณาลองใหม่</StateMessage>}
+      {isLoading && <StateMessage>กำลังโหลด...</StateMessage>}
+      {rows && rows.length === 0 && <Card><StateMessage centered>ไม่มีงานค้างในบริษัทที่คุณเข้าถึงได้ 🎉</StateMessage></Card>}
+
+      {rows && rows.length > 0 && (
+        <Card className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b bg-slate-50 text-xs text-gray-600">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium">ผู้รับผิดชอบ</th>
+                <th className="px-4 py-3 text-right font-medium w-28">งานค้าง</th>
+                <th className="px-4 py-3 text-right font-medium w-28">เกินกำหนด</th>
+                <th className="px-4 py-3 text-right font-medium w-32">ใกล้ครบกำหนด</th>
+                <th className="px-4 py-3 text-right font-medium w-28">ไม่มีกำหนด</th>
+                <th className="px-4 py-3 text-right font-medium w-28">บริษัท</th>
+                <th className="px-4 py-3 text-left font-medium w-36">ครบกำหนดเร็วสุด</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.userId ?? 'unassigned'}
+                  className={`border-t border-gray-100 ${r.userId == null ? 'bg-amber-50/50' : 'hover:bg-slate-50'}`}>
+                  <td className="px-4 py-2 font-medium text-slate-800">{r.displayName}</td>
+                  <td className="px-4 py-2 text-right font-mono">{r.openCount}</td>
+                  <td className={`px-4 py-2 text-right font-mono ${r.overdueCount > 0 ? 'font-semibold text-red-600' : 'text-gray-300'}`}>
+                    {r.overdueCount || '—'}
+                  </td>
+                  <td className={`px-4 py-2 text-right font-mono ${r.dueSoonCount > 0 ? 'text-amber-700' : 'text-gray-300'}`}>
+                    {r.dueSoonCount || '—'}
+                  </td>
+                  <td className="px-4 py-2 text-right font-mono text-gray-500">{r.noDueDateCount || '—'}</td>
+                  <td className="px-4 py-2 text-right font-mono text-gray-500">{r.companyCount}</td>
+                  <td className="px-4 py-2 text-gray-600">{fmtDate(r.earliestDueDate)}</td>
                 </tr>
               ))}
             </tbody>

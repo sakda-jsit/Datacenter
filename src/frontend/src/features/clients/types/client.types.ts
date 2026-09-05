@@ -33,6 +33,9 @@ export interface ClientDetailDto extends ClientListDto {
   businessActivity?: string | null
   isicCode?: string | null
   email?: string | null
+  /** เจ้าหน้าที่บัญชีที่รับผิดชอบบริษัทนี้ประจำ (auto-assign งานประจำที่สร้างใหม่) */
+  defaultAssigneeUserId?: number | null
+  defaultAssigneeName?: string | null
 }
 
 export interface CreateClientRequest {
@@ -63,4 +66,5 @@ export interface UpdateClientRequest {
   businessActivity?: string
   isicCode?: string
   email?: string
+  defaultAssigneeUserId?: number | null
 }

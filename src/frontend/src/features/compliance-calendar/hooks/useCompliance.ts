@@ -55,7 +55,7 @@ export function useTaskTemplates(clientCompanyId?: number) {
 export function useUpsertTemplate() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { clientCompanyId: number | null; taskType: ComplianceTaskType; enabled: boolean; dueDay: number | null }) =>
+    mutationFn: (input: { clientCompanyId: number | null; taskType: ComplianceTaskType; enabled: boolean; dueDay: number | null; requireEvidence?: boolean | null }) =>
       upsertTemplate(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['compliance', 'templates'] }),
   })

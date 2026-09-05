@@ -9,6 +9,7 @@ export async function getTemplates(clientCompanyId?: number): Promise<Compliance
 
 export async function upsertTemplate(input: {
   clientCompanyId: number | null; taskType: ComplianceTaskType; enabled: boolean; dueDay: number | null
+  requireEvidence?: boolean | null
 }): Promise<void> {
   await apiClient.put('/compliance-calendar/templates', input)
 }

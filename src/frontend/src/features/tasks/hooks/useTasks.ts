@@ -7,6 +7,7 @@ const keys = {
     ['work-tasks', companyId, status ?? null, assignee ?? null] as const,
   board: (p: WorkboardParams) => ['workboard', p] as const,
   users: (companyId: number) => ['assignable-users', companyId] as const,
+  workload: (includeCompliance: boolean) => ['work-workload', includeCompliance] as const,
 }
 
 export function useWorkTasks(companyId: number, status?: number | null, assignee?: number | null, enabled = true) {
@@ -22,6 +23,13 @@ export function useWorkboard(params: WorkboardParams, enabled = true) {
     queryKey: keys.board(params),
     queryFn: () => taskApi.board(params),
     enabled,
+  })
+}
+
+export function useWorkload(includeCompliance: boolean) {
+  return useQuery({
+    queryKey: keys.workload(includeCompliance),
+    queryFn: () => taskApi.workload(includeCompliance),
   })
 }
 

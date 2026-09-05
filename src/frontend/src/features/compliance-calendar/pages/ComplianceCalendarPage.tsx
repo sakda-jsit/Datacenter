@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import DataTable, { type DataTableColumn } from '../../../shared/components/table/DataTable'
 import Button from '../../../shared/components/ui/Button'
 import Card from '../../../shared/components/ui/Card'
@@ -9,11 +10,15 @@ import TaskTemplateSettings from '../components/TaskTemplateSettings'
 import type { ClientListDto } from '../../clients/types/client.types'
 import type { ExportSection } from '../../../shared/utils/exportTable'
 import {
+  useAssignTask,
   useComplianceDashboard,
   useComplianceTasks,
   useGenerateTasks,
   useUpdateTaskStatus,
 } from '../hooks/useCompliance'
+import { useAssignableUsers } from '../../tasks/hooks/useTasks'
+import AttachmentUploadModal from '../../attachments/components/AttachmentUploadModal'
+import { AttachmentCategory } from '../../attachments/types/attachment.types'
 import type { ComplianceTaskDto, ComplianceTaskStatus, MonthSummaryDto } from '../types/compliance.types'
 import { STATUS_COLORS, STATUS_LABELS, TASK_TYPE_LABELS } from '../types/compliance.types'
 
@@ -38,6 +43,23 @@ export default function ComplianceCalendarPage({ clients }: Props) {
 
   const generate = useGenerateTasks()
   const updateStatus = useUpdateTaskStatus()
+  const assign = useAssignTask()
+  const qc = useQueryClient()
+  const { data: assignableUsers } = useAssignableUsers(companyId)
+  // งานที่กำลังแนบหลักฐาน (เปิด modal)
+  const [evidenceFor, setEvidenceFor] = useState<ComplianceTaskDto | null>(null)
+  const [statusError, setStatusError] = useState<string | null>(null)
+
+  /** ปิดงานเป็น "เสร็จสิ้น" อาจถูกปฏิเสธถ้ายังไม่แนบหลักฐาน — แสดงเหตุผลให้ผู้ใช้เห็น */
+  function changeStatus(taskId: number, status: ComplianceTaskStatus) {
+    setStatusError(null)
+    updateStatus.mutate({ taskId, status }, {
+      onError: (err) => {
+        const data = (err as { response?: { data?: { errors?: Record<string, string[]>; detail?: string; title?: string } } })?.response?.data
+        setStatusError(data?.errors?.Status?.[0] ?? data?.detail ?? data?.title ?? 'เปลี่ยนสถานะไม่สำเร็จ')
+      },
+    })
+  }
 
   useEffect(() => {
     setSelectedMonth(null)
@@ -86,10 +108,47 @@ export default function ComplianceCalendarPage({ clients }: Props) {
     {
       key: 'assignedUser',
       header: 'ผู้รับผิดชอบ',
-      render: (task) => <span className="text-xs text-gray-500">{task.assignedUserName ?? '—'}</span>,
+      render: (task) => (
+        <select
+          value={task.assignedUserId ?? ''}
+          onChange={(e) => assign.mutate({ taskId: task.id, userId: e.target.value ? Number(e.target.value) : null })}
+          disabled={assign.isPending}
+          className="w-full rounded border border-gray-200 bg-white px-1.5 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400"
+        >
+          <option value="">— ไม่ระบุ —</option>
+          {(assignableUsers ?? []).map((u) => (
+            <option key={u.userId} value={u.userId}>{u.displayName}</option>
+          ))}
+        </select>
+      ),
       sortValue: (task) => task.assignedUserName ?? '',
       sortable: true,
-      headerClassName: 'w-32',
+      headerClassName: 'w-40',
+    },
+    {
+      key: 'evidence',
+      header: 'หลักฐาน',
+      render: (task) => (
+        <button
+          type="button"
+          onClick={() => setEvidenceFor(task)}
+          title="แนบแบบที่ยื่น / ใบเสร็จ ของงวดนี้"
+          className={`rounded border px-2 py-0.5 text-xs ${
+            task.evidenceCount > 0
+              ? 'border-green-200 bg-green-50 text-green-700'
+              : task.requireEvidence
+                ? 'border-amber-300 bg-amber-50 text-amber-700'
+                : 'border-slate-200 bg-white text-slate-500'
+          }`}
+        >
+          {task.evidenceCount > 0
+            ? `${task.evidenceCount} ไฟล์`
+            : task.requireEvidence ? '+ ต้องแนบ' : '+ แนบ'}
+        </button>
+      ),
+      sortValue: (task) => task.evidenceCount,
+      sortable: true,
+      headerClassName: 'w-28',
     },
     {
       key: 'note',
@@ -104,7 +163,7 @@ export default function ComplianceCalendarPage({ clients }: Props) {
       render: (task) => (
         <StatusButtons
           status={task.status}
-          onChange={(status) => updateStatus.mutate({ taskId: task.id, status })}
+          onChange={(status) => changeStatus(task.id, status)}
         />
       ),
       headerClassName: 'w-36',
@@ -226,6 +285,11 @@ export default function ComplianceCalendarPage({ clients }: Props) {
                 />
               )}
             </div>
+            {statusError && (
+              <div className="mx-4 mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                ⚠ {statusError}
+              </div>
+            )}
             {tasks && tasks.length === 0 && (
               <StateMessage centered>ยังไม่มีรายการงาน — กดปุ่ม "สร้าง" บนการ์ดเดือน</StateMessage>
             )}
@@ -244,6 +308,22 @@ export default function ComplianceCalendarPage({ clients }: Props) {
         </>
       )}
       </>
+      )}
+
+      {evidenceFor && (
+        <AttachmentUploadModal
+          companyId={evidenceFor.clientCompanyId}
+          fiscalYear={evidenceFor.year}
+          defaultCategory={AttachmentCategory.RevenueFiling}
+          moduleName="ComplianceTask"
+          recordId={evidenceFor.id}
+          recordRef={`${evidenceFor.taskTypeName} ${evidenceFor.month}/${evidenceFor.year}`}
+          onClose={() => {
+            setEvidenceFor(null)
+            // อัปเดตจำนวนหลักฐานบนตารางหลังแนบไฟล์
+            qc.invalidateQueries({ queryKey: ['compliance'] })
+          }}
+        />
       )}
     </div>
   )

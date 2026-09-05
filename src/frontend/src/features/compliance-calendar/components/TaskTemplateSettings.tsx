@@ -30,12 +30,13 @@ export default function TaskTemplateSettings({ companyId, companyName }: Props) 
   const upsert = useUpsertTemplate()
   const reset = useResetTemplate()
 
-  function save(t: ComplianceTaskTemplateDto, patch: Partial<Pick<ComplianceTaskTemplateDto, 'enabled' | 'dueDay'>>) {
+  function save(t: ComplianceTaskTemplateDto, patch: Partial<Pick<ComplianceTaskTemplateDto, 'enabled' | 'dueDay' | 'requireEvidence'>>) {
     upsert.mutate({
       clientCompanyId: effectiveScope === 'company' ? companyId : null,
       taskType: t.taskType,
       enabled: patch.enabled ?? t.enabled,
       dueDay: patch.dueDay !== undefined ? patch.dueDay : t.dueDay,
+      requireEvidence: patch.requireEvidence !== undefined ? patch.requireEvidence : t.requireEvidence,
     })
   }
 
@@ -43,7 +44,7 @@ export default function TaskTemplateSettings({ companyId, companyName }: Props) 
     <Card className="overflow-hidden">
       <div className="border-b border-slate-100 px-5 py-4">
         <p className="text-sm font-extrabold text-slate-800">ตั้งค่างานประจำ (template 2 ระดับ)</p>
-        <p className="mt-0.5 text-xs text-slate-500">กำหนดว่างานประเภทไหนใช้กับบริษัทไหน + วันครบกำหนด — ใช้ตอนสร้างงานรายเดือน</p>
+        <p className="mt-0.5 text-xs text-slate-500">กำหนดว่างานประเภทไหนใช้กับบริษัทไหน + วันครบกำหนด + ต้องแนบหลักฐานก่อนปิดงานหรือไม่ — ใช้ตอนสร้างงานรายเดือน</p>
         <div className="mt-3 inline-flex rounded-lg border border-slate-200 p-0.5 text-sm">
           <button type="button" onClick={() => setScope('global')}
             className={`rounded-md px-3 py-1.5 font-medium ${effectiveScope === 'global' ? 'bg-sky-600 text-white' : 'text-slate-600'}`}>
@@ -71,6 +72,7 @@ export default function TaskTemplateSettings({ companyId, companyName }: Props) 
               <th className="px-4 py-2 text-left">ประเภทงาน</th>
               <th className="px-4 py-2 text-center">ใช้งาน</th>
               <th className="px-4 py-2 text-left">วันครบกำหนด (ของเดือนถัดไป)</th>
+              <th className="px-4 py-2 text-center">ต้องแนบหลักฐาน</th>
               <th className="px-4 py-2 text-left">ที่มา</th>
               <th className="px-4 py-2"></th>
             </tr>
@@ -96,6 +98,13 @@ export default function TaskTemplateSettings({ companyId, companyName }: Props) 
                         className="w-20 rounded border border-gray-300 px-2 py-1 text-sm disabled:bg-slate-100" />
                       <span className="text-xs text-gray-400">{dueLabel(t)} {t.defaultDueDay === 0 && '(0 = สิ้นเดือน)'}</span>
                     </div>
+                  </td>
+                  <td className="px-4 py-2 text-center">
+                    <label className="inline-flex cursor-pointer items-center"
+                      title="ถ้าติ๊กไว้ จะปิดงานเป็น &quot;เสร็จสิ้น&quot; ไม่ได้จนกว่าจะแนบแบบที่ยื่น/ใบเสร็จของงวดนั้น">
+                      <input type="checkbox" checked={t.requireEvidence} disabled={!t.enabled || upsert.isPending}
+                        onChange={(e) => save(t, { requireEvidence: e.target.checked })} className="h-4 w-4" />
+                    </label>
                   </td>
                   <td className="px-4 py-2">
                     <span className={`dc-pill ${badge.cls}`}>{badge.label}</span>

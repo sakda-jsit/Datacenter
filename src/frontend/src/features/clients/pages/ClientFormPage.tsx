@@ -5,6 +5,7 @@ import Card from '../../../shared/components/ui/Card'
 import PageHeader from '../../../shared/components/ui/PageHeader'
 import { useForm } from '../../../shared/hooks/useForm'
 import { useClientDetail, useCreateClient, useUpdateClient } from '../hooks/useClients'
+import { useAssignableUsers } from '../../tasks/hooks/useTasks'
 import type { CreateClientRequest } from '../types/client.types'
 
 const MONTHS = [
@@ -14,7 +15,7 @@ const MONTHS = [
 
 // ช่องที่อยู่แยก (ใช้ตอนแก้ไข — สำหรับฟอร์มราชการ เช่น ภ.ง.ด.50)
 type FormState = CreateClientRequest & {
-  businessActivity: string; isicCode: string; email: string
+  businessActivity: string; isicCode: string; email: string; defaultAssigneeUserId: string
   addrBuilding: string; addrRoomNo: string; addrFloor: string; addrVillage: string
   addrHouseNo: string; addrMoo: string; addrSoi: string; addrRoad: string
   addrSubDistrict: string; addrDistrict: string; addrProvince: string
@@ -31,7 +32,7 @@ const emptyForm: FormState = {
   ssoBranchCode: '000000',
   phone: '',
   postalCode: '',
-  businessActivity: '', isicCode: '', email: '',
+  businessActivity: '', isicCode: '', email: '', defaultAssigneeUserId: '',
   addrBuilding: '', addrRoomNo: '', addrFloor: '', addrVillage: '',
   addrHouseNo: '', addrMoo: '', addrSoi: '', addrRoad: '',
   addrSubDistrict: '', addrDistrict: '', addrProvince: '',
@@ -44,6 +45,7 @@ export default function ClientFormPage() {
   const navigate = useNavigate()
 
   const { data: existing } = useClientDetail(clientId)
+  const { data: assignableUsers } = useAssignableUsers(clientId)
   const createMutation = useCreateClient()
   const updateMutation = useUpdateClient()
 
@@ -65,6 +67,7 @@ export default function ClientFormPage() {
         businessActivity: existing.businessActivity ?? '',
         isicCode: existing.isicCode ?? '',
         email: existing.email ?? '',
+        defaultAssigneeUserId: existing.defaultAssigneeUserId ? String(existing.defaultAssigneeUserId) : '',
         addrBuilding: existing.addressDetail?.building ?? '',
         addrRoomNo: existing.addressDetail?.roomNo ?? '',
         addrFloor: existing.addressDetail?.floor ?? '',
@@ -101,6 +104,7 @@ export default function ClientFormPage() {
             businessActivity: values.businessActivity || undefined,
             isicCode: values.isicCode || undefined,
             email: values.email || undefined,
+            defaultAssigneeUserId: values.defaultAssigneeUserId ? Number(values.defaultAssigneeUserId) : null,
             addressDetail: {
               building: values.addrBuilding || undefined,
               roomNo: values.addrRoomNo || undefined,
@@ -229,6 +233,26 @@ export default function ClientFormPage() {
             ))}
           </select>
         </Field>
+
+        {isEdit && (
+          <Field label="เจ้าหน้าที่บัญชีที่รับผิดชอบประจำ">
+            <select
+              name="defaultAssigneeUserId"
+              value={values.defaultAssigneeUserId}
+              onChange={handleChange}
+              className={inputCls(false)}
+            >
+              <option value="">— ไม่ระบุ —</option>
+              {(assignableUsers ?? []).map((u) => (
+                <option key={u.userId} value={u.userId}>{u.displayName}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-400">
+              งานประจำรายเดือน (ภ.พ.30 / ภ.ง.ด. / ปกส. / ปิดบัญชี) ที่สร้างใหม่จะถูกมอบหมายให้คนนี้อัตโนมัติ —
+              เปลี่ยนผู้รับผิดชอบรายงานได้ที่หน้าปฏิทินงาน
+            </p>
+          </Field>
+        )}
 
         {isEdit && (
           <div className="space-y-4 rounded-lg border border-slate-100 bg-slate-50/50 p-4">
