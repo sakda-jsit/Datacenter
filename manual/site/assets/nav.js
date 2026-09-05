@@ -46,9 +46,9 @@
     {
       title: 'เงินเดือน',
       items: [
-        { label: 'เงินเดือน' },
-        { label: 'ภ.ง.ด.1' },
-        { label: 'ประกันสังคม' },
+        { label: 'เงินเดือน', href: 'pages/payroll.html' },
+        { label: 'ภ.ง.ด.1', href: 'pages/pnd1.html' },
+        { label: 'ประกันสังคม', href: 'pages/sso.html' },
       ],
     },
     {

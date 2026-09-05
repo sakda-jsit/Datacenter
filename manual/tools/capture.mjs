@@ -198,6 +198,28 @@ ROUTES.push(
   { name: 'tasks-board', path: '/tasks', full: false, prepare: tab('งานข้ามบริษัท (workboard)') },
 )
 
+// ── กลุ่ม "เงินเดือน" (ต้องใช้บริษัทที่มีข้อมูลเงินเดือน) ──
+const PAYROLL_COMPANY_ID = Number(process.env.MANUAL_PAYROLL_COMPANY_ID || 242)
+
+ROUTES.push(
+  { name: 'payroll-dashboard', path: '/payroll', companyId: PAYROLL_COMPANY_ID, full: false },
+  { name: 'payroll-employees', path: '/payroll', companyId: PAYROLL_COMPANY_ID, full: false, prepare: tab('ทะเบียนพนักงาน') },
+  { name: 'payroll-runs', path: '/payroll', companyId: PAYROLL_COMPANY_ID, full: false, prepare: tab('งวดเงินเดือน') },
+  {
+    name: 'payroll-run-grid',
+    path: '/payroll',
+    companyId: PAYROLL_COMPANY_ID,
+    full: false,
+    prepare: async (page) => {
+      await tab('งวดเงินเดือน')(page)
+      await page.getByRole('button', { name: 'เปิด', exact: true }).first().click()
+      await page.waitForTimeout(2500)
+    },
+  },
+  { name: 'payroll-year', path: '/payroll', companyId: PAYROLL_COMPANY_ID, full: false, prepare: tab('รายได้ทั้งปี') },
+  { name: 'payroll-mapping', path: '/payroll', companyId: PAYROLL_COMPANY_ID, full: false, prepare: tab('แมพบัญชีเงินเดือน') },
+)
+
 const only = process.argv.slice(2)
 const routes = only.length ? ROUTES.filter((r) => only.includes(r.name)) : ROUTES
 if (!routes.length) {
