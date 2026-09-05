@@ -10,52 +10,8 @@
 </head>
 <body>
 <div class="wrap">
-  <!-- ===== Sidebar ===== -->
-  <aside class="sidebar">
-    <div class="brand">
-      <span class="logo">JS</span>
-      <span><b>Datacenter</b><small>คู่มือการใช้งาน</small></span>
-    </div>
-
-    <div class="nav-group">
-      <div class="nav-title">เริ่มต้น</div>
-      <a href="../index.html">ภาพรวมระบบ</a>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">ภาพรวม</div>
-      <span class="todo">Dashboard</span>
-      <span class="todo">ปฏิทินงาน</span>
-      <span class="todo">งาน / มอบหมายงาน</span>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">ข้อมูลและนำเข้า</div>
-      <span class="todo">ลูกค้า</span>
-      <a href="import.html" class="active">นำเข้าข้อมูล</a>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">บัญชี</div>
-      <span class="todo">งบทดลอง</span>
-      <span class="todo">บัญชีแยกประเภท</span>
-      <span class="todo">ลูกหนี้ / เจ้าหนี้</span>
-      <span class="todo">สินค้าคงคลัง</span>
-      <span class="todo">ธนาคาร / สมุดเงินฝาก</span>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">เงินเดือน · ภาษี</div>
-      <span class="todo">เงินเดือน / ภ.ง.ด.1 / ปกส.</span>
-      <span class="todo">ภาษีมูลค่าเพิ่ม / ภ.ง.ด.50 / หัก ณ ที่จ่าย</span>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">รายงานและปิดงวด</div>
-      <span class="todo">กระดาษทำการปิดงบ</span>
-      <span class="todo">งบการเงิน</span>
-      <span class="todo">ปิดรอบบัญชี · ชุดรายงาน</span>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">ระบบ</div>
-      <span class="todo">ตั้งค่า · ประวัติการใช้งาน</span>
-    </div>
-  </aside>
+  <!-- ===== Sidebar (สร้างจาก assets/nav.js) ===== -->
+  <aside class="sidebar" data-nav></aside>
 
   <!-- ===== Content ===== -->
   <main class="content">
@@ -181,8 +137,8 @@
 
     <div class="callout note">
       <span class="tag">ถัดไป</span>
-      <p>เมื่อนำเข้าสำเร็จแล้ว ขั้นต่อไปคือตรวจสอบยอดที่เมนู <span class="todo" style="display:inline;padding:0;color:#64748b">งบทดลอง</span>
-      และ <span class="todo" style="display:inline;padding:0;color:#64748b">บัญชีแยกประเภท</span> (คู่มือกำลังจัดทำ)</p>
+      <p>เมื่อนำเข้าสำเร็จแล้ว ขั้นต่อไปคือตรวจสอบยอดที่เมนู <a href="trial-balance.html">งบทดลอง →</a>
+      และ <a href="general-ledger.html">บัญชีแยกประเภท →</a></p>
     </div>
 
     <div class="footer-note">
@@ -192,5 +148,6 @@
   </div>
   </main>
 </div>
+<script src="../assets/nav.js" data-root="../" data-current="pages/import.html"></script>
 </body>
 </html>

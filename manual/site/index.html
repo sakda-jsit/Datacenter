@@ -10,52 +10,8 @@
 </head>
 <body>
 <div class="wrap">
-  <!-- ===== Sidebar ===== -->
-  <aside class="sidebar">
-    <div class="brand">
-      <span class="logo">JS</span>
-      <span><b>Datacenter</b><small>คู่มือการใช้งาน</small></span>
-    </div>
-
-    <div class="nav-group">
-      <div class="nav-title">เริ่มต้น</div>
-      <a href="index.html" class="active">ภาพรวมระบบ</a>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">ภาพรวม</div>
-      <span class="todo">Dashboard</span>
-      <span class="todo">ปฏิทินงาน</span>
-      <span class="todo">งาน / มอบหมายงาน</span>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">ข้อมูลและนำเข้า</div>
-      <span class="todo">ลูกค้า</span>
-      <a href="pages/import.html">นำเข้าข้อมูล</a>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">บัญชี</div>
-      <span class="todo">งบทดลอง</span>
-      <span class="todo">บัญชีแยกประเภท</span>
-      <span class="todo">ลูกหนี้ / เจ้าหนี้</span>
-      <span class="todo">สินค้าคงคลัง</span>
-      <span class="todo">ธนาคาร / สมุดเงินฝาก</span>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">เงินเดือน · ภาษี</div>
-      <span class="todo">เงินเดือน / ภ.ง.ด.1 / ปกส.</span>
-      <span class="todo">ภาษีมูลค่าเพิ่ม / ภ.ง.ด.50 / หัก ณ ที่จ่าย</span>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">รายงานและปิดงวด</div>
-      <span class="todo">กระดาษทำการปิดงบ</span>
-      <span class="todo">งบการเงิน</span>
-      <span class="todo">ปิดรอบบัญชี · ชุดรายงาน</span>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">ระบบ</div>
-      <span class="todo">ตั้งค่า · ประวัติการใช้งาน</span>
-    </div>
-  </aside>
+  <!-- ===== Sidebar (สร้างจาก assets/nav.js) ===== -->
+  <aside class="sidebar" data-nav></aside>
 
   <!-- ===== Content ===== -->
   <main class="content">
@@ -72,8 +28,13 @@
     <div class="callout note">
       <span class="tag">คู่มือชุดนี้ครอบคลุมอะไรบ้าง</span>
       <p>แบ่งเป็น 2 ส่วน: <b>(1) ภาพรวมระบบ</b> (หน้านี้) อธิบายแนวคิด การเข้าใช้งาน และการนำทาง
-      และ <b>(2) คู่มือรายหน้า</b> อธิบายการใช้งานของแต่ละเมนูอย่างละเอียด — เริ่มจากโมดูล
-      <a href="pages/import.html">นำเข้าข้อมูล</a> เป็นตัวอย่าง</p>
+      และ <b>(2) คู่มือรายหน้า</b> อธิบายการใช้งานของแต่ละเมนูอย่างละเอียด
+      ขณะนี้จัดทำแล้ว: <a href="pages/dashboard.html">Dashboard</a> ·
+      <a href="pages/clients.html">ลูกค้า</a> ·
+      <a href="pages/import.html">นำเข้าข้อมูล</a> ·
+      <a href="pages/trial-balance.html">งบทดลอง</a> ·
+      <a href="pages/general-ledger.html">บัญชีแยกประเภท</a>
+      — เมนูที่เหลือจะทยอยเพิ่ม (ในเมนูซ้ายจะขึ้นว่า “เร็วๆ นี้”)</p>
     </div>
 
     <h2>1. ระบบนี้ทำอะไร</h2>
@@ -155,9 +116,9 @@
     <h2>5. ขั้นตอนการทำงานหลัก (ภาพรวม)</h2>
     <p>สำหรับลูกค้าหนึ่งราย ลำดับการทำงานทั่วไปเป็นดังนี้:</p>
     <ol class="steps">
-      <li><b>เลือก/สร้างบริษัทลูกค้า</b> — เลือกบริษัทจากแถบด้านบน (บริษัทที่มีข้อมูลใน Express จะถูกเตรียมไว้ให้)</li>
-      <li><b>นำเข้าข้อมูลจาก Express</b> — เมนู “นำเข้าข้อมูล” ดึงผังบัญชี ยอดยกมา ความเคลื่อนไหว และรอบบัญชี เข้าระบบครั้งเดียว</li>
-      <li><b>ตรวจสอบข้อมูลบัญชี</b> — ดูงบทดลอง / บัญชีแยกประเภท ว่ายอดถูกต้องและสมดุล</li>
+      <li><b>เลือก/สร้างบริษัทลูกค้า</b> — เลือกบริษัทจากแถบด้านบน (บริษัทที่มีข้อมูลใน Express จะถูกเตรียมไว้ให้) · <a href="pages/clients.html">คู่มือ</a></li>
+      <li><b>นำเข้าข้อมูลจาก Express</b> — เมนู “นำเข้าข้อมูล” ดึงผังบัญชี ยอดยกมา ความเคลื่อนไหว และรอบบัญชี เข้าระบบครั้งเดียว · <a href="pages/import.html">คู่มือ</a></li>
+      <li><b>ตรวจสอบข้อมูลบัญชี</b> — ดู <a href="pages/trial-balance.html">งบทดลอง</a> / <a href="pages/general-ledger.html">บัญชีแยกประเภท</a> ว่ายอดถูกต้องและสมดุล</li>
       <li><b>ทำกระดาษทำการปิดงบ</b> — บันทึกรายการปรับปรุง, ค่าเสื่อม, ค่าใช้จ่ายจ่ายล่วงหน้า, เช่าซื้อ ฯลฯ</li>
       <li><b>ออกงบการเงินและแบบภาษี</b> — งบฐานะการเงิน/กำไรขาดทุน, ภ.พ.30, ภ.ง.ด.50 และอื่นๆ</li>
       <li><b>ปิดรอบบัญชีและล็อกงบ</b> — lock รอบบัญชี และจัดชุดรายงานที่ยื่นเป็นเวอร์ชันถาวร</li>
@@ -181,7 +142,12 @@
 
     <div class="callout note">
       <span class="tag">ถัดไป</span>
-      <p>ดูตัวอย่างคู่มือรายหน้าแบบละเอียดได้ที่ <a href="pages/import.html">โมดูลนำเข้าข้อมูล →</a></p>
+      <p>ถ้าเพิ่งเริ่มใช้ระบบ แนะนำให้อ่านตามลำดับนี้:
+      <a href="pages/dashboard.html">Dashboard</a> →
+      <a href="pages/clients.html">ลูกค้า</a> →
+      <a href="pages/import.html">นำเข้าข้อมูล</a> →
+      <a href="pages/trial-balance.html">งบทดลอง</a> →
+      <a href="pages/general-ledger.html">บัญชีแยกประเภท</a></p>
     </div>
 
     <div class="footer-note">
@@ -191,5 +157,6 @@
   </div>
   </main>
 </div>
+<script src="assets/nav.js" data-root="" data-current="index.html"></script>
 </body>
 </html>
