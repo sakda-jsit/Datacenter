@@ -67,6 +67,9 @@ tmp_*/
 .claude/.repomix-dirty
 .claude/settings.local.json
 
+# repomix bundle — สร้างใหม่ได้จากโค้ดทุกครั้ง ไม่ต้องเก็บใน git
+repomix-output.xml
+
 # ข้อมูลส่วนบุคคล/ลูกค้าจริง (PDPA) — ห้าม commit
 reference/payroll/
 reference/bank/
