@@ -114,8 +114,8 @@ export default function UsersPage() {
   /** บทบาทระดับพนักงานที่หัวหน้างานดูแลได้ — ตรงกับกฎฝั่ง API */
   const STAFF_ROLES: number[] = [USER_ROLE.Maker, USER_ROLE.Checker]
 
-  /** เพิ่มผู้ใช้ใหม่ = ผู้ดูแลระบบเท่านั้น */
-  const canCreateUser = isAdmin
+  /** เพิ่มผู้ใช้ใหม่ — หัวหน้างานสร้างได้เฉพาะบทบาทระดับพนักงาน (ช่องบทบาทกรองไว้แล้ว) */
+  const canCreateUser = isAdmin || isSupervisor
 
   /**
    * แก้ไข/รีเซ็ตรหัส/ปลดล็อก รายคน — Admin ทำได้ทุกบัญชี,
@@ -222,7 +222,7 @@ export default function UsersPage() {
               ผู้ใช้ทั้งหมด {users?.length ?? 0} คน
               {!isAdmin && (
                 <span className="ml-2 text-xs font-normal text-gray-400">
-                  · แก้ไข/รีเซ็ตรหัสได้เฉพาะบัญชีผู้บันทึกและผู้ตรวจ — เพิ่มผู้ใช้ใหม่ต้องให้ผู้ดูแลระบบทำ
+                  · เพิ่ม/แก้ไข/รีเซ็ตรหัสได้เฉพาะบัญชีผู้บันทึกและผู้ตรวจ
                 </span>
               )}
             </span>

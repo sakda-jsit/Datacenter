@@ -9,9 +9,8 @@ namespace Datacenter.Api.Controllers;
 /// จัดการผู้ใช้ระบบ — <b>เฉพาะ Admin</b>. สร้างผู้ใช้ให้พนักงานแต่ละคน (ห้ามใช้บัญชีร่วมกัน
 /// เพราะ audit log/field-audit ต้องระบุตัวผู้ทำได้) + ผูกสิทธิ์เข้าถึงรายบริษัทลูกค้า.
 /// </summary>
-// Admin ทำได้ทุกอย่าง; หัวหน้างานดูรายชื่อได้ + แก้ไข/รีเซ็ตรหัส/ปลดล็อก ได้เฉพาะบัญชี
-// ระดับพนักงาน (Maker/Checker) — กติกาละเอียดอยู่ใน UsersFeatureHelpers.EnsureMayManage
-// ส่วน "เพิ่มผู้ใช้ใหม่" ยังเป็นของ Admin เท่านั้น
+// Admin ทำได้ทุกอย่าง; หัวหน้างานจัดการได้เฉพาะบัญชีระดับพนักงาน (Maker/Checker)
+// — สร้างใหม่ก็ได้เฉพาะสองบทบาทนี้ กติกาละเอียดอยู่ใน UsersFeatureHelpers
 [Authorize(Roles = AuthRoles.CentralSettings)]
 [ApiController]
 [Route("api/v1/users")]
@@ -23,7 +22,7 @@ public class UsersController(IMediator mediator) : ControllerBase
         => Ok(await mediator.Send(new GetUsersQuery(), ct));
 
     /// <summary>POST /api/v1/users (body: UserCreateInput) — สร้างผู้ใช้ (ต้องเปลี่ยนรหัสตอน login ครั้งแรก)</summary>
-    [Authorize(Roles = AuthRoles.AdminOnly)]
+    [Authorize(Roles = AuthRoles.CentralSettings)]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] UserCreateInput body, CancellationToken ct)
         => Ok(new { id = await mediator.Send(new CreateUserCommand(body), ct) });
