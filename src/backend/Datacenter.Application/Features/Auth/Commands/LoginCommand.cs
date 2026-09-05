@@ -17,4 +17,9 @@ public record LoginResult(
     string Token,
     string RefreshToken,
     DateTime ExpiresAt,
-    bool MustChangePassword);
+    bool MustChangePassword,
+    /// <summary>
+    /// บริษัทที่ผู้ใช้นี้ "ดูแล" = ทำรายการได้ (ดูได้ทุกบริษัทอยู่แล้ว).
+    /// null = Admin (ดูแลได้ทุกบริษัท) — frontend ใช้ตัดสินว่าจะเปิดปุ่มแก้ไขให้หรือไม่
+    /// </summary>
+    IReadOnlyList<int>? OwnedCompanyIds);

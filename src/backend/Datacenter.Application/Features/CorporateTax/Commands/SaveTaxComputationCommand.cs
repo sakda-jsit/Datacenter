@@ -19,7 +19,7 @@ namespace Datacenter.Application.Features.CorporateTax.Commands;
 /// ภาษีที่คำนวณได้ → FsExternalInput X4 + ภาษีจ่ายล่วงหน้า → WHT เพื่อให้งบดุลลง counterpart (TXP/TXR).
 /// </summary>
 public record SaveTaxComputationCommand(int ClientCompanyId, int FiscalYear, TaxComputationInput Data)
-    : IRequest<TaxComputationDto>, IRequireCompanyAccess;
+    : IRequest<TaxComputationDto>, IRequireCompanyOwnerAccess;
 
 public class SaveTaxComputationCommandHandler(
     IApplicationDbContext db, ISender sender, ICurrentUserService currentUser, IAuditService audit)

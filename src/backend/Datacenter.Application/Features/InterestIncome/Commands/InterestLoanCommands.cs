@@ -11,7 +11,7 @@ namespace Datacenter.Application.Features.InterestIncome.Commands;
 
 // ── Create ──────────────────────────────────────────────────────────────────────
 public record CreateInterestLoanCommand(int ClientCompanyId, InterestLoanInput Data)
-    : IRequest<InterestLoanDto>, IRequireCompanyAccess;
+    : IRequest<InterestLoanDto>, IRequireCompanyOwnerAccess;
 
 public class CreateInterestLoanCommandHandler(
     IApplicationDbContext db, ICurrentUserService currentUser, IAuditService audit)
@@ -38,7 +38,7 @@ public class CreateInterestLoanCommandHandler(
 
 // ── Update ──────────────────────────────────────────────────────────────────────
 public record UpdateInterestLoanCommand(int Id, int ClientCompanyId, InterestLoanInput Data)
-    : IRequest<InterestLoanDto>, IRequireCompanyAccess;
+    : IRequest<InterestLoanDto>, IRequireCompanyOwnerAccess;
 
 public class UpdateInterestLoanCommandHandler(
     IApplicationDbContext db, ICurrentUserService currentUser, IAuditService audit)
@@ -68,7 +68,7 @@ public class UpdateInterestLoanCommandHandler(
 }
 
 // ── Delete ──────────────────────────────────────────────────────────────────────
-public record DeleteInterestLoanCommand(int Id, int ClientCompanyId) : IRequest, IRequireCompanyAccess;
+public record DeleteInterestLoanCommand(int Id, int ClientCompanyId) : IRequest, IRequireCompanyOwnerAccess;
 
 public class DeleteInterestLoanCommandHandler(IApplicationDbContext db, IAuditService audit)
     : IRequestHandler<DeleteInterestLoanCommand>

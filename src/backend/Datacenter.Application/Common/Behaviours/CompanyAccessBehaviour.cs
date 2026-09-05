@@ -15,7 +15,10 @@ public class CompanyAccessBehaviour<TRequest, TResponse>(ICompanyAccessGuard gua
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next,
         CancellationToken cancellationToken)
     {
-        if (request is IRequireCompanyAccess scoped)
+        // ผู้ดูแลบริษัท (ทำรายการ / ดูเงินเดือน) ตรวจเข้มกว่า — เช็คก่อนเพราะ interface สืบทอดกัน
+        if (request is IRequireCompanyOwnerAccess owned)
+            await guard.EnsureOwnerAccessAsync(owned.ClientCompanyId, cancellationToken);
+        else if (request is IRequireCompanyAccess scoped)
             await guard.EnsureAccessAsync(scoped.ClientCompanyId, cancellationToken);
 
         return await next();

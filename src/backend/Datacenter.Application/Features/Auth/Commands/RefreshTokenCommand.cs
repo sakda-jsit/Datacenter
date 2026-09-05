@@ -68,6 +68,7 @@ public class RefreshTokenCommandHandler(
             Token:        accessToken,
             RefreshToken: refreshToken,
             ExpiresAt:    expiresAt,
-            MustChangePassword: user.MustChangePassword);
+            MustChangePassword: user.MustChangePassword,
+            OwnedCompanyIds: await AuthCompanyScope.OwnedCompanyIdsAsync(db, user, ct));
     }
 }

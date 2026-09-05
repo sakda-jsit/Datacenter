@@ -13,7 +13,7 @@ namespace Datacenter.Application.Features.Payroll.Queries;
 // ── P6: แดชบอร์ด/Checklist + กระทบยอด 3 ทาง (รวม P3/P4/P5) ──────────────────────
 // คำนวณจากข้อมูลที่มี (ไม่เพิ่ม entity): สถานะงวด + slip↔ระบบ + เงินเดือน↔GL + ภาษี/ปกส.↔แบบรายปี
 public record GetPayrollDashboardQuery(int ClientCompanyId, int Year)
-    : IRequest<PayrollDashboardDto>, IRequireCompanyAccess;
+    : IRequest<PayrollDashboardDto>, IRequireCompanyOwnerAccess;
 
 public class GetPayrollDashboardQueryHandler(IApplicationDbContext db, ISender sender)
     : IRequestHandler<GetPayrollDashboardQuery, PayrollDashboardDto>

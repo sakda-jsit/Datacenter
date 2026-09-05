@@ -11,7 +11,7 @@ namespace Datacenter.Application.Features.Payroll.Commands;
 // ── สร้างรายการแจ้งเข้า/ออก ปกส. ───────────────────────────────────────────────
 public record CreateSsoEnrollmentCommand(
     int ClientCompanyId, int EmployeeId, SsoEnrollmentType Type, DateTime EventDate, string? Note)
-    : IRequest<int>, IRequireCompanyAccess;
+    : IRequest<int>, IRequireCompanyOwnerAccess;
 
 public class CreateSsoEnrollmentCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
     : IRequestHandler<CreateSsoEnrollmentCommand, int>
@@ -38,7 +38,7 @@ public class CreateSsoEnrollmentCommandHandler(IApplicationDbContext db, ICurren
 public record UpdateSsoEnrollmentCommand(
     int ClientCompanyId, int Id, DateTime? SubmittedDate, SsoEnrollmentStatus Status,
     int? ProofDocumentId, string? Note)
-    : IRequest<Unit>, IRequireCompanyAccess;
+    : IRequest<Unit>, IRequireCompanyOwnerAccess;
 
 public class UpdateSsoEnrollmentCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
     : IRequestHandler<UpdateSsoEnrollmentCommand, Unit>

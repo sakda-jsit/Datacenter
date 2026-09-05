@@ -53,7 +53,7 @@ internal static class ExpressExpected
 }
 
 public record GetExpressPostingLinkQuery(int ClientCompanyId, int SourceType, int Year, int Month)
-    : IRequest<ExpressPostingLinkDto>, IRequireCompanyAccess;
+    : IRequest<ExpressPostingLinkDto>, IRequireCompanyOwnerAccess;
 
 public class GetExpressPostingLinkQueryHandler(IApplicationDbContext db, ISender sender)
     : IRequestHandler<GetExpressPostingLinkQuery, ExpressPostingLinkDto>
@@ -82,7 +82,7 @@ public class GetExpressPostingLinkQueryHandler(IApplicationDbContext db, ISender
 public record UpsertExpressPostingLinkCommand(
     int ClientCompanyId, int SourceType, int Year, int Month,
     DateTime? PostedDate, string? ExpressDocNo, decimal? PostedAmount, string? Note)
-    : IRequest<int>, IRequireCompanyAccess;
+    : IRequest<int>, IRequireCompanyOwnerAccess;
 
 public class UpsertExpressPostingLinkCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
     : IRequestHandler<UpsertExpressPostingLinkCommand, int>

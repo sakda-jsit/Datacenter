@@ -23,7 +23,7 @@ public class UpdateWorkTaskStatusCommandHandler(
             .Include(t => t.Items)
             .FirstOrDefaultAsync(t => t.Id == request.Id, ct)
             ?? throw new NotFoundException("WorkTask", request.Id);
-        await accessGuard.EnsureAccessAsync(task.ClientCompanyId, ct);
+        await accessGuard.EnsureOwnerAccessAsync(task.ClientCompanyId, ct);
 
         var prev = task.Status;
         task.Status = request.Status;
@@ -114,7 +114,7 @@ public class AssignWorkTaskCommandHandler(
             .Include(t => t.ClientCompany).Include(t => t.AssignedUser).Include(t => t.CompletedByUser)
             .FirstOrDefaultAsync(t => t.Id == request.Id, ct)
             ?? throw new NotFoundException("WorkTask", request.Id);
-        await accessGuard.EnsureAccessAsync(task.ClientCompanyId, ct);
+        await accessGuard.EnsureOwnerAccessAsync(task.ClientCompanyId, ct);
 
         var prev = task.AssignedUserId;
         task.AssignedUserId = request.UserId;
@@ -141,7 +141,7 @@ public class DeleteWorkTaskCommandHandler(
     {
         var task = await db.WorkTasks.FirstOrDefaultAsync(t => t.Id == request.Id, ct)
             ?? throw new NotFoundException("WorkTask", request.Id);
-        await accessGuard.EnsureAccessAsync(task.ClientCompanyId, ct);
+        await accessGuard.EnsureOwnerAccessAsync(task.ClientCompanyId, ct);
 
         db.WorkTasks.Remove(task);
         await audit.LogAsync("DeleteWorkTask", "WorkTask", task.Id.ToString(),
@@ -163,7 +163,7 @@ public class ToggleWorkTaskItemCommandHandler(
             .Include(i => i.WorkTask)
             .FirstOrDefaultAsync(i => i.Id == request.ItemId && i.WorkTaskId == request.TaskId, ct)
             ?? throw new NotFoundException("WorkTaskItem", request.ItemId);
-        await accessGuard.EnsureAccessAsync(item.WorkTask.ClientCompanyId, ct);
+        await accessGuard.EnsureOwnerAccessAsync(item.WorkTask.ClientCompanyId, ct);
 
         item.IsDone = request.IsDone;
         item.ModifiedBy = currentUser.Username;

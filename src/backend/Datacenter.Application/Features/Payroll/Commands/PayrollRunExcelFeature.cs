@@ -9,7 +9,7 @@ namespace Datacenter.Application.Features.Payroll.Commands;
 
 // ── ดาวน์โหลด Excel template ของงวด (รายชื่อพนักงาน + ค่าปัจจุบัน) ───────────────
 public record GetPayrollRunTemplateQuery(int ClientCompanyId, int RunId)
-    : IRequest<byte[]>, IRequireCompanyAccess;
+    : IRequest<byte[]>, IRequireCompanyOwnerAccess;
 
 public class GetPayrollRunTemplateQueryHandler(IApplicationDbContext db, IPayrollExcelService excel)
     : IRequestHandler<GetPayrollRunTemplateQuery, byte[]>
@@ -38,7 +38,7 @@ public class GetPayrollRunTemplateQueryHandler(IApplicationDbContext db, IPayrol
 
 // ── อัปโหลด Excel → แทนที่ค่ารายการในงวด (แก้ไข = อัปโหลดใหม่) ───────────────────
 public record ImportPayrollRunCommand(int ClientCompanyId, int RunId, byte[] File)
-    : IRequest<int>, IRequireCompanyAccess;   // คืนจำนวนแถวที่อัปเดต
+    : IRequest<int>, IRequireCompanyOwnerAccess;   // คืนจำนวนแถวที่อัปเดต
 
 public class ImportPayrollRunCommandHandler(IApplicationDbContext db, IPayrollExcelService excel)
     : IRequestHandler<ImportPayrollRunCommand, int>

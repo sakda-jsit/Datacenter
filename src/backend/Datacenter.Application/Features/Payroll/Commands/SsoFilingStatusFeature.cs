@@ -26,7 +26,7 @@ internal static class SsoFilingTotals
 public record UpsertSsoFilingStatusCommand(
     int ClientCompanyId, int RunId,
     DateTime? SubmittedDate, DateTime? ReceiptDate, decimal? ReceiptAmount,
-    string? ReceiptNo, string? Note) : IRequest<int>, IRequireCompanyAccess;
+    string? ReceiptNo, string? Note) : IRequest<int>, IRequireCompanyOwnerAccess;
 
 public class UpsertSsoFilingStatusCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
     : IRequestHandler<UpsertSsoFilingStatusCommand, int>
@@ -83,7 +83,7 @@ public class UpsertSsoFilingStatusCommandHandler(IApplicationDbContext db, ICurr
 /// <summary>อัปโหลดไฟล์แนบ (kind = form|receipt) เก็บเป็น blob</summary>
 public record UploadSsoFilingDocumentCommand(
     int ClientCompanyId, int RunId, string Kind,
-    string FileName, string ContentType, byte[] Content) : IRequest<int>, IRequireCompanyAccess;
+    string FileName, string ContentType, byte[] Content) : IRequest<int>, IRequireCompanyOwnerAccess;
 
 public class UploadSsoFilingDocumentCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
     : IRequestHandler<UploadSsoFilingDocumentCommand, int>
@@ -134,7 +134,7 @@ public record SsoFilingDocumentResult(string FileName, string ContentType, byte[
 
 /// <summary>ดาวน์โหลดไฟล์แนบ (kind = form|receipt)</summary>
 public record GetSsoFilingDocumentQuery(int ClientCompanyId, int RunId, string Kind)
-    : IRequest<SsoFilingDocumentResult>, IRequireCompanyAccess;
+    : IRequest<SsoFilingDocumentResult>, IRequireCompanyOwnerAccess;
 
 public class GetSsoFilingDocumentQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetSsoFilingDocumentQuery, SsoFilingDocumentResult>

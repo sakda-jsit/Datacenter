@@ -14,10 +14,10 @@ namespace Datacenter.Application.Features.Payroll.Queries;
 //   • แสดงบล็อกท้ายฟอร์ม "เงินสะสมเข้ากองทุนประกันสังคม" (= ปกส.สมทบของลูกจ้างทั้งปี)
 // EmployeeIds ว่าง = ออกให้ทุกคนที่มีเงินได้ในปีนั้น
 public record Get50TawiSalaryPdfQuery(int ClientCompanyId, int Year, IReadOnlyList<int>? EmployeeIds = null)
-    : IRequest<byte[]>, IRequireCompanyAccess;
+    : IRequest<byte[]>, IRequireCompanyOwnerAccess;
 
 public record Get50TawiSalaryImagesQuery(int ClientCompanyId, int Year, IReadOnlyList<int>? EmployeeIds = null)
-    : IRequest<IReadOnlyList<string>>, IRequireCompanyAccess;
+    : IRequest<IReadOnlyList<string>>, IRequireCompanyOwnerAccess;
 
 public static class SalaryCertificateBuilder
 {

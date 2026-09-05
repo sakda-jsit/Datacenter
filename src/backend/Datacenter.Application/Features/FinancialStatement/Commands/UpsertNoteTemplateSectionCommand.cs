@@ -16,7 +16,7 @@ public record UpsertNoteTemplateSectionCommand(
     string NoteKey,
     string Title,
     string BodyText,
-    int SortOrder) : IRequest<int>, IRequireCompanyAccess;
+    int SortOrder) : IRequest<int>, IRequireCompanyOwnerAccess;
 
 public class UpsertNoteTemplateSectionCommandHandler(
     IApplicationDbContext db, ICurrentUserService user, IAuditService audit)

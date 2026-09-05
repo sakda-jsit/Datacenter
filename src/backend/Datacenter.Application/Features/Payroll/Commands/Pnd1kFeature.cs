@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Datacenter.Application.Features.Payroll.Commands;
 
 // ── ภ.ง.ด.1ก: สรุปเงินได้/ภาษีหัก ณ ที่จ่ายเงินเดือน (มาตรา 40(1)) ทั้งปี ต่อพนักงาน ──
-public record GetPnd1kQuery(int ClientCompanyId, int Year) : IRequest<Pnd1kDto>, IRequireCompanyAccess;
+public record GetPnd1kQuery(int ClientCompanyId, int Year) : IRequest<Pnd1kDto>, IRequireCompanyOwnerAccess;
 
 public class GetPnd1kQueryHandler(IApplicationDbContext db) : IRequestHandler<GetPnd1kQuery, Pnd1kDto>
 {
@@ -57,7 +57,7 @@ public class GetPnd1kQueryHandler(IApplicationDbContext db) : IRequestHandler<Ge
     private static string Digits(string s) => System.Text.RegularExpressions.Regex.Replace(s ?? "", @"\D", "");
 }
 
-public record GetPnd1kExcelQuery(int ClientCompanyId, int Year) : IRequest<byte[]>, IRequireCompanyAccess;
+public record GetPnd1kExcelQuery(int ClientCompanyId, int Year) : IRequest<byte[]>, IRequireCompanyOwnerAccess;
 public class GetPnd1kExcelQueryHandler(ISender sender, IPnd1kExportService svc)
     : IRequestHandler<GetPnd1kExcelQuery, byte[]>
 {
@@ -65,7 +65,7 @@ public class GetPnd1kExcelQueryHandler(ISender sender, IPnd1kExportService svc)
         => svc.BuildExcel(await sender.Send(new GetPnd1kQuery(req.ClientCompanyId, req.Year), ct));
 }
 
-public record GetPnd1kPdfQuery(int ClientCompanyId, int Year) : IRequest<byte[]>, IRequireCompanyAccess;
+public record GetPnd1kPdfQuery(int ClientCompanyId, int Year) : IRequest<byte[]>, IRequireCompanyOwnerAccess;
 public class GetPnd1kPdfQueryHandler(ISender sender, IPnd1kExportService svc)
     : IRequestHandler<GetPnd1kPdfQuery, byte[]>
 {
@@ -74,7 +74,7 @@ public class GetPnd1kPdfQueryHandler(ISender sender, IPnd1kExportService svc)
 }
 
 // ── TXT (e-Filing กรมสรรพากร) ────────────────────────────────────────────────────
-public record GetPnd1kTxtQuery(int ClientCompanyId, int Year) : IRequest<byte[]>, IRequireCompanyAccess;
+public record GetPnd1kTxtQuery(int ClientCompanyId, int Year) : IRequest<byte[]>, IRequireCompanyOwnerAccess;
 public class GetPnd1kTxtQueryHandler(ISender sender, IPnd1kExportService svc)
     : IRequestHandler<GetPnd1kTxtQuery, byte[]>
 {

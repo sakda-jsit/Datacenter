@@ -14,7 +14,7 @@ public class AssignTaskCommandHandler(IApplicationDbContext db, IAuditService au
             ?? throw new NotFoundException("ComplianceTask", request.TaskId);
 
         // task อ้างถึงบริษัทผ่าน TaskId จึงตรวจสิทธิ์หลังโหลด entity แทน pipeline behaviour
-        await accessGuard.EnsureAccessAsync(task.ClientCompanyId, ct);
+        await accessGuard.EnsureOwnerAccessAsync(task.ClientCompanyId, ct);
 
         var previousUserId = task.AssignedUserId;
         task.AssignedUserId = request.UserId;

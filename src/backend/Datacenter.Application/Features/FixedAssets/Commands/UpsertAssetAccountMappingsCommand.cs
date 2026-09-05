@@ -11,4 +11,4 @@ namespace Datacenter.Application.Features.FixedAssets.Commands;
 public record UpsertAssetAccountMappingsCommand(
     int ClientCompanyId,
     IReadOnlyList<AssetAccountMappingInput> Mappings)
-    : IRequest<IReadOnlyList<AssetAccountMappingDto>>, IRequireCompanyAccess;
+    : IRequest<IReadOnlyList<AssetAccountMappingDto>>, IRequireCompanyOwnerAccess;

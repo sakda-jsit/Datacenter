@@ -10,7 +10,7 @@ namespace Datacenter.Application.Features.Payroll.Commands;
 
 // ── ภ.ง.ด.1 รายเดือน (ใบแนบ): เงินได้/ภาษีหัก ณ ที่จ่ายเงินเดือน ม.40(1) ต่อพนักงาน เฉพาะเดือน ──
 // ใช้รูปแบบ/template เดียวกับ ภ.ง.ด.1ก (Pnd1kDto + IPnd1kExportService.BuildTxt) ต่างที่กรองเฉพาะงวดเดือนนั้น
-public record GetPnd1Query(int ClientCompanyId, int Year, int Month) : IRequest<Pnd1kDto>, IRequireCompanyAccess;
+public record GetPnd1Query(int ClientCompanyId, int Year, int Month) : IRequest<Pnd1kDto>, IRequireCompanyOwnerAccess;
 
 public class GetPnd1QueryHandler(IApplicationDbContext db) : IRequestHandler<GetPnd1Query, Pnd1kDto>
 {
@@ -59,7 +59,7 @@ public class GetPnd1QueryHandler(IApplicationDbContext db) : IRequestHandler<Get
 }
 
 // ── TXT (e-Filing) — ใช้ BuildTxt ตัวเดียวกับ ภ.ง.ด.1ก ──
-public record GetPnd1TxtQuery(int ClientCompanyId, int Year, int Month) : IRequest<byte[]>, IRequireCompanyAccess;
+public record GetPnd1TxtQuery(int ClientCompanyId, int Year, int Month) : IRequest<byte[]>, IRequireCompanyOwnerAccess;
 
 public class GetPnd1TxtQueryHandler(ISender sender, IPnd1kExportService svc)
     : IRequestHandler<GetPnd1TxtQuery, byte[]>

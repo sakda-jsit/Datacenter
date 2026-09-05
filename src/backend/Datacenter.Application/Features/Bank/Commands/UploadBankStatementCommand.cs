@@ -14,7 +14,7 @@ namespace Datacenter.Application.Features.Bank.Commands;
 
 // ── preview (parse อย่างเดียว ไม่บันทึก) ─────────────────────────────────────────
 public record ParseBankStatementPreviewCommand(int ClientCompanyId, int BankAccountId, string FileName, byte[] Content)
-    : IRequest<BankStatementParsePreviewDto>, IRequireCompanyAccess;
+    : IRequest<BankStatementParsePreviewDto>, IRequireCompanyOwnerAccess;
 
 public class ParseBankStatementPreviewCommandHandler(IApplicationDbContext db, IBankStatementParser parser)
     : IRequestHandler<ParseBankStatementPreviewCommand, BankStatementParsePreviewDto>
@@ -47,7 +47,7 @@ public class ParseBankStatementPreviewCommandHandler(IApplicationDbContext db, I
 public record UploadBankStatementCommand(
     int ClientCompanyId, int BankAccountId, string FileName, byte[] Content,
     decimal? OpeningBalance, decimal? ClosingBalance, string? Note)
-    : IRequest<int>, IRequireCompanyAccess;
+    : IRequest<int>, IRequireCompanyOwnerAccess;
 
 public class UploadBankStatementCommandHandler(
     IApplicationDbContext db, IBankStatementParser parser, ICurrentUserService currentUser, IAuditService audit)

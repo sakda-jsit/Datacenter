@@ -16,7 +16,7 @@ namespace Datacenter.Application.Features.Prepaid.Commands;
 /// </summary>
 public record GeneratePrepaidAdjustmentCommand(
     int ClientCompanyId, int FiscalYear, IReadOnlyList<int> PrepaidIds, DateTime? EntryDate)
-    : IRequest<AdjustmentEntryDto>, IRequireCompanyAccess;
+    : IRequest<AdjustmentEntryDto>, IRequireCompanyOwnerAccess;
 
 public class GeneratePrepaidAdjustmentCommandHandler(IApplicationDbContext db, IMediator mediator)
     : IRequestHandler<GeneratePrepaidAdjustmentCommand, AdjustmentEntryDto>

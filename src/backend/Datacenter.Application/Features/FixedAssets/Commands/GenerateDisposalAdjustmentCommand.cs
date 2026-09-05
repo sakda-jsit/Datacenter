@@ -18,4 +18,4 @@ public record GenerateDisposalAdjustmentCommand(
     int LossAccountId,
     int? ProceedsAccountId,
     DateTime? EntryDate)
-    : IRequest<AdjustmentEntryDto>, IRequireCompanyAccess;
+    : IRequest<AdjustmentEntryDto>, IRequireCompanyOwnerAccess;

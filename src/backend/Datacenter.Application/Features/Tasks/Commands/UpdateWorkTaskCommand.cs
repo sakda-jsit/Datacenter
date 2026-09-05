@@ -44,7 +44,7 @@ public class UpdateWorkTaskCommandHandler(IApplicationDbContext db, ICurrentUser
             .FirstOrDefaultAsync(t => t.Id == request.Id, ct)
             ?? throw new NotFoundException("WorkTask", request.Id);
 
-        await accessGuard.EnsureAccessAsync(task.ClientCompanyId, ct);
+        await accessGuard.EnsureOwnerAccessAsync(task.ClientCompanyId, ct);
 
         task.Title = request.Title.Trim();
         task.Description = request.Description;

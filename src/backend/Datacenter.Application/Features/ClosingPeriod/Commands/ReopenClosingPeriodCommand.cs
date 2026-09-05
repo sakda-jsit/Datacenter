@@ -5,4 +5,4 @@ using MediatR;
 namespace Datacenter.Application.Features.ClosingPeriod.Commands;
 
 public record ReopenClosingPeriodCommand(int ClientCompanyId, int Year, int Month, string? Reason)
-    : IRequest<ClosingPeriodMonthDto>, IRequireCompanyAccess;
+    : IRequest<ClosingPeriodMonthDto>, IRequireCompanyOwnerAccess;

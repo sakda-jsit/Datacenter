@@ -8,7 +8,7 @@ namespace Datacenter.Application.Features.Wht.Commands;
 
 /// <summary>อัปโหลด/ลบรูปลายเซ็นผู้มีอำนาจของบริษัท (ใช้แนบในหนังสือรับรองหัก ณ ที่จ่าย). Image=null = ลบ</summary>
 public record UpdateClientCompanySignatureCommand(int ClientCompanyId, byte[]? Image)
-    : IRequest<Unit>, IRequireCompanyAccess;
+    : IRequest<Unit>, IRequireCompanyOwnerAccess;
 
 public class UpdateClientCompanySignatureCommandHandler(
     IApplicationDbContext db, ICurrentUserService currentUser, ISignatureImageProcessor imageProcessor)

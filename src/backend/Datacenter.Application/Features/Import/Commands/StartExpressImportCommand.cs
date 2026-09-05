@@ -11,4 +11,4 @@ namespace Datacenter.Application.Features.Import.Commands;
 public record StartExpressImportCommand(
     int ClientCompanyId,
     int FiscalYear)
-    : IRequest<int>, IRequireCompanyAccess;
+    : IRequest<int>, IRequireCompanyOwnerAccess;

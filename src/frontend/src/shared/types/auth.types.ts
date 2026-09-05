@@ -10,4 +10,9 @@ export interface AuthUser {
   expiresAt: string
   /** true = ผู้ดูแลตั้งรหัสให้ ต้องเปลี่ยนรหัสก่อนใช้งานส่วนอื่น */
   mustChangePassword: boolean
+  /**
+   * บริษัทที่ผู้ใช้นี้ "ดูแล" = ทำรายการได้ (ดูข้อมูลได้ทุกบริษัทอยู่แล้ว)
+   * null = Admin ดูแลได้ทุกบริษัท
+   */
+  ownedCompanyIds: number[] | null
 }

@@ -11,7 +11,7 @@ namespace Datacenter.Application.Features.CashCount.Commands;
 
 // ── Create ──────────────────────────────────────────────────────────────────────
 public record CreateCashCountCommand(int ClientCompanyId, CashCountInput Data)
-    : IRequest<CashCountDto>, IRequireCompanyAccess;
+    : IRequest<CashCountDto>, IRequireCompanyOwnerAccess;
 
 public class CreateCashCountCommandHandler(
     IApplicationDbContext db, ICurrentUserService currentUser, IAuditService audit)
@@ -38,7 +38,7 @@ public class CreateCashCountCommandHandler(
 
 // ── Update ──────────────────────────────────────────────────────────────────────
 public record UpdateCashCountCommand(int Id, int ClientCompanyId, CashCountInput Data)
-    : IRequest<CashCountDto>, IRequireCompanyAccess;
+    : IRequest<CashCountDto>, IRequireCompanyOwnerAccess;
 
 public class UpdateCashCountCommandHandler(
     IApplicationDbContext db, ICurrentUserService currentUser, IAuditService audit)
@@ -68,7 +68,7 @@ public class UpdateCashCountCommandHandler(
 }
 
 // ── Delete ──────────────────────────────────────────────────────────────────────
-public record DeleteCashCountCommand(int Id, int ClientCompanyId) : IRequest, IRequireCompanyAccess;
+public record DeleteCashCountCommand(int Id, int ClientCompanyId) : IRequest, IRequireCompanyOwnerAccess;
 
 public class DeleteCashCountCommandHandler(IApplicationDbContext db, IAuditService audit)
     : IRequestHandler<DeleteCashCountCommand>

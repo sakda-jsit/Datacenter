@@ -10,7 +10,7 @@ namespace Datacenter.Application.Features.Bank.Commands;
 
 // ── จับคู่เอง ─────────────────────────────────────────────────────────────────
 public record MatchBankLineCommand(int ClientCompanyId, int ImportId, int StatementLineId, int BankTransactionId)
-    : IRequest, IRequireCompanyAccess;
+    : IRequest, IRequireCompanyOwnerAccess;
 
 public class MatchBankLineCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
     : IRequestHandler<MatchBankLineCommand>
@@ -50,7 +50,7 @@ public class MatchBankLineCommandHandler(IApplicationDbContext db, ICurrentUserS
 
 // ── ปลดคู่ ────────────────────────────────────────────────────────────────────
 public record UnmatchBankLineCommand(int ClientCompanyId, int ImportId, int StatementLineId)
-    : IRequest, IRequireCompanyAccess;
+    : IRequest, IRequireCompanyOwnerAccess;
 
 public class UnmatchBankLineCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
     : IRequestHandler<UnmatchBankLineCommand>
@@ -73,7 +73,7 @@ public class UnmatchBankLineCommandHandler(IApplicationDbContext db, ICurrentUse
 
 // ── ลบรอบนำเข้า (ทุกคนลบได้ + audit ตาม req #7) ─────────────────────────────────
 public record DeleteBankStatementImportCommand(int ClientCompanyId, int ImportId)
-    : IRequest, IRequireCompanyAccess;
+    : IRequest, IRequireCompanyOwnerAccess;
 
 public class DeleteBankStatementImportCommandHandler(IApplicationDbContext db, IAuditService audit)
     : IRequestHandler<DeleteBankStatementImportCommand>

@@ -18,7 +18,7 @@ namespace Datacenter.Application.Features.Bank.Commands;
 public record GenerateBankReconciliationAdjustmentCommand(
     int ClientCompanyId, int ImportId, int FiscalYear,
     IReadOnlyList<int> StatementLineIds, int BankGlAccountId, int CounterpartAccountId, DateTime? EntryDate)
-    : IRequest<AdjustmentEntryDto>, IRequireCompanyAccess;
+    : IRequest<AdjustmentEntryDto>, IRequireCompanyOwnerAccess;
 
 public class GenerateBankReconciliationAdjustmentCommandHandler(IApplicationDbContext db, IMediator mediator)
     : IRequestHandler<GenerateBankReconciliationAdjustmentCommand, AdjustmentEntryDto>

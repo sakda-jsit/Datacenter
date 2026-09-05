@@ -138,7 +138,7 @@ public class GetCit50BsMappingQueryHandler(IApplicationDbContext db)
 // Scope = prefix ของ scope ที่กำลังบันทึก (เช่น "R4_","R8","BS_") — ล้าง mapping เฉพาะที่อยู่ใน scope นี้
 // เท่านั้น กันลบ mapping ของแท็บอื่นเมื่อบัญชีเดียวกันโผล่หลายแท็บ. null = ล้างได้ทุกอัน (back-compat).
 public record SaveCit50MappingCommand(int ClientCompanyId, IReadOnlyList<Cit50MappingItemInput> Items, string? Scope = null)
-    : IRequest, IRequireCompanyAccess;
+    : IRequest, IRequireCompanyOwnerAccess;
 
 public class SaveCit50MappingCommandHandler(IApplicationDbContext db, ICurrentUserService user, IAuditService audit)
     : IRequestHandler<SaveCit50MappingCommand>

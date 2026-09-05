@@ -14,7 +14,7 @@ public record UploadEmployeeDocumentCommand(
     int ClientCompanyId, int EmployeeId, EmployeeDocType DocType,
     string FileName, string ContentType, byte[] Content,
     DateTime? EffectiveDate, string? Note)
-    : IRequest<int>, IRequireCompanyAccess;
+    : IRequest<int>, IRequireCompanyOwnerAccess;
 
 public class UploadEmployeeDocumentCommandHandler(
     IApplicationDbContext db, ICurrentUserService currentUser, IAuditService audit)
@@ -53,7 +53,7 @@ public class UploadEmployeeDocumentCommandHandler(
 
 // ── ดาวน์โหลดเอกสาร (PDPA: audit ทุกการเข้าถึง) ────────────────────────────────
 public record GetEmployeeDocumentContentQuery(int ClientCompanyId, int DocumentId)
-    : IRequest<EmployeeDocumentContentDto>, IRequireCompanyAccess;
+    : IRequest<EmployeeDocumentContentDto>, IRequireCompanyOwnerAccess;
 
 public class GetEmployeeDocumentContentQueryHandler(IApplicationDbContext db, IAuditService audit)
     : IRequestHandler<GetEmployeeDocumentContentQuery, EmployeeDocumentContentDto>
@@ -78,7 +78,7 @@ public class GetEmployeeDocumentContentQueryHandler(IApplicationDbContext db, IA
 
 // ── ลบเอกสาร ───────────────────────────────────────────────────────────────────
 public record DeleteEmployeeDocumentCommand(int ClientCompanyId, int DocumentId)
-    : IRequest<Unit>, IRequireCompanyAccess;
+    : IRequest<Unit>, IRequireCompanyOwnerAccess;
 
 public class DeleteEmployeeDocumentCommandHandler(IApplicationDbContext db, IAuditService audit)
     : IRequestHandler<DeleteEmployeeDocumentCommand, Unit>

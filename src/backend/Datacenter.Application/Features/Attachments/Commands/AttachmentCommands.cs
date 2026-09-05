@@ -23,7 +23,7 @@ public record UploadAttachmentCommand(
     string ContentType,
     byte[] Content,
     DateTime? DocumentDate,
-    string? Note) : IRequest<int>, IRequireCompanyAccess;
+    string? Note) : IRequest<int>, IRequireCompanyOwnerAccess;
 
 public class UploadAttachmentCommandValidator : AbstractValidator<UploadAttachmentCommand>
 {
@@ -84,7 +84,7 @@ public record UpdateAttachmentMetadataCommand(
     string? RecordRef,
     string Title,
     DateTime? DocumentDate,
-    string? Note) : IRequest<Unit>, IRequireCompanyAccess;
+    string? Note) : IRequest<Unit>, IRequireCompanyOwnerAccess;
 
 public class UpdateAttachmentMetadataCommandValidator : AbstractValidator<UpdateAttachmentMetadataCommand>
 {
@@ -129,7 +129,7 @@ public class UpdateAttachmentMetadataCommandHandler(
 // ── ตั้งสถานะตรวจสอบ ───────────────────────────────────────────────────────────
 public record SetAttachmentVerificationCommand(
     int ClientCompanyId, int Id, AttachmentVerificationStatus Status, string? Note)
-    : IRequest<Unit>, IRequireCompanyAccess;
+    : IRequest<Unit>, IRequireCompanyOwnerAccess;
 
 public class SetAttachmentVerificationCommandHandler(
     IApplicationDbContext db, ICurrentUserService currentUser, IAuditService audit)
@@ -164,7 +164,7 @@ public class SetAttachmentVerificationCommandHandler(
 }
 
 // ── ลบเอกสาร ───────────────────────────────────────────────────────────────────
-public record DeleteAttachmentCommand(int ClientCompanyId, int Id) : IRequest<Unit>, IRequireCompanyAccess;
+public record DeleteAttachmentCommand(int ClientCompanyId, int Id) : IRequest<Unit>, IRequireCompanyOwnerAccess;
 
 public class DeleteAttachmentCommandHandler(IApplicationDbContext db, IAuditService audit)
     : IRequestHandler<DeleteAttachmentCommand, Unit>

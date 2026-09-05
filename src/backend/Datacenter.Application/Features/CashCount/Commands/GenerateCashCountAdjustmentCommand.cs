@@ -18,7 +18,7 @@ namespace Datacenter.Application.Features.CashCount.Commands;
 /// </summary>
 public record GenerateCashCountAdjustmentCommand(
     int ClientCompanyId, int FiscalYear, IReadOnlyList<int> CashCountIds, int CounterpartAccountId, DateTime? EntryDate)
-    : IRequest<AdjustmentEntryDto>, IRequireCompanyAccess;
+    : IRequest<AdjustmentEntryDto>, IRequireCompanyOwnerAccess;
 
 public class GenerateCashCountAdjustmentCommandHandler(IApplicationDbContext db, IMediator mediator)
     : IRequestHandler<GenerateCashCountAdjustmentCommand, AdjustmentEntryDto>

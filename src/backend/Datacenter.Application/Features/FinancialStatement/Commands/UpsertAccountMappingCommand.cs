@@ -9,4 +9,4 @@ public record UpsertAccountMappingCommand(
     string AccountCode,
     string AccountName,
     string RefCode)
-    : IRequest, IRequireCompanyAccess;
+    : IRequest, IRequireCompanyOwnerAccess;

@@ -11,7 +11,7 @@ namespace Datacenter.Application.Features.Payroll.Commands;
 // แมพบัญชีเงินเดือน Express → ฝ่าย (ต่อบริษัท) — ใช้ระบุว่า import พนักงานจากบัญชีไหน
 
 public record GetPayrollAccountMappingsQuery(int ClientCompanyId)
-    : IRequest<IReadOnlyList<PayrollAccountMappingDto>>, IRequireCompanyAccess;
+    : IRequest<IReadOnlyList<PayrollAccountMappingDto>>, IRequireCompanyOwnerAccess;
 
 public class GetPayrollAccountMappingsQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetPayrollAccountMappingsQuery, IReadOnlyList<PayrollAccountMappingDto>>
@@ -25,7 +25,7 @@ public class GetPayrollAccountMappingsQueryHandler(IApplicationDbContext db)
 }
 
 public record UpsertPayrollAccountMappingCommand(int ClientCompanyId, int? Id, PayrollAccountMappingInput Data)
-    : IRequest<int>, IRequireCompanyAccess;
+    : IRequest<int>, IRequireCompanyOwnerAccess;
 
 public class UpsertPayrollAccountMappingCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
     : IRequestHandler<UpsertPayrollAccountMappingCommand, int>
@@ -68,7 +68,7 @@ public class UpsertPayrollAccountMappingCommandHandler(IApplicationDbContext db,
 }
 
 public record DeletePayrollAccountMappingCommand(int ClientCompanyId, int Id)
-    : IRequest<Unit>, IRequireCompanyAccess;
+    : IRequest<Unit>, IRequireCompanyOwnerAccess;
 
 public class DeletePayrollAccountMappingCommandHandler(IApplicationDbContext db)
     : IRequestHandler<DeletePayrollAccountMappingCommand, Unit>

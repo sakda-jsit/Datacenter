@@ -16,7 +16,7 @@ namespace Datacenter.Application.Features.ReportPackages.Commands;
 /// - Locked แก้ไปสถานะอื่นที่ไม่ใช่ Final ไม่ได้ (ต้องปลดล็อกก่อน)
 /// </summary>
 public record SetReportPackageStatusCommand(int ClientCompanyId, int Id, int TargetStatus)
-    : IRequest<ReportPackageDto>, IRequireCompanyAccess;
+    : IRequest<ReportPackageDto>, IRequireCompanyOwnerAccess;
 
 public class SetReportPackageStatusCommandHandler(
     IApplicationDbContext db, ICurrentUserService currentUser, IAuditService audit, IMediator mediator)

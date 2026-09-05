@@ -11,7 +11,7 @@ namespace Datacenter.Application.Features.Prepaid.Commands;
 
 // ── Create ──────────────────────────────────────────────────────────────────────
 public record CreatePrepaidExpenseCommand(int ClientCompanyId, PrepaidExpenseInput Data)
-    : IRequest<PrepaidExpenseDto>, IRequireCompanyAccess;
+    : IRequest<PrepaidExpenseDto>, IRequireCompanyOwnerAccess;
 
 public class CreatePrepaidExpenseCommandHandler(
     IApplicationDbContext db, ICurrentUserService currentUser, IAuditService audit)
@@ -37,7 +37,7 @@ public class CreatePrepaidExpenseCommandHandler(
 
 // ── Update ──────────────────────────────────────────────────────────────────────
 public record UpdatePrepaidExpenseCommand(int Id, int ClientCompanyId, PrepaidExpenseInput Data)
-    : IRequest<PrepaidExpenseDto>, IRequireCompanyAccess;
+    : IRequest<PrepaidExpenseDto>, IRequireCompanyOwnerAccess;
 
 public class UpdatePrepaidExpenseCommandHandler(
     IApplicationDbContext db, ICurrentUserService currentUser, IAuditService audit)
@@ -66,7 +66,7 @@ public class UpdatePrepaidExpenseCommandHandler(
 }
 
 // ── Delete ──────────────────────────────────────────────────────────────────────
-public record DeletePrepaidExpenseCommand(int Id, int ClientCompanyId) : IRequest, IRequireCompanyAccess;
+public record DeletePrepaidExpenseCommand(int Id, int ClientCompanyId) : IRequest, IRequireCompanyOwnerAccess;
 
 public class DeletePrepaidExpenseCommandHandler(IApplicationDbContext db, IAuditService audit)
     : IRequestHandler<DeletePrepaidExpenseCommand>

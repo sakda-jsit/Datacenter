@@ -24,7 +24,7 @@ public class PostImportBatchCommandHandler(
             ?? throw new NotFoundException("ImportBatch", request.ImportBatchId);
 
         // batch อ้างบริษัทผ่าน id จึงตรวจสิทธิ์หลังโหลด entity (ไม่ผ่าน pipeline behaviour)
-        await accessGuard.EnsureAccessAsync(batch.ClientCompanyId, ct);
+        await accessGuard.EnsureOwnerAccessAsync(batch.ClientCompanyId, ct);
 
         if (batch.Status != ImportStatus.Success)
             throw new DomainException("ต้องนำเข้าข้อมูลสำเร็จ (ไม่มี error) ก่อนจึงจะ post เข้าระบบบัญชีได้");

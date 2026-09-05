@@ -10,7 +10,7 @@ namespace Datacenter.Application.Features.ReportPackages.Commands;
 
 /// <summary>สร้างชุดรายงานงบใหม่ (version ถัดไปของบริษัท+ปีนั้น) สถานะ Draft. ใช้สำหรับยื่นเพิ่มเติม = เปิด version ใหม่</summary>
 public record CreateReportPackageCommand(int ClientCompanyId, int FiscalYear, string? Title = null, string? Note = null)
-    : IRequest<ReportPackageDto>, IRequireCompanyAccess;
+    : IRequest<ReportPackageDto>, IRequireCompanyOwnerAccess;
 
 public class CreateReportPackageCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser, IAuditService audit)
     : IRequestHandler<CreateReportPackageCommand, ReportPackageDto>

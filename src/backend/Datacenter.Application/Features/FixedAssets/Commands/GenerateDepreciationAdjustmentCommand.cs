@@ -15,4 +15,4 @@ public record GenerateDepreciationAdjustmentCommand(
     IReadOnlyList<int> AssetIds,
     DepreciationSet Set,
     DateTime? EntryDate)
-    : IRequest<AdjustmentEntryDto>, IRequireCompanyAccess;
+    : IRequest<AdjustmentEntryDto>, IRequireCompanyOwnerAccess;

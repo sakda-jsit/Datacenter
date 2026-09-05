@@ -19,6 +19,17 @@ export function useAuth() {
   const isAuthenticated = !!user
   const isAdmin = user?.role === 'Admin'
 
+  /**
+   * ผู้ใช้ปัจจุบัน "ดูแล" บริษัทนี้หรือไม่ = ทำรายการได้ไหม
+   * (ดูข้อมูลได้ทุกบริษัทอยู่แล้ว — ที่จำกัดคือการบันทึก/แก้/ลบ และการดูข้อมูลเงินเดือน)
+   * Admin (ownedCompanyIds = null) ทำได้ทุกบริษัท
+   */
+  function canManage(companyId: number | null | undefined): boolean {
+    if (!user || !companyId) return false
+    if (user.ownedCompanyIds == null) return true   // Admin
+    return user.ownedCompanyIds.includes(companyId)
+  }
+
   function logout() {
     // แจ้ง server ให้ยกเลิก refresh token ใบนี้ (ไม่รอผล — ออกจากระบบต้องไม่ค้างเพราะเน็ตช้า)
     const refreshToken = localStorage.getItem('refreshToken')
@@ -29,5 +40,5 @@ export function useAuth() {
     window.location.href = '/login'
   }
 
-  return { user, isAuthenticated, isAdmin, logout }
+  return { user, isAuthenticated, isAdmin, canManage, logout }
 }

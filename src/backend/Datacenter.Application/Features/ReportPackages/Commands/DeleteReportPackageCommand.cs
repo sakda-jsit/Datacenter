@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Datacenter.Application.Features.ReportPackages.Commands;
 
 /// <summary>ลบชุดรายงานงบ — ได้เฉพาะสถานะ Draft (Final/Locked ห้ามลบ)</summary>
-public record DeleteReportPackageCommand(int ClientCompanyId, int Id) : IRequest<Unit>, IRequireCompanyAccess;
+public record DeleteReportPackageCommand(int ClientCompanyId, int Id) : IRequest<Unit>, IRequireCompanyOwnerAccess;
 
 public class DeleteReportPackageCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser, IAuditService audit)
     : IRequestHandler<DeleteReportPackageCommand, Unit>

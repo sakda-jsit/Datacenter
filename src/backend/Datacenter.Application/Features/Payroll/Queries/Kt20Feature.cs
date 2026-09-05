@@ -12,7 +12,7 @@ namespace Datacenter.Application.Features.Payroll.Queries;
 // ── กท.20ก: แบบแสดงเงินค่าจ้างประจำปี กองทุนเงินทดแทน ────────────────────────────
 // กฎ (จากคำแนะนำท้ายแบบ): เงินค่าจ้าง = ค่าตอบแทนการทำงานเวลาปกติ (ไม่รวม OT/วันหยุด/โบนัส)
 // = ฐานค่าจ้างยื่น ปกส. (SsoWageBase) สูงสุดคนละไม่เกิน 240,000 บาท/ปี; ลูกจ้าง = ผู้มีค่าจ้าง
-public record GetKt20Query(int ClientCompanyId, int Year) : IRequest<Kt20Dto>, IRequireCompanyAccess;
+public record GetKt20Query(int ClientCompanyId, int Year) : IRequest<Kt20Dto>, IRequireCompanyOwnerAccess;
 
 public class GetKt20QueryHandler(IApplicationDbContext db) : IRequestHandler<GetKt20Query, Kt20Dto>
 {
@@ -67,7 +67,7 @@ public class GetKt20QueryHandler(IApplicationDbContext db) : IRequestHandler<Get
     private static string Digits(string s) => System.Text.RegularExpressions.Regex.Replace(s ?? "", @"\D", "");
 }
 
-public record GetKt20ExcelQuery(int ClientCompanyId, int Year) : IRequest<byte[]>, IRequireCompanyAccess;
+public record GetKt20ExcelQuery(int ClientCompanyId, int Year) : IRequest<byte[]>, IRequireCompanyOwnerAccess;
 public class GetKt20ExcelQueryHandler(ISender sender, IKt20ExportService svc)
     : IRequestHandler<GetKt20ExcelQuery, byte[]>
 {
@@ -75,7 +75,7 @@ public class GetKt20ExcelQueryHandler(ISender sender, IKt20ExportService svc)
         => svc.BuildExcel(await sender.Send(new GetKt20Query(req.ClientCompanyId, req.Year), ct));
 }
 
-public record GetKt20PdfQuery(int ClientCompanyId, int Year) : IRequest<byte[]>, IRequireCompanyAccess;
+public record GetKt20PdfQuery(int ClientCompanyId, int Year) : IRequest<byte[]>, IRequireCompanyOwnerAccess;
 public class GetKt20PdfQueryHandler(ISender sender, IKt20ExportService svc)
     : IRequestHandler<GetKt20PdfQuery, byte[]>
 {
@@ -83,7 +83,7 @@ public class GetKt20PdfQueryHandler(ISender sender, IKt20ExportService svc)
         => svc.BuildPdf(await sender.Send(new GetKt20Query(req.ClientCompanyId, req.Year), ct));
 }
 
-public record GetKt20ImagesQuery(int ClientCompanyId, int Year) : IRequest<IReadOnlyList<string>>, IRequireCompanyAccess;
+public record GetKt20ImagesQuery(int ClientCompanyId, int Year) : IRequest<IReadOnlyList<string>>, IRequireCompanyOwnerAccess;
 public class GetKt20ImagesQueryHandler(ISender sender, IKt20ExportService svc)
     : IRequestHandler<GetKt20ImagesQuery, IReadOnlyList<string>>
 {

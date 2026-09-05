@@ -23,7 +23,7 @@ public class DeleteImportBatchCommandHandler(
             ?? throw new NotFoundException("ImportBatch", request.ImportBatchId);
 
         // batch อ้างบริษัทผ่าน id จึงตรวจสิทธิ์หลังโหลด entity
-        await accessGuard.EnsureAccessAsync(batch.ClientCompanyId, ct);
+        await accessGuard.EnsureOwnerAccessAsync(batch.ClientCompanyId, ct);
 
         // ลบได้เฉพาะปีที่อยู่ใน "หน้ากำหนดรอบบัญชี" (ISPRD) ปัจจุบันเท่านั้น — ปีที่หลุดออกจากหน้านี้แล้ว
         // = ข้อมูลประวัติ ห้ามลบ (Express โพสต์รอบปีแล้ว detail ถูกลบ → สำเนาที่นำเข้านี้เป็นชุดเดียวที่เหลือ)

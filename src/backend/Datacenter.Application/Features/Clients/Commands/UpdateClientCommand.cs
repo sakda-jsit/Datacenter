@@ -20,7 +20,7 @@ public record UpdateClientCommand(
     string? IsicCode = null,
     string? Email = null,
     int? DefaultAssigneeUserId = null)
-    : IRequest, IRequireCompanyAccess
+    : IRequest, IRequireCompanyOwnerAccess
 {
     public int ClientCompanyId => Id;
 }

@@ -8,4 +8,4 @@ namespace Datacenter.Application.Features.ComplianceCalendar.Commands;
 /// Idempotent — skips tasks that already exist.
 /// </summary>
 public record GenerateMonthlyTasksCommand(int ClientCompanyId, int Year, int Month)
-    : IRequest<int>, IRequireCompanyAccess;
+    : IRequest<int>, IRequireCompanyOwnerAccess;

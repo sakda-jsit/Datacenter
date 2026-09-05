@@ -10,7 +10,7 @@ namespace Datacenter.Application.Features.FinancialStatement.Commands;
 /// ไม่กระทบ template กลาง.
 /// </summary>
 public record ResetNoteTemplateSectionCommand(
-    int ClientCompanyId, int EffectiveYear, string NoteKey) : IRequest<bool>, IRequireCompanyAccess;
+    int ClientCompanyId, int EffectiveYear, string NoteKey) : IRequest<bool>, IRequireCompanyOwnerAccess;
 
 public class ResetNoteTemplateSectionCommandHandler(
     IApplicationDbContext db, IAuditService audit)

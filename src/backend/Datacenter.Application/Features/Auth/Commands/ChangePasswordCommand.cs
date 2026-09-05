@@ -81,6 +81,7 @@ public class ChangePasswordCommandHandler(
             Token:        accessToken,
             RefreshToken: refreshToken,
             ExpiresAt:    expiresAt,
-            MustChangePassword: false);
+            MustChangePassword: false,
+            OwnedCompanyIds: await AuthCompanyScope.OwnedCompanyIdsAsync(db, user, ct));
     }
 }

@@ -14,4 +14,4 @@ public record GenerateLeaseAdjustmentCommand(
     int FiscalYear,
     IReadOnlyList<int> ContractIds,
     DateTime? EntryDate)
-    : IRequest<AdjustmentEntryDto>, IRequireCompanyAccess;
+    : IRequest<AdjustmentEntryDto>, IRequireCompanyOwnerAccess;

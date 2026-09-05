@@ -12,7 +12,7 @@ namespace Datacenter.Application.Features.CorporateTax.Commands;
 
 /// <summary>ตั้งผู้ลงนามประจำบริษัท (ค่าเริ่มต้น ใช้ทุกปีที่ไม่มี override).</summary>
 public record SetCompanyDefaultSignersCommand(int ClientCompanyId, CompanyDefaultSignersInput Data)
-    : IRequest<CompanySignersDto>, IRequireCompanyAccess;
+    : IRequest<CompanySignersDto>, IRequireCompanyOwnerAccess;
 
 public class SetCompanyDefaultSignersCommandHandler(
     IApplicationDbContext db, ISender sender, ICurrentUserService user, IAuditService audit)
@@ -40,7 +40,7 @@ public class SetCompanyDefaultSignersCommandHandler(
 
 /// <summary>บันทึกผู้ลงนามเฉพาะรอบปี (override + วันที่ในรายงาน). ว่างทั้งหมด = ลบ override ของปีนั้น.</summary>
 public record SaveCompanyYearSignersCommand(int ClientCompanyId, int FiscalYear, CompanyYearSignersInput Data)
-    : IRequest<CompanySignersDto>, IRequireCompanyAccess;
+    : IRequest<CompanySignersDto>, IRequireCompanyOwnerAccess;
 
 public class SaveCompanyYearSignersCommandHandler(
     IApplicationDbContext db, ISender sender, ICurrentUserService user, IAuditService audit)

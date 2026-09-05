@@ -6,4 +6,4 @@ namespace Datacenter.Application.Features.FixedAssets.Commands;
 
 /// <summary>สร้างสินทรัพย์ถาวรใหม่ในทะเบียน</summary>
 public record CreateFixedAssetCommand(int ClientCompanyId, FixedAssetInput Data)
-    : IRequest<FixedAssetDto>, IRequireCompanyAccess;
+    : IRequest<FixedAssetDto>, IRequireCompanyOwnerAccess;

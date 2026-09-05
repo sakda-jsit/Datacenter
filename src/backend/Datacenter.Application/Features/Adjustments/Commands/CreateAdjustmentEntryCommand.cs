@@ -15,4 +15,4 @@ public record CreateAdjustmentEntryCommand(
     string Reason,
     string? AttachmentPath,
     IReadOnlyList<AdjustmentLineInput> Lines)
-    : IRequest<AdjustmentEntryDto>, IRequireCompanyAccess;
+    : IRequest<AdjustmentEntryDto>, IRequireCompanyOwnerAccess;

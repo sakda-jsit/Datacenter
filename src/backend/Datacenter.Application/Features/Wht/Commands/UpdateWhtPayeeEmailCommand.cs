@@ -8,7 +8,7 @@ namespace Datacenter.Application.Features.Wht.Commands;
 
 /// <summary>กำหนด/แก้ไขอีเมลของผู้ถูกหัก (req 1) — upsert WhtPayee by (บริษัท, เลขผู้เสียภาษี)</summary>
 public record UpdateWhtPayeeEmailCommand(int ClientCompanyId, string TaxId, string? Email)
-    : IRequest<Unit>, IRequireCompanyAccess;
+    : IRequest<Unit>, IRequireCompanyOwnerAccess;
 
 public class UpdateWhtPayeeEmailCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
     : IRequestHandler<UpdateWhtPayeeEmailCommand, Unit>

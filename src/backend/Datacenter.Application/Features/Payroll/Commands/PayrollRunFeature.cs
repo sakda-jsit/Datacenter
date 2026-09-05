@@ -13,7 +13,7 @@ namespace Datacenter.Application.Features.Payroll.Commands;
 
 // ── รายการงวด ────────────────────────────────────────────────────────────────────
 public record GetPayrollRunsQuery(int ClientCompanyId, int? Year = null)
-    : IRequest<IReadOnlyList<PayrollRunListItemDto>>, IRequireCompanyAccess;
+    : IRequest<IReadOnlyList<PayrollRunListItemDto>>, IRequireCompanyOwnerAccess;
 
 public class GetPayrollRunsQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetPayrollRunsQuery, IReadOnlyList<PayrollRunListItemDto>>
@@ -33,7 +33,7 @@ public class GetPayrollRunsQueryHandler(IApplicationDbContext db)
 
 // ── รายละเอียดงวด + ค่าคำนวณเทียบ ────────────────────────────────────────────────
 public record GetPayrollRunQuery(int ClientCompanyId, int RunId)
-    : IRequest<PayrollRunDetailDto>, IRequireCompanyAccess;
+    : IRequest<PayrollRunDetailDto>, IRequireCompanyOwnerAccess;
 
 public class GetPayrollRunQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetPayrollRunQuery, PayrollRunDetailDto>
@@ -77,7 +77,7 @@ public class GetPayrollRunQueryHandler(IApplicationDbContext db)
 
 // ── สรุปรายได้ทั้งปี (แถว=เดือน) อิง sheet "รายได้ทั้งปี" ─────────────────────────
 public record GetPayrollYearSummaryQuery(int ClientCompanyId, int Year)
-    : IRequest<PayrollYearSummaryDto>, IRequireCompanyAccess;
+    : IRequest<PayrollYearSummaryDto>, IRequireCompanyOwnerAccess;
 
 public class GetPayrollYearSummaryQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetPayrollYearSummaryQuery, PayrollYearSummaryDto>
@@ -179,7 +179,7 @@ public class GetPayrollYearSummaryQueryHandler(IApplicationDbContext db)
 
 // ── สปส.1-10 (แบบรายการแสดงการส่งเงินสมทบ) ต่องวด ────────────────────────────────
 public record GetSsoFilingQuery(int ClientCompanyId, int RunId)
-    : IRequest<SsoFilingDto>, IRequireCompanyAccess;
+    : IRequest<SsoFilingDto>, IRequireCompanyOwnerAccess;
 
 public class GetSsoFilingQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetSsoFilingQuery, SsoFilingDto>
@@ -240,7 +240,7 @@ public class GetSsoFilingQueryHandler(IApplicationDbContext db)
     private static string Digits(string s) => System.Text.RegularExpressions.Regex.Replace(s ?? "", @"\D", "");
 }
 
-public record GetSsoFilingExcelQuery(int ClientCompanyId, int RunId) : IRequest<byte[]>, IRequireCompanyAccess;
+public record GetSsoFilingExcelQuery(int ClientCompanyId, int RunId) : IRequest<byte[]>, IRequireCompanyOwnerAccess;
 public class GetSsoFilingExcelQueryHandler(ISender sender, ISsoFilingExcelService excel)
     : IRequestHandler<GetSsoFilingExcelQuery, byte[]>
 {
@@ -248,7 +248,7 @@ public class GetSsoFilingExcelQueryHandler(ISender sender, ISsoFilingExcelServic
         => excel.BuildEServiceFile(await sender.Send(new GetSsoFilingQuery(req.ClientCompanyId, req.RunId), ct));
 }
 
-public record GetSsoFilingPdfQuery(int ClientCompanyId, int RunId) : IRequest<byte[]>, IRequireCompanyAccess;
+public record GetSsoFilingPdfQuery(int ClientCompanyId, int RunId) : IRequest<byte[]>, IRequireCompanyOwnerAccess;
 public class GetSsoFilingPdfQueryHandler(ISender sender, ISsoFilingPdfService pdf)
     : IRequestHandler<GetSsoFilingPdfQuery, byte[]>
 {
@@ -258,7 +258,7 @@ public class GetSsoFilingPdfQueryHandler(ISender sender, ISsoFilingPdfService pd
 
 // ── ใบสำคัญลงบัญชีเงินเดือน + กระทบยอด GL (ไม่โพสต์ทับ GL ที่ import จาก Express) ──
 public record GetPayrollPostingQuery(int ClientCompanyId, int RunId)
-    : IRequest<PayrollPostingDto>, IRequireCompanyAccess;
+    : IRequest<PayrollPostingDto>, IRequireCompanyOwnerAccess;
 
 public class GetPayrollPostingQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetPayrollPostingQuery, PayrollPostingDto>
@@ -374,7 +374,7 @@ public class GetPayrollPostingQueryHandler(IApplicationDbContext db)
 
 // ── สร้างงวด + auto สร้างรายการจากพนักงาน Active ─────────────────────────────────
 public record CreatePayrollRunCommand(int ClientCompanyId, int Year, int Month)
-    : IRequest<int>, IRequireCompanyAccess;
+    : IRequest<int>, IRequireCompanyOwnerAccess;
 
 public class CreatePayrollRunCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
     : IRequestHandler<CreatePayrollRunCommand, int>
@@ -423,7 +423,7 @@ public class CreatePayrollRunCommandHandler(IApplicationDbContext db, ICurrentUs
 
 // ── บันทึกค่ารายการ (grid save) — recompute Gross/Net ────────────────────────────
 public record SavePayrollItemsCommand(int ClientCompanyId, int RunId, IReadOnlyList<PayrollItemInput> Items)
-    : IRequest<Unit>, IRequireCompanyAccess;
+    : IRequest<Unit>, IRequireCompanyOwnerAccess;
 
 public class SavePayrollItemsCommandHandler(IApplicationDbContext db)
     : IRequestHandler<SavePayrollItemsCommand, Unit>
@@ -452,7 +452,7 @@ public class SavePayrollItemsCommandHandler(IApplicationDbContext db)
 
 // ── ลบงวด ────────────────────────────────────────────────────────────────────────
 public record DeletePayrollRunCommand(int ClientCompanyId, int RunId)
-    : IRequest<Unit>, IRequireCompanyAccess;
+    : IRequest<Unit>, IRequireCompanyOwnerAccess;
 
 public class DeletePayrollRunCommandHandler(IApplicationDbContext db)
     : IRequestHandler<DeletePayrollRunCommand, Unit>
@@ -470,7 +470,7 @@ public class DeletePayrollRunCommandHandler(IApplicationDbContext db)
 
 // ── เปลี่ยนสถานะงวด ──────────────────────────────────────────────────────────────
 public record SetPayrollRunStatusCommand(int ClientCompanyId, int RunId, int Status)
-    : IRequest<Unit>, IRequireCompanyAccess;
+    : IRequest<Unit>, IRequireCompanyOwnerAccess;
 
 public class SetPayrollRunStatusCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
     : IRequestHandler<SetPayrollRunStatusCommand, Unit>

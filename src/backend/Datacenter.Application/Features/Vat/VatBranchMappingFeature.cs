@@ -52,7 +52,7 @@ public class GetVatBranchMappingsQueryHandler(IApplicationDbContext db)
 
 // ── Upsert ───────────────────────────────────────────────────────────────────────
 public record UpsertVatBranchMappingCommand(int ClientCompanyId, VatBranchMappingInput Data)
-    : IRequest, IRequireCompanyAccess;
+    : IRequest, IRequireCompanyOwnerAccess;
 
 public class UpsertVatBranchMappingCommandHandler(
     IApplicationDbContext db, ICurrentUserService currentUser, IAuditService audit)
@@ -96,7 +96,7 @@ public class UpsertVatBranchMappingCommandHandler(
 
 // ── Delete (กลับไปใช้กฎอัตโนมัติ) ───────────────────────────────────────────────
 public record DeleteVatBranchMappingCommand(int ClientCompanyId, string DepartmentCode)
-    : IRequest, IRequireCompanyAccess;
+    : IRequest, IRequireCompanyOwnerAccess;
 
 public class DeleteVatBranchMappingCommandHandler(IApplicationDbContext db, IAuditService audit)
     : IRequestHandler<DeleteVatBranchMappingCommand>

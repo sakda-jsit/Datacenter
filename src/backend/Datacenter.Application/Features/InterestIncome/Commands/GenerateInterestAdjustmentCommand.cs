@@ -17,7 +17,7 @@ namespace Datacenter.Application.Features.InterestIncome.Commands;
 /// </summary>
 public record GenerateInterestAdjustmentCommand(
     int ClientCompanyId, int FiscalYear, IReadOnlyList<int> LoanIds, DateTime? EntryDate)
-    : IRequest<AdjustmentEntryDto>, IRequireCompanyAccess;
+    : IRequest<AdjustmentEntryDto>, IRequireCompanyOwnerAccess;
 
 public class GenerateInterestAdjustmentCommandHandler(IApplicationDbContext db, IMediator mediator)
     : IRequestHandler<GenerateInterestAdjustmentCommand, AdjustmentEntryDto>

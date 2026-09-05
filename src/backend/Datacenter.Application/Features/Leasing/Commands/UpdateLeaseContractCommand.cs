@@ -6,4 +6,4 @@ namespace Datacenter.Application.Features.Leasing.Commands;
 
 /// <summary>แก้ไขสัญญาเช่าซื้อ/เงินกู้</summary>
 public record UpdateLeaseContractCommand(int Id, int ClientCompanyId, LeaseContractInput Data)
-    : IRequest<LeaseContractDto>, IRequireCompanyAccess;
+    : IRequest<LeaseContractDto>, IRequireCompanyOwnerAccess;

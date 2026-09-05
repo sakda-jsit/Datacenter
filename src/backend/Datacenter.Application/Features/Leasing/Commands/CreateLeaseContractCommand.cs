@@ -6,4 +6,4 @@ namespace Datacenter.Application.Features.Leasing.Commands;
 
 /// <summary>สร้างสัญญาเช่าซื้อ/เงินกู้ใหม่</summary>
 public record CreateLeaseContractCommand(int ClientCompanyId, LeaseContractInput Data)
-    : IRequest<LeaseContractDto>, IRequireCompanyAccess;
+    : IRequest<LeaseContractDto>, IRequireCompanyOwnerAccess;

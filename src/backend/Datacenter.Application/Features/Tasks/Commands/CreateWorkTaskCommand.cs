@@ -20,7 +20,7 @@ public record CreateWorkTaskCommand(
     WorkTaskRecurrence RecurrenceType = WorkTaskRecurrence.None,
     int RecurrenceInterval = 1,
     IReadOnlyList<WorkTaskItemInput>? Items = null)
-    : IRequest<WorkTaskDto>, IRequireCompanyAccess;
+    : IRequest<WorkTaskDto>, IRequireCompanyOwnerAccess;
 
 public class CreateWorkTaskCommandValidator : AbstractValidator<CreateWorkTaskCommand>
 {

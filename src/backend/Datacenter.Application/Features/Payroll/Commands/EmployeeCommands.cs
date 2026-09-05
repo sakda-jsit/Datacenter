@@ -11,7 +11,7 @@ namespace Datacenter.Application.Features.Payroll.Commands;
 
 // ── Create ─────────────────────────────────────────────────────────────────────
 public record CreateEmployeeCommand(int ClientCompanyId, EmployeeInput Data)
-    : IRequest<int>, IRequireCompanyAccess;
+    : IRequest<int>, IRequireCompanyOwnerAccess;
 
 public class CreateEmployeeCommandValidator : AbstractValidator<CreateEmployeeCommand>
 {
@@ -86,7 +86,7 @@ public class CreateEmployeeCommandHandler(IApplicationDbContext db, ICurrentUser
 
 // ── Update ─────────────────────────────────────────────────────────────────────
 public record UpdateEmployeeCommand(int Id, int ClientCompanyId, EmployeeInput Data)
-    : IRequest<Unit>, IRequireCompanyAccess;
+    : IRequest<Unit>, IRequireCompanyOwnerAccess;
 
 public class UpdateEmployeeCommandValidator : AbstractValidator<UpdateEmployeeCommand>
 {
@@ -123,7 +123,7 @@ public class UpdateEmployeeCommandHandler(IApplicationDbContext db, ICurrentUser
 
 // ── Delete ─────────────────────────────────────────────────────────────────────
 public record DeleteEmployeeCommand(int Id, int ClientCompanyId)
-    : IRequest<Unit>, IRequireCompanyAccess;
+    : IRequest<Unit>, IRequireCompanyOwnerAccess;
 
 public class DeleteEmployeeCommandHandler(IApplicationDbContext db, IAuditService audit)
     : IRequestHandler<DeleteEmployeeCommand, Unit>

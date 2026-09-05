@@ -49,7 +49,7 @@ internal static class StatutoryFilingCurrent
 }
 
 public record GetStatutoryFilingQuery(int ClientCompanyId, int FilingType, int Year, int Month)
-    : IRequest<StatutoryFilingDto>, IRequireCompanyAccess;
+    : IRequest<StatutoryFilingDto>, IRequireCompanyOwnerAccess;
 
 public class GetStatutoryFilingQueryHandler(IApplicationDbContext db, ISender sender)
     : IRequestHandler<GetStatutoryFilingQuery, StatutoryFilingDto>
@@ -83,7 +83,7 @@ public class GetStatutoryFilingQueryHandler(IApplicationDbContext db, ISender se
 public record UpsertStatutoryFilingStatusCommand(
     int ClientCompanyId, int FilingType, int Year, int Month,
     DateTime? SubmittedDate, DateTime? ReceiptDate, decimal? ReceiptAmount, string? ReceiptNo, string? Note)
-    : IRequest<int>, IRequireCompanyAccess;
+    : IRequest<int>, IRequireCompanyOwnerAccess;
 
 public class UpsertStatutoryFilingStatusCommandHandler(IApplicationDbContext db, ISender sender, ICurrentUserService currentUser)
     : IRequestHandler<UpsertStatutoryFilingStatusCommand, int>
@@ -131,7 +131,7 @@ public class UpsertStatutoryFilingStatusCommandHandler(IApplicationDbContext db,
 
 public record UploadStatutoryFilingDocumentCommand(
     int ClientCompanyId, int FilingType, int Year, int Month, string Kind,
-    string FileName, string ContentType, byte[] Content) : IRequest<int>, IRequireCompanyAccess;
+    string FileName, string ContentType, byte[] Content) : IRequest<int>, IRequireCompanyOwnerAccess;
 
 public class UploadStatutoryFilingDocumentCommandHandler(IApplicationDbContext db, ICurrentUserService currentUser)
     : IRequestHandler<UploadStatutoryFilingDocumentCommand, int>
@@ -171,7 +171,7 @@ public class UploadStatutoryFilingDocumentCommandHandler(IApplicationDbContext d
 }
 
 public record GetStatutoryFilingDocumentQuery(int ClientCompanyId, int FilingType, int Year, int Month, string Kind)
-    : IRequest<SsoFilingDocumentResult>, IRequireCompanyAccess;
+    : IRequest<SsoFilingDocumentResult>, IRequireCompanyOwnerAccess;
 
 public class GetStatutoryFilingDocumentQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetStatutoryFilingDocumentQuery, SsoFilingDocumentResult>

@@ -87,7 +87,8 @@ public class LoginCommandHandler(
             Token:       accessToken,
             RefreshToken: refreshToken,
             ExpiresAt:   expiresAt,
-            MustChangePassword: user.MustChangePassword);
+            MustChangePassword: user.MustChangePassword,
+            OwnedCompanyIds: await AuthCompanyScope.OwnedCompanyIdsAsync(db, user, ct));
     }
 
     // เขียน audit ตรง ๆ (IAuditService อ่านผู้ใช้จาก JWT ซึ่งตอน login ยังไม่มี)

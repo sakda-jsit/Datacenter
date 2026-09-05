@@ -20,7 +20,7 @@ public record SendWhtCertificatesCommand(
     IReadOnlyList<int> EntryIds,
     WhtSendGrouping Grouping = WhtSendGrouping.ByPayee,
     string? RecipientEmail = null)
-    : IRequest<IReadOnlyList<WhtSendResultDto>>, IRequireCompanyAccess;
+    : IRequest<IReadOnlyList<WhtSendResultDto>>, IRequireCompanyOwnerAccess;
 
 public class SendWhtCertificatesCommandHandler(
     IApplicationDbContext db,

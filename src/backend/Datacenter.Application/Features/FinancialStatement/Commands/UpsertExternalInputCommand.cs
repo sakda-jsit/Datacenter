@@ -13,4 +13,4 @@ public record UpsertExternalInputCommand(
     string RefCode,
     decimal Amount,
     string? Note)
-    : IRequest, IRequireCompanyAccess;
+    : IRequest, IRequireCompanyOwnerAccess;

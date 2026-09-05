@@ -197,7 +197,7 @@ export default function UsersPage() {
                   <th className="px-3 py-2 text-left">ชื่อผู้ใช้</th>
                   <th className="px-3 py-2 text-left">ชื่อที่แสดง</th>
                   <th className="px-3 py-2 text-left">บทบาท</th>
-                  <th className="px-3 py-2 text-left">บริษัทที่เข้าถึง</th>
+                  <th className="px-3 py-2 text-left">บริษัทที่ดูแล</th>
                   <th className="px-3 py-2 text-left">เข้าใช้งานล่าสุด</th>
                   <th className="px-3 py-2 text-left">สถานะ</th>
                   <th className="px-3 py-2"></th>
@@ -322,8 +322,12 @@ export default function UsersPage() {
 
           {form.role !== USER_ROLE.Admin && (
             <div className="mt-4">
-              <p className="mb-2 text-xs font-medium text-gray-600">
-                บริษัทที่เข้าถึงได้ (เลือกแล้ว {form.companyIds.length} จาก {companies.length})
+              <p className="mb-1 text-xs font-medium text-gray-600">
+                บริษัทที่ดูแล — ทำรายการได้ (เลือกแล้ว {form.companyIds.length} จาก {companies.length})
+              </p>
+              <p className="mb-2 text-xs text-gray-400">
+                ผู้ใช้ทุกคน <b>ดูข้อมูลได้ทุกบริษัท</b>อยู่แล้ว — ที่เลือกตรงนี้คือบริษัทที่ผู้ใช้คนนี้
+                <b>บันทึก/แก้ไข/นำเข้าข้อมูล</b> และ <b>ดูข้อมูลเงินเดือน</b> ได้
               </p>
               <div className="flex gap-3 pb-2 text-xs">
                 <button

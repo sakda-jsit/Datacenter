@@ -10,7 +10,7 @@ namespace Datacenter.Application.Features.Payroll.Queries;
 
 // ── รายชื่อพนักงาน ───────────────────────────────────────────────────────────────
 public record GetEmployeesQuery(int ClientCompanyId, bool IncludeResigned = true)
-    : IRequest<IReadOnlyList<EmployeeListItemDto>>, IRequireCompanyAccess;
+    : IRequest<IReadOnlyList<EmployeeListItemDto>>, IRequireCompanyOwnerAccess;
 
 public class GetEmployeesQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetEmployeesQuery, IReadOnlyList<EmployeeListItemDto>>
@@ -35,7 +35,7 @@ public class GetEmployeesQueryHandler(IApplicationDbContext db)
 
 // ── รายละเอียดพนักงาน (+ เอกสาร + การแจ้ง ปกส.) ─────────────────────────────────
 public record GetEmployeeQuery(int Id, int ClientCompanyId)
-    : IRequest<EmployeeDetailDto>, IRequireCompanyAccess;
+    : IRequest<EmployeeDetailDto>, IRequireCompanyOwnerAccess;
 
 public class GetEmployeeQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetEmployeeQuery, EmployeeDetailDto>

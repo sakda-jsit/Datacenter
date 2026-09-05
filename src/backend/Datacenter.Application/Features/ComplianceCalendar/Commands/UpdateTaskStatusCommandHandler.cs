@@ -21,7 +21,7 @@ public class UpdateTaskStatusCommandHandler(
             ?? throw new NotFoundException("ComplianceTask", request.TaskId);
 
         // task อ้างถึงบริษัทผ่าน TaskId จึงตรวจสิทธิ์หลังโหลด entity แทน pipeline behaviour
-        await accessGuard.EnsureAccessAsync(task.ClientCompanyId, ct);
+        await accessGuard.EnsureOwnerAccessAsync(task.ClientCompanyId, ct);
 
         // ปิดงานเป็น "เสร็จสิ้น" ได้ต่อเมื่อมีหลักฐานแนบ (ถ้าประเภทงานนั้นบังคับไว้)
         if (request.Status == ComplianceTaskStatus.Completed && task.Status != ComplianceTaskStatus.Completed)
