@@ -303,6 +303,17 @@ ROUTES.push(
     },
   },
   { name: 'closing-period', path: '/closing-period', full: false, prepare: setYearThen() },
+  {
+    // แผงตรวจสอบความพร้อมจะขึ้นเมื่อคลิกการ์ดเดือน — เลือกงวดสิ้นปี (ธ.ค.) ให้เห็นผลกระทบยอดจริง
+    name: 'closing-validation',
+    path: '/closing-period',
+    full: false,
+    prepare: async (page) => {
+      await setYearThen()(page)
+      await page.getByText('ธันวาคม', { exact: false }).first().click()
+      await page.waitForTimeout(3000)
+    },
+  },
   { name: 'report-packages', path: '/report-packages', full: false, prepare: setYearThen() },
   { name: 'evidence', path: '/evidence', full: false, prepare: setYearThen() },
   { name: 'evidence-checklist', path: '/evidence', full: false, prepare: tab('ความครบถ้วนหลักฐาน') },
