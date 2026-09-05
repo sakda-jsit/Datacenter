@@ -60,6 +60,62 @@ const ROUTES = [
   },
 ]
 
+// ── ภ.พ.30 ──
+const VAT_YEAR = process.env.MANUAL_VAT_YEAR || '2025'
+const MULTI_BRANCH_COMPANY_ID = Number(process.env.MANUAL_MULTIBRANCH_COMPANY_ID || 287) // บริษัทที่มีหลายสาขาใน Express
+
+/** ตั้งปีภาษีที่ select ตัวแรกของหน้า /vat (ปีจะ auto เลือกปีล่าสุดที่มีข้อมูล ถ้าไม่ตั้งเอง) */
+async function setVatYear(page) {
+  await page.locator('main select').first().selectOption(VAT_YEAR)
+  await page.waitForTimeout(1500)
+}
+
+async function openVatTab(page, label) {
+  await setVatYear(page)
+  await page.getByRole('button', { name: label }).click()
+  await page.waitForTimeout(2000)
+}
+
+ROUTES.push(
+  { name: 'vat-report', path: '/vat', prepare: setVatYear, full: false },
+  {
+    // ใบช่วยกรอกเป็นฟอร์ม ไม่ยาวมาก — แคปเต็มหน้าให้เห็นครบทุกช่องจนถึง "ภาษีสุทธิ"
+    name: 'vat-filing',
+    path: '/vat',
+    prepare: (page) => openVatTab(page, 'ใบกรอก ภ.พ.30 (e-Filing)'),
+  },
+  {
+    name: 'vat-entries',
+    path: '/vat',
+    full: false,
+    prepare: (page) => openVatTab(page, 'รายละเอียดภาษีซื้อ/ขาย'),
+  },
+  {
+    // ตารางแยกสาขาจะขึ้นเฉพาะบริษัทที่มีหลาย DEPCOD ใน Express — แคปเฉพาะการ์ดใบนั้น
+    name: 'vat-branches',
+    path: '/vat',
+    companyId: MULTI_BRANCH_COMPANY_ID,
+    element: (page) => page.locator('div.overflow-x-auto').filter({ hasText: 'แยกตามสาขา' }).first(),
+    prepare: async (page) => {
+      await openVatTab(page, 'ใบกรอก ภ.พ.30 (e-Filing)')
+      // ต้องเลือกเดือนที่มีข้อมูลมากกว่า 1 สาขา ไม่งั้นการ์ด "แยกตามสาขา" จะไม่ขึ้น
+      await page.locator('main select').nth(1).selectOption(process.env.MANUAL_BRANCH_MONTH || '3')
+      await page.waitForTimeout(2000)
+    },
+  },
+  {
+    name: 'vat-branch-mapping',
+    path: '/vat',
+    companyId: MULTI_BRANCH_COMPANY_ID,
+    full: false,
+    prepare: async (page) => {
+      await openVatTab(page, 'ใบกรอก ภ.พ.30 (e-Filing)')
+      await page.getByRole('button', { name: 'แมพเลขสาขา' }).click()
+      await page.waitForTimeout(1500)
+    },
+  },
+)
+
 const only = process.argv.slice(2)
 const routes = only.length ? ROUTES.filter((r) => only.includes(r.name)) : ROUTES
 if (!routes.length) {
@@ -90,14 +146,26 @@ await page.evaluate((id) => localStorage.setItem('companyId', String(id)), COMPA
 // 3) capture each route
 for (const r of routes) {
   const url = `${BASE}${r.path}`
+  // route ที่ต้องใช้บริษัทอื่น (เช่น ตัวอย่างบริษัทหลายสาขา)
+  if (r.companyId) await page.evaluate((id) => localStorage.setItem('companyId', String(id)), r.companyId)
   await page.goto(url, { waitUntil: 'networkidle' })
   await page.waitForTimeout(r.wait ?? 1200)
   if (r.prepare) await r.prepare(page)
   const file = join(OUT, `${r.name}.png`)
-  await page.screenshot({ path: file, fullPage: r.full !== false })
+  if (r.element) {
+    // แคปเฉพาะส่วนที่ต้องการ (เช่น การ์ดใบเดียวกลางหน้ายาว ๆ)
+    const el = r.element(page)
+    await el.scrollIntoViewIfNeeded()
+    await page.waitForTimeout(400)
+    await el.screenshot({ path: file })
+  } else {
+    await page.screenshot({ path: file, fullPage: r.full !== false })
+  }
   console.log('captured', r.name, '->', file)
-  // route ที่ล้างบริษัททิ้ง ต้องตั้งกลับก่อนไป route ถัดไป
-  if (r.restoreCompany) await page.evaluate((id) => localStorage.setItem('companyId', String(id)), COMPANY_ID)
+  // route ที่เปลี่ยน/ล้างบริษัท ต้องตั้งกลับก่อนไป route ถัดไป
+  if (r.restoreCompany || r.companyId) {
+    await page.evaluate((id) => localStorage.setItem('companyId', String(id)), COMPANY_ID)
+  }
 }
 
 await browser.close()
