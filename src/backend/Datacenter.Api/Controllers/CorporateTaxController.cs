@@ -2,6 +2,7 @@ using Datacenter.Application.Features.CorporateTax.Commands;
 using Datacenter.Application.Features.CorporateTax.DTOs;
 using Datacenter.Application.Features.CorporateTax.Queries;
 using MediatR;
+using Datacenter.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -54,6 +55,8 @@ public class CorporateTaxController(IMediator mediator) : ControllerBase
         => Ok(await mediator.Send(new SaveCompanyYearSignersCommand(clientCompanyId, fiscalYear, data), ct));
 
     /// <summary>GET /corporate-tax/signer-assignments — ภาพรวมผู้ลงนามประจำของทุกบริษัท (จัดการรวมศูนย์)</summary>
+    // ภาพรวมข้ามทุกบริษัท เป็นหน้าจัดการรวมศูนย์ในเมนูระบบ
+    [Authorize(Roles = nameof(UserRole.Admin))]
     [HttpGet("signer-assignments")]
     public async Task<IActionResult> GetSignerAssignments(
         [FromQuery] string? search, [FromQuery] int? auditorId, [FromQuery] int? bookkeeperId, CancellationToken ct)

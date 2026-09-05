@@ -117,14 +117,16 @@ const navGroups: NavGroup[] = [
     icon: 'history',
     desc: 'ตั้งค่ากลาง · Audit',
     items: [
+      // ตั้งค่ากลางทั้งหมดกระทบทุกบริษัท จึงเป็นของผู้ดูแลระบบ —
+      // ผู้ใช้ทั่วไปเห็นเฉพาะ "เปลี่ยนรหัสผ่าน" ซึ่งเป็นของบัญชีตัวเอง
       { to: '/settings/users', icon: 'users', label: 'ผู้ใช้งานระบบ', desc: 'บัญชีพนักงาน + สิทธิ์รายบริษัท', adminOnly: true },
       { to: '/change-password', icon: 'lock', label: 'เปลี่ยนรหัสผ่าน', desc: 'รหัสผ่านของบัญชีคุณ' },
-      { to: '/settings/office-profile', icon: 'building', label: 'โปรไฟล์สำนักงานบัญชี', desc: 'ข้อมูลสำนักงานคุณ (ใช้ทุกบริษัท)' },
-      { to: '/settings/auditors', icon: 'users', label: 'ทะเบียนผู้สอบบัญชี', desc: 'master ใช้เลือกในแบบภาษี' },
-      { to: '/settings/bookkeepers', icon: 'users', label: 'ทะเบียนผู้ทำบัญชี', desc: 'master ใช้เลือกในแบบภาษี' },
-      { to: '/settings/signer-assignments', icon: 'scale', label: 'มอบหมายผู้ลงนาม', desc: 'ภาพรวมผู้สอบ/ผู้ทำบัญชี ทุกบริษัท' },
-      { to: '/settings/payroll-rates', icon: 'shield', label: 'อัตราเงินสมทบ ปกส.', desc: 'ค่ากลาง ปกส./กองทุนทดแทน' },
-      { to: '/audit-log', icon: 'history', label: 'ประวัติการใช้งาน', desc: 'Audit log' },
+      { to: '/settings/office-profile', icon: 'building', label: 'โปรไฟล์สำนักงานบัญชี', desc: 'ข้อมูลสำนักงานคุณ (ใช้ทุกบริษัท)', adminOnly: true },
+      { to: '/settings/auditors', icon: 'users', label: 'ทะเบียนผู้สอบบัญชี', desc: 'master ใช้เลือกในแบบภาษี', adminOnly: true },
+      { to: '/settings/bookkeepers', icon: 'users', label: 'ทะเบียนผู้ทำบัญชี', desc: 'master ใช้เลือกในแบบภาษี', adminOnly: true },
+      { to: '/settings/signer-assignments', icon: 'scale', label: 'มอบหมายผู้ลงนาม', desc: 'ภาพรวมผู้สอบ/ผู้ทำบัญชี ทุกบริษัท', adminOnly: true },
+      { to: '/settings/payroll-rates', icon: 'shield', label: 'อัตราเงินสมทบ ปกส.', desc: 'ค่ากลาง ปกส./กองทุนทดแทน', adminOnly: true },
+      { to: '/audit-log', icon: 'history', label: 'ประวัติการใช้งาน', desc: 'Audit log', adminOnly: true },
     ],
   },
 ]

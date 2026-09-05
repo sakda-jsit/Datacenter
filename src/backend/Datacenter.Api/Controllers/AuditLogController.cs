@@ -1,11 +1,13 @@
 using Datacenter.Application.Features.AuditLog.Queries;
 using MediatR;
+using Datacenter.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Datacenter.Api.Controllers;
 
-[Authorize]
+// ประวัติการใช้งานทั้งสำนักงาน — ข้อมูลกำกับดูแล เปิดให้เฉพาะผู้ดูแลระบบ
+[Authorize(Roles = nameof(UserRole.Admin))]
 [ApiController]
 [Route("api/v1/audit-log")]
 public class AuditLogController(IMediator mediator) : ControllerBase

@@ -1,5 +1,6 @@
 using Datacenter.Application.Features.OfficeProfile;
 using MediatR;
+using Datacenter.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,6 +21,7 @@ public class OfficeProfileController(IMediator mediator) : ControllerBase
         => Ok(await mediator.Send(new GetOfficeProfileQuery(), ct));
 
     /// <summary>PUT /api/v1/office-profile (body: OfficeProfileInput) — บันทึกโปรไฟล์สำนักงาน</summary>
+    [Authorize(Roles = nameof(UserRole.Admin))]
     [HttpPut]
     public async Task<IActionResult> Save([FromBody] OfficeProfileInput data, CancellationToken ct)
         => Ok(await mediator.Send(new SaveOfficeProfileCommand(data), ct));

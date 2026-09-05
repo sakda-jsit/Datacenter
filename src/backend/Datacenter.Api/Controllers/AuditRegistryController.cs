@@ -1,5 +1,6 @@
 using Datacenter.Application.Features.AuditRegistry;
 using MediatR;
+using Datacenter.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,10 +16,12 @@ public class AuditorsController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetAll(CancellationToken ct)
         => Ok(await mediator.Send(new GetAuditorsQuery(), ct));
 
+    [Authorize(Roles = nameof(UserRole.Admin))]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] AuditorInput data, CancellationToken ct)
         => Ok(new { id = await mediator.Send(new UpsertAuditorCommand(null, data), ct) });
 
+    [Authorize(Roles = nameof(UserRole.Admin))]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] AuditorInput data, CancellationToken ct)
     {
@@ -26,6 +29,7 @@ public class AuditorsController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = nameof(UserRole.Admin))]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
@@ -44,10 +48,12 @@ public class BookkeepersController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetAll(CancellationToken ct)
         => Ok(await mediator.Send(new GetBookkeepersQuery(), ct));
 
+    [Authorize(Roles = nameof(UserRole.Admin))]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] BookkeeperInput data, CancellationToken ct)
         => Ok(new { id = await mediator.Send(new UpsertBookkeeperCommand(null, data), ct) });
 
+    [Authorize(Roles = nameof(UserRole.Admin))]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] BookkeeperInput data, CancellationToken ct)
     {
@@ -55,6 +61,7 @@ public class BookkeepersController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = nameof(UserRole.Admin))]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {

@@ -38,6 +38,7 @@ import ComplianceCalendarRoute from '../features/compliance-calendar/pages/Compl
 import TasksPage from '../features/tasks/pages/TasksPage'
 import ClosingPeriodPage from '../features/closing-period/pages/ClosingPeriodPage'
 import AuditLogPage from '../features/audit-log/pages/AuditLogPage'
+import AdminRoute from './AdminRoute'
 import DashboardPage from '../features/dashboard/pages/DashboardPage'
 
 export default function AppRouter() {
@@ -78,13 +79,16 @@ export default function AppRouter() {
           <Route path="closing-period" element={<ClosingPeriodPage />} />
           <Route path="report-packages" element={<ReportPackagesPage />} />
           <Route path="evidence" element={<EvidencePage />} />
-          <Route path="audit-log" element={<AuditLogPage />} />
-          <Route path="settings/payroll-rates" element={<PayrollRatesPage />} />
-          <Route path="settings/users" element={<UsersPage />} />
-          <Route path="settings/office-profile" element={<OfficeProfilePage />} />
-          <Route path="settings/auditors" element={<AuditorsPage />} />
-          <Route path="settings/bookkeepers" element={<BookkeepersPage />} />
-          <Route path="settings/signer-assignments" element={<SignerAssignmentsPage />} />
+          {/* ตั้งค่ากลาง + audit log — ผู้ดูแลระบบเท่านั้น (พิมพ์ URL ตรงก็เข้าไม่ได้) */}
+          <Route element={<AdminRoute />}>
+            <Route path="audit-log" element={<AuditLogPage />} />
+            <Route path="settings/payroll-rates" element={<PayrollRatesPage />} />
+            <Route path="settings/users" element={<UsersPage />} />
+            <Route path="settings/office-profile" element={<OfficeProfilePage />} />
+            <Route path="settings/auditors" element={<AuditorsPage />} />
+            <Route path="settings/bookkeepers" element={<BookkeepersPage />} />
+            <Route path="settings/signer-assignments" element={<SignerAssignmentsPage />} />
+          </Route>
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
