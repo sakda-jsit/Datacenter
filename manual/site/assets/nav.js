@@ -21,8 +21,8 @@
       title: 'ภาพรวม',
       items: [
         { label: 'Dashboard', href: 'pages/dashboard.html' },
-        { label: 'ปฏิทินงาน' },
-        { label: 'งาน / มอบหมายงาน' },
+        { label: 'ปฏิทินงาน', href: 'pages/compliance.html' },
+        { label: 'งาน / มอบหมายงาน', href: 'pages/tasks.html' },
       ],
     },
     {

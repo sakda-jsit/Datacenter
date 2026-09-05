@@ -185,6 +185,19 @@ ROUTES.push(
   },
 )
 
+// ── กลุ่ม "ภาพรวม": ปฏิทินงาน / งาน-มอบหมายงาน ──
+ROUTES.push(
+  { name: 'compliance-calendar', path: '/compliance', full: false },
+  {
+    name: 'compliance-templates',
+    path: '/compliance',
+    full: false,
+    prepare: tab('ตั้งค่างานประจำ'),
+  },
+  { name: 'tasks-company', path: '/tasks', full: false },
+  { name: 'tasks-board', path: '/tasks', full: false, prepare: tab('งานข้ามบริษัท (workboard)') },
+)
+
 const only = process.argv.slice(2)
 const routes = only.length ? ROUTES.filter((r) => only.includes(r.name)) : ROUTES
 if (!routes.length) {
