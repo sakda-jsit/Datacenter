@@ -78,10 +78,10 @@
     {
       title: 'ระบบ',
       items: [
-        { label: 'ผู้ใช้งานระบบ' },
-        { label: 'โปรไฟล์สำนักงานบัญชี' },
-        { label: 'ทะเบียนผู้สอบ / ผู้ทำบัญชี' },
-        { label: 'ประวัติการใช้งาน' },
+        { label: 'ผู้ใช้งานระบบ', href: 'pages/users.html' },
+        { label: 'โปรไฟล์สำนักงานบัญชี', href: 'pages/office-profile.html' },
+        { label: 'ทะเบียนผู้สอบ / ผู้ทำบัญชี', href: 'pages/signers.html' },
+        { label: 'ประวัติการใช้งาน', href: 'pages/audit-log.html' },
       ],
     },
   ]

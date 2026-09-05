@@ -307,6 +307,16 @@ ROUTES.push(
   { name: 'evidence-checklist', path: '/evidence', full: false, prepare: tab('ความครบถ้วนหลักฐาน') },
 )
 
+// ── กลุ่ม "ระบบ" ──
+ROUTES.push(
+  { name: 'settings-users', path: '/settings/users', full: false },
+  { name: 'settings-office-profile', path: '/settings/office-profile', full: false },
+  { name: 'settings-auditors', path: '/settings/auditors', full: false },
+  { name: 'settings-signers', path: '/settings/signer-assignments', full: false },
+  { name: 'settings-payroll-rates', path: '/settings/payroll-rates', full: false },
+  { name: 'audit-log', path: '/audit-log', full: false },
+)
+
 const only = process.argv.slice(2)
 const routes = only.length ? ROUTES.filter((r) => only.includes(r.name)) : ROUTES
 if (!routes.length) {

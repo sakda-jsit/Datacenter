@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>โปรไฟล์สำนักงานบัญชี — คู่มือการใช้งาน JSP Datacenter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<div class="wrap">
+  <!-- ===== Sidebar (สร้างจาก assets/nav.js) ===== -->
+  <aside class="sidebar" data-nav></aside>
+
+  <!-- ===== Content ===== -->
+  <main class="content">
+  <div class="content-inner">
+
+    <div class="crumbs"><a href="../index.html">คู่มือการใช้งาน</a> › ระบบ › โปรไฟล์สำนักงานบัญชี</div>
+    <h1>โปรไฟล์สำนักงานบัญชี</h1>
+    <p class="lead">
+      ข้อมูลของ <b>สำนักงานบัญชีของคุณเอง</b> (ไม่ใช่ของลูกค้า) — ใช้พิมพ์ลงแบบภาษีในช่อง
+      “สำนักงานทำบัญชี” และเป็นค่าตั้งต้นของทุกบริษัทลูกค้า
+    </p>
+
+    <div class="callout tip">
+      <span class="tag">ตั้งครั้งเดียว ใช้ทุกบริษัท</span>
+      <p>ข้อมูลชุดนี้เป็น <b>ค่ากลางของสำนักงาน</b> — ตั้งครั้งแรกครั้งเดียวแล้วทุกบริษัทลูกค้าใช้ร่วมกัน
+      ต่างจาก <a href="clients.html">เมนูลูกค้า</a> ที่เป็นข้อมูลรายบริษัท</p>
+    </div>
+
+    <h2>1. การเข้าใช้งาน</h2>
+    <p>เปิดเมนู <b>ระบบ → โปรไฟล์สำนักงานบัญชี</b> (ไม่ต้องเลือกบริษัท)</p>
+
+    <h2>2. ช่องข้อมูล</h2>
+    <figure>
+      <img src="../assets/img/settings-office-profile.png" alt="หน้าโปรไฟล์สำนักงานบัญชี" />
+      <figcaption>โปรไฟล์สำนักงานบัญชี — ข้อมูลนิติบุคคลของสำนักงาน ใช้ในแบบภาษีของลูกค้าทุกราย</figcaption>
+    </figure>
+    <table class="doc">
+      <tr><th style="width:320px">ช่อง</th><th>คำอธิบาย</th></tr>
+      <tr><td><b>ชื่อสำนักงานบัญชี (นิติบุคคล)</b></td>
+          <td>ชื่อเต็มตามหนังสือรับรอง — พิมพ์ลงช่อง “สำนักงานทำบัญชี” ในแบบภาษี</td></tr>
+      <tr><td><b>เลขประจำตัวผู้เสียภาษีอากร (13 หลัก)</b></td><td>เลขผู้เสียภาษีของสำนักงาน</td></tr>
+      <tr><td><b>รหัสสาขา</b></td><td>สำนักงานใหญ่ใช้ <code>00000</code></td></tr>
+      <tr><td><b>ที่อยู่</b></td><td>ที่อยู่ตามทะเบียนของสำนักงาน</td></tr>
+      <tr><td><b>โทรศัพท์</b></td><td>เบอร์ติดต่อที่ใช้ในแบบ</td></tr>
+      <tr><td><b>อีเมลผู้ทำบัญชี (ภ.ง.ด.50)</b></td>
+          <td>อีเมลผู้ทำบัญชีที่กรอกในแบบ ภ.ง.ด.50 — สรรพากรใช้ติดต่อกลับ</td></tr>
+    </table>
+    <p>กด <b>บันทึก</b> เมื่อแก้เสร็จ — ถ้าข้อมูลไม่ถูกต้องจะขึ้น “บันทึกไม่สำเร็จ — ตรวจข้อมูล”</p>
+
+    <h2>3. ข้อมูลนี้ถูกใช้ที่ไหนบ้าง</h2>
+    <table class="doc">
+      <tr><th style="width:280px">ใช้ที่</th><th>ใช้อย่างไร</th></tr>
+      <tr><td><b><a href="pnd50.html">ภ.ง.ด.50</a></b></td>
+          <td>ช่อง “สำนักงานทำบัญชี” ในการ์ดผู้ลงนามดึงจากที่นี่</td></tr>
+      <tr><td><b>ไฟล์ PDF แบบภาษี</b></td><td>ชื่อ เลขผู้เสียภาษี และที่อยู่ของสำนักงานถูกพิมพ์ลงแบบ</td></tr>
+      <tr><td><b>เอกสารที่ออกให้ลูกค้า</b></td><td>ใช้เป็นข้อมูลสำนักงานผู้จัดทำ</td></tr>
+    </table>
+    <div class="callout warn">
+      <span class="tag">แก้แล้วมีผลกับทุกบริษัททันที</span>
+      <p>เป็นค่ากลาง — เอกสารที่ออกหลังจากนี้ของลูกค้าทุกรายจะใช้ค่าใหม่
+      (เอกสารที่ออกและเก็บไฟล์ไว้แล้วไม่เปลี่ยน)</p>
+    </div>
+
+    <h2>4. ปัญหาที่พบบ่อย</h2>
+    <table class="doc">
+      <tr><th style="width:260px">อาการ</th><th>สาเหตุและวิธีแก้</th></tr>
+      <tr><td><b>ช่องสำนักงานทำบัญชีใน ภ.ง.ด.50 ว่าง</b></td><td>ยังไม่ได้กรอกโปรไฟล์นี้</td></tr>
+      <tr><td><b>บันทึกไม่สำเร็จ</b></td>
+          <td>ตรวจว่าเลขผู้เสียภาษีครบ 13 หลัก และรหัสสาขาเป็นตัวเลข 5 หลัก</td></tr>
+      <tr><td><b>ชื่อสำนักงานพิมพ์ผิดในเอกสารเก่า</b></td>
+          <td>แก้ที่นี่แล้วออกเอกสารใหม่ — ไฟล์เดิมที่บันทึกไว้แล้วไม่เปลี่ยนตาม</td></tr>
+    </table>
+
+    <div class="callout note">
+      <span class="tag">ถัดไป</span>
+      <p><a href="signers.html">ทะเบียนผู้สอบ / ผู้ทำบัญชี →</a></p>
+    </div>
+
+    <div class="footer-note">
+      คู่มือการใช้งาน JSP Datacenter — โปรไฟล์สำนักงานบัญชี · ภาพประกอบจากระบบจริง
+    </div>
+
+  </div>
+  </main>
+</div>
+<script src="../assets/nav.js" data-root="../" data-current="pages/office-profile.html"></script>
+</body>
+</html>
