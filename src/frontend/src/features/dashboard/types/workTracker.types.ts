@@ -42,6 +42,8 @@ export interface WorkTrackerColumn {
 export interface WorkTrackerOverview {
   year: number
   month: number
+  /** true = ตัวเลขนับเฉพาะบริษัทที่ผู้ใช้ดูแล (ไม่ใช่ Admin) */
+  scopedToOwnedCompanies: boolean
   totalTasks: number
   completed: number
   inProgress: number

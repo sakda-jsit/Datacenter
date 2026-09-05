@@ -16,9 +16,9 @@ public class GetDashboardSummaryQueryHandler(
         var now = DateTime.UtcNow;
         var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        // กรองบริษัทตามสิทธิ์: null = Admin เห็นทุกบริษัท
+        // Dashboard นับเฉพาะบริษัทที่ผู้ใช้ดูแล (null = Admin เห็นทุกบริษัท) — ให้ตรงกับ work-tracker
         var companiesQuery = db.ClientCompanies.AsNoTracking();
-        var accessibleIds = await accessGuard.GetAccessibleCompanyIdsAsync(ct);
+        var accessibleIds = await accessGuard.GetOwnedCompanyIdsAsync(ct);
         if (accessibleIds is not null)
             companiesQuery = companiesQuery.Where(c => accessibleIds.Contains(c.Id));
 

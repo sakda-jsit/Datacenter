@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../../../shared/hooks/useAuth'
 import { useCurrentCompany } from '../../../shared/hooks/useCurrentCompany'
 import MyTasksWidget from '../components/MyTasksWidget'
 import { useWorkTracker } from '../hooks/useWorkTracker'
@@ -40,6 +41,9 @@ const nowDate = new Date()
 
 export default function DashboardPage() {
   const { companyId, selectCompany } = useCurrentCompany()
+  const { user } = useAuth()
+  // Admin (ownedCompanyIds = null) ดูแลได้ทุกบริษัท
+  const canManageAll = user?.ownedCompanyIds == null
   const [year, setYear] = useState(nowDate.getFullYear())
   const [month, setMonth] = useState(nowDate.getMonth() + 1)
 
@@ -51,7 +55,9 @@ export default function DashboardPage() {
             <span className="h-0.5 w-6 rounded-full bg-sky-400" /> ติดตามงานประจำ
           </span>
           <h1 className="text-2xl font-extrabold leading-tight text-slate-900">
-            {companyId ? 'งานประจำของบริษัทที่เลือก' : 'ภาพรวมงานประจำทุกบริษัท'}
+            {companyId
+              ? 'งานประจำของบริษัทที่เลือก'
+              : canManageAll ? 'ภาพรวมงานประจำทุกบริษัท' : 'ภาพรวมงานประจำที่คุณดูแล'}
           </h1>
           <p className="mt-1 text-sm text-slate-500">
             ภ.พ.30 · ภ.ง.ด.1/3/53 · ประกันสังคม · ปิดบัญชีประจำเดือน
@@ -106,6 +112,20 @@ function AllCompaniesView({ year, month, onSelectCompany }: { year: number; mont
         <Kpi label="ใกล้ครบกำหนด ≤7 วัน" value={data.dueSoon} sub="ทุกงวด" tone="amber" />
         <Kpi label="บริษัทที่ยังมีงานค้าง" value={`${data.companiesWithOpenWork}/${data.companiesWithTasks}`} tone="indigo" />
       </div>
+
+      {data.scopedToOwnedCompanies && (
+        <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm text-sky-800">
+          👤 ตัวเลขทั้งหมดนับเฉพาะ <b>{data.totalActiveCompanies} บริษัทที่คุณดูแล</b> —
+          บริษัทอื่นยังเปิดดูได้ตามปกติโดยเลือกที่แถบด้านบน
+        </div>
+      )}
+
+      {data.scopedToOwnedCompanies && data.totalActiveCompanies === 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          ⚠ ยังไม่มีบริษัทที่คุณเป็นผู้ดูแล — กระดานนี้จึงว่าง
+          ให้ผู้ดูแลระบบเพิ่มชื่อคุณที่ <b>ระบบ → ผู้ใช้งานระบบ → บริษัทที่ดูแล</b>
+        </div>
+      )}
 
       {data.companiesNoTasks > 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">

@@ -24,6 +24,8 @@ public record WorkTrackerColumnDto(int TaskType, string ShortName, string TaskTy
 /// <summary>ภาพรวมงานประจำทุกบริษัทของงวด (ปี/เดือน) — โหมด A ของ Dashboard</summary>
 public record WorkTrackerOverviewDto(
     int Year, int Month,
+    /// <summary>true = แสดงเฉพาะบริษัทที่ผู้ใช้ดูแล (ไม่ใช่ Admin) — ใช้บอกผู้ใช้ว่าตัวเลขครอบคลุมแค่ไหน</summary>
+    bool ScopedToOwnedCompanies,
     int TotalTasks, int Completed, int InProgress, int Pending, int Overdue, int DueSoon,
     int CompaniesWithOpenWork, int CompaniesWithTasks, int TotalActiveCompanies, int CompaniesNoTasks,
     IReadOnlyList<WorkTrackerAttentionDto> NeedsAttention,

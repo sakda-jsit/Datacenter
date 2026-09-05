@@ -21,7 +21,9 @@ public class GetWorkTrackerOverviewQueryHandler(IApplicationDbContext db, ICompa
     public async Task<WorkTrackerOverviewDto> Handle(GetWorkTrackerOverviewQuery request, CancellationToken ct)
     {
         var now = DateTime.UtcNow.Date;
-        var accessible = await guard.GetAccessibleCompanyIdsAsync(ct); // null = admin (ทุกบริษัท)
+        // Dashboard = กระดานงานของตัวเอง จึงกรองเป็น "บริษัทที่ดูแล" ไม่ใช่ทุกบริษัทที่ดูได้
+        // (ยังเปิดดูบริษัทอื่นได้ตามปกติด้วยการเลือกบริษัทที่แถบด้านบน)
+        var accessible = await guard.GetOwnedCompanyIdsAsync(ct); // null = admin (ทุกบริษัท)
 
         var taskQuery = db.ComplianceTasks
             .Include(t => t.ClientCompany)
@@ -111,6 +113,7 @@ public class GetWorkTrackerOverviewQueryHandler(IApplicationDbContext db, ICompa
 
         return new WorkTrackerOverviewDto(
             request.Year, request.Month,
+            accessible is not null,
             total, completed, inProgress, pending, overdue, dueSoon,
             companiesWithOpenWork, companiesWithTasks, totalActive, Math.Max(totalActive - companiesWithTasks, 0),
             attention, rows, columns);
