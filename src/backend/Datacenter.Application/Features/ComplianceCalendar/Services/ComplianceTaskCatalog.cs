@@ -25,6 +25,8 @@ public static class ComplianceTaskCatalog
     public record Entry(
         ComplianceTaskType Type,
         string Name,
+        /// <summary>ชื่อสั้นสำหรับหัวคอลัมน์ในตารางแคบ ๆ</summary>
+        string ShortName,
         ComplianceCycle Cycle,
         ComplianceDueRule Due,
         bool RequireEvidence,
@@ -33,25 +35,25 @@ public static class ComplianceTaskCatalog
     private static readonly Entry[] Entries =
     [
         // ── รายเดือน (ครบกำหนดเดือนถัดไป) ───────────────────────────────────
-        new(ComplianceTaskType.PP30,   "ภ.พ.30 (VAT)",                        ComplianceCycle.Monthly, new(1, 15), true),
-        new(ComplianceTaskType.PND1,   "ภ.ง.ด.1 (ภาษีหัก ณ ที่จ่าย พนักงาน)",   ComplianceCycle.Monthly, new(1, 15), true),
-        new(ComplianceTaskType.PND3,   "ภ.ง.ด.3 (ภาษีหัก ณ ที่จ่าย บุคคลธรรมดา)", ComplianceCycle.Monthly, new(1, 7),  true),
-        new(ComplianceTaskType.PND53,  "ภ.ง.ด.53 (ภาษีหัก ณ ที่จ่าย นิติบุคคล)",  ComplianceCycle.Monthly, new(1, 7),  true),
-        new(ComplianceTaskType.SSO,    "ประกันสังคม",                          ComplianceCycle.Monthly, new(1, 15), true),
-        new(ComplianceTaskType.MonthlyClosing, "ปิดบัญชีประจำเดือน",            ComplianceCycle.Monthly, new(1, 0),  false),
+        new(ComplianceTaskType.PP30,   "ภ.พ.30 (VAT)", "ภ.พ.30",                        ComplianceCycle.Monthly, new(1, 15), true),
+        new(ComplianceTaskType.PND1,   "ภ.ง.ด.1 (ภาษีหัก ณ ที่จ่าย พนักงาน)", "ภ.ง.ด.1",   ComplianceCycle.Monthly, new(1, 15), true),
+        new(ComplianceTaskType.PND3,   "ภ.ง.ด.3 (ภาษีหัก ณ ที่จ่าย บุคคลธรรมดา)", "ภ.ง.ด.3", ComplianceCycle.Monthly, new(1, 7),  true),
+        new(ComplianceTaskType.PND53,  "ภ.ง.ด.53 (ภาษีหัก ณ ที่จ่าย นิติบุคคล)", "ภ.ง.ด.53",  ComplianceCycle.Monthly, new(1, 7),  true),
+        new(ComplianceTaskType.SSO,    "ประกันสังคม", "ปกส.",                          ComplianceCycle.Monthly, new(1, 15), true),
+        new(ComplianceTaskType.MonthlyClosing, "ปิดบัญชีประจำเดือน", "ปิดเดือน",            ComplianceCycle.Monthly, new(1, 0),  false),
 
         // ── ครึ่งปีบัญชี ────────────────────────────────────────────────────
         // ภ.ง.ด.51 ยื่นภายใน 2 เดือนนับแต่วันสุดท้ายของ 6 เดือนแรกของรอบบัญชี
-        new(ComplianceTaskType.PND51,  "ภ.ง.ด.51 (ภาษีนิติบุคคลครึ่งปี)",       ComplianceCycle.HalfYear, new(2, 0), true),
+        new(ComplianceTaskType.PND51,  "ภ.ง.ด.51 (ภาษีนิติบุคคลครึ่งปี)", "ภ.ง.ด.51",       ComplianceCycle.HalfYear, new(2, 0), true),
 
         // ── รายปี ──────────────────────────────────────────────────────────
         // ภ.ง.ด.50 ยื่นภายใน 150 วันนับแต่วันสุดท้ายของรอบบัญชี
-        new(ComplianceTaskType.PND50,  "ภ.ง.ด.50 (ภาษีนิติบุคคลประจำปี)",       ComplianceCycle.Yearly, new(5, 0, DaysAfter: 150), true),
+        new(ComplianceTaskType.PND50,  "ภ.ง.ด.50 (ภาษีนิติบุคคลประจำปี)", "ภ.ง.ด.50",       ComplianceCycle.Yearly, new(5, 0, DaysAfter: 150), true),
         // งบการเงิน: ประชุมอนุมัติภายใน 4 เดือน + นำส่ง DBD ภายใน 1 เดือนหลังประชุม
-        new(ComplianceTaskType.FinancialStatement, "งบการเงิน + สบช.3 (นำส่ง DBD)", ComplianceCycle.Yearly, new(5, 0), true),
+        new(ComplianceTaskType.FinancialStatement, "งบการเงิน + สบช.3 (นำส่ง DBD)", "งบการเงิน", ComplianceCycle.Yearly, new(5, 0), true),
         // ภ.ง.ด.1ก / กท.20ก สรุปค่าจ้างตามปีปฏิทิน (ม.ค.–ธ.ค.) ครบกำหนดสิ้น ก.พ. — ไม่ผูกกับรอบบัญชีบริษัท
-        new(ComplianceTaskType.PND1K,  "ภ.ง.ด.1ก (สรุปภาษีพนักงานประจำปี)",     ComplianceCycle.Yearly, new(2, 0), true, CalendarYearBased: true),
-        new(ComplianceTaskType.KT20,   "กท.20ก (รายงานค่าจ้างประจำปี)",         ComplianceCycle.Yearly, new(2, 0), true, CalendarYearBased: true),
+        new(ComplianceTaskType.PND1K,  "ภ.ง.ด.1ก (สรุปภาษีพนักงานประจำปี)", "ภ.ง.ด.1ก",     ComplianceCycle.Yearly, new(2, 0), true, CalendarYearBased: true),
+        new(ComplianceTaskType.KT20,   "กท.20ก (รายงานค่าจ้างประจำปี)", "กท.20ก",         ComplianceCycle.Yearly, new(2, 0), true, CalendarYearBased: true),
     ];
 
     private static readonly Dictionary<ComplianceTaskType, Entry> ByType = Entries.ToDictionary(e => e.Type);
@@ -62,9 +64,10 @@ public static class ComplianceTaskCatalog
     public static Entry Get(ComplianceTaskType type)
         => ByType.TryGetValue(type, out var e)
             ? e
-            : new Entry(type, type.ToString(), ComplianceCycle.Monthly, new(1, 15), true);
+            : new Entry(type, type.ToString(), type.ToString(), ComplianceCycle.Monthly, new(1, 15), true);
 
     public static string Name(ComplianceTaskType type) => Get(type).Name;
+    public static string ShortName(ComplianceTaskType type) => Get(type).ShortName;
     public static ComplianceCycle Cycle(ComplianceTaskType type) => Get(type).Cycle;
 
     public static string CycleName(ComplianceCycle cycle) => cycle switch

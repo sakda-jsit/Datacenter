@@ -24,9 +24,15 @@ public class GetComplianceTaskTemplatesQueryHandler(IApplicationDbContext db)
             .Where(t => t.ClientCompanyId == null).ToListAsync(ct);
 
         List<Domain.Entities.ComplianceTaskTemplate>? companyRules = null;
+        int fiscalStart = 1;
         if (companyId is int cid)
+        {
             companyRules = await db.ComplianceTaskTemplates.AsNoTracking()
                 .Where(t => t.ClientCompanyId == cid).ToListAsync(ct);
+            fiscalStart = await db.ClientCompanies.AsNoTracking()
+                .Where(c => c.Id == cid).Select(c => c.FiscalYearStartMonth).FirstOrDefaultAsync(ct);
+            if (fiscalStart is < 1 or > 12) fiscalStart = 1;
+        }
 
         if (companyId is null)
         {
@@ -37,7 +43,7 @@ public class GetComplianceTaskTemplatesQueryHandler(IApplicationDbContext db)
                 gmap.TryGetValue(type, out var gr);
                 return Build(type, gr?.Enabled ?? true, gr?.DueDay, gr?.DueMonthsAfter,
                     gr?.RequireEvidence ?? ComplianceTemplateResolver.DefaultRequireEvidence(type),
-                    gr is null ? "default" : "global");
+                    gr is null ? "default" : "global", fiscalStart);
             }).ToList();
         }
 
@@ -46,15 +52,19 @@ public class GetComplianceTaskTemplatesQueryHandler(IApplicationDbContext db)
         return ComplianceTemplateResolver.AllTypes.Select(type =>
         {
             var e = eff[type];
-            return Build(type, e.Enabled, e.DueDay, e.DueMonthsAfter, e.RequireEvidence, e.Source);
+            return Build(type, e.Enabled, e.DueDay, e.DueMonthsAfter, e.RequireEvidence, e.Source, fiscalStart);
         }).ToList();
     }
 
     private static ComplianceTaskTemplateDto Build(
         Domain.Enums.ComplianceTaskType type, bool enabled, int? dueDay, int? dueMonthsAfter,
-        bool requireEvidence, string source)
+        bool requireEvidence, string source, int fiscalStart)
     {
         var cycle = ComplianceTaskCatalog.Cycle(type);
+
+        // งวดตัวอย่างของปีนี้ — งานรายเดือนใช้เดือนปัจจุบัน, งานรอบยาวใช้เดือนที่งวดสิ้นสุดจริง
+        int sampleYear = DateTime.Now.Year;
+        int sampleMonth = ComplianceTaskCatalog.PeriodEndMonth(type, fiscalStart) ?? DateTime.Now.Month;
         return new ComplianceTaskTemplateDto(
             type,
             ComplianceTaskHelpers.TaskTypeName(type),
@@ -67,6 +77,8 @@ public class GetComplianceTaskTemplatesQueryHandler(IApplicationDbContext db)
             ComplianceDueDateCalculator.DefaultDueMonthsAfter(type),
             ComplianceTaskCatalog.DueDescription(type, dueDay, dueMonthsAfter),
             ComplianceTaskCatalog.UsesDaysAfterRule(type, dueDay, dueMonthsAfter),
+            ComplianceTaskCatalog.PeriodLabel(type, sampleYear, sampleMonth),
+            ComplianceDueDateCalculator.Calculate(type, sampleYear, sampleMonth, dueDay, dueMonthsAfter),
             requireEvidence,
             ComplianceTemplateResolver.DefaultRequireEvidence(type),
             source);

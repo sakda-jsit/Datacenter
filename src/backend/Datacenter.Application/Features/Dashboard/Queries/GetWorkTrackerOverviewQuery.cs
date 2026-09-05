@@ -1,6 +1,7 @@
 using Datacenter.Application.Common.Interfaces;
 using Datacenter.Application.Common.Security;
 using Datacenter.Application.Features.ComplianceCalendar;
+using Datacenter.Application.Features.ComplianceCalendar.Services;
 using Datacenter.Application.Features.Dashboard.DTOs;
 using Datacenter.Domain.Enums;
 using MediatR;
@@ -30,6 +31,16 @@ public class GetWorkTrackerOverviewQueryHandler(IApplicationDbContext db, ICompa
 
         var tasks = await taskQuery.ToListAsync(ct);
 
+        // งานที่ต้องจัดการด่วน ดูจาก "วันครบกำหนดจริง" ไม่ผูกกับงวดที่กำลังแสดง —
+        // งานครึ่งปี/รายปีเก็บไว้ที่งวดเดือน 6/12 แต่ครบกำหนดคนละเดือน ถ้ากรองด้วยงวดจะไม่มีวันเตือนเลย
+        var attentionQuery = db.ComplianceTasks
+            .Include(t => t.ClientCompany)
+            .Where(t => t.Status != ComplianceTaskStatus.Completed
+                     && t.DueDate.Date <= now.AddDays(7));
+        if (accessible is not null)
+            attentionQuery = attentionQuery.Where(t => accessible.Contains(t.ClientCompanyId));
+        var attentionTasks = await attentionQuery.ToListAsync(ct);
+
         bool IsOverdue(Domain.Entities.ComplianceTask t) =>
             t.Status == ComplianceTaskStatus.Overdue
             || (t.Status != ComplianceTaskStatus.Completed && t.DueDate.Date < now);
@@ -41,9 +52,10 @@ public class GetWorkTrackerOverviewQueryHandler(IApplicationDbContext db, ICompa
         int total = tasks.Count;
         int completed = tasks.Count(t => t.Status == ComplianceTaskStatus.Completed);
         int inProgress = tasks.Count(t => t.Status == ComplianceTaskStatus.InProgress);
-        int overdue = tasks.Count(IsOverdue);
-        int dueSoon = tasks.Count(IsDueSoon);
         int pending = tasks.Count(t => t.Status == ComplianceTaskStatus.Pending && t.DueDate.Date >= now);
+        // นับจากทุกงวด เพราะเป็นตัวเลข "ต้องรีบทำ" ไม่ใช่ความคืบหน้าของเดือนนี้
+        int overdue = attentionTasks.Count(IsOverdue);
+        int dueSoon = attentionTasks.Count(IsDueSoon);
 
         // ── จำนวนบริษัท ──
         var companyQuery = db.ClientCompanies.Where(c => c.IsActive);
@@ -57,8 +69,7 @@ public class GetWorkTrackerOverviewQueryHandler(IApplicationDbContext db, ICompa
             .Select(t => t.ClientCompanyId).Distinct().Count();
 
         // ── ต้องจัดการด่วน (overdue + ใกล้ครบกำหนด) ──
-        var attention = tasks
-            .Where(t => IsOverdue(t) || IsDueSoon(t))
+        var attention = attentionTasks
             .OrderByDescending(IsOverdue)            // overdue ก่อน
             .ThenBy(t => t.DueDate)
             .Take(60)
@@ -66,7 +77,8 @@ public class GetWorkTrackerOverviewQueryHandler(IApplicationDbContext db, ICompa
                 t.Id, t.ClientCompanyId, Name(t),
                 (int)t.TaskType, ComplianceTaskHelpers.TaskTypeName(t.TaskType), t.DueDate,
                 (int)t.Status, ComplianceTaskHelpers.StatusName(t.Status), IsOverdue(t),
-                (int)(t.DueDate.Date - now).TotalDays))
+                (int)(t.DueDate.Date - now).TotalDays,
+                ComplianceTaskCatalog.PeriodLabel(t.TaskType, t.Year, t.Month)))
             .ToList();
 
         // ── ตารางตามบริษัท ──
@@ -89,11 +101,19 @@ public class GetWorkTrackerOverviewQueryHandler(IApplicationDbContext db, ICompa
             .ThenBy(r => r.ClientName, StringComparer.Ordinal)
             .ToList();
 
+        // คอลัมน์ของตาราง = ประเภทงานที่มีอยู่จริงในงวดนี้ (เดือน มิ.ย./ธ.ค. จะมีงานรอบยาวเพิ่มเข้ามา)
+        var columns = tasks
+            .Select(t => t.TaskType).Distinct()
+            .OrderBy(t => Array.IndexOf(ComplianceTemplateResolver.AllTypes, t))
+            .Select(t => new WorkTrackerColumnDto(
+                (int)t, ComplianceTaskCatalog.ShortName(t), ComplianceTaskHelpers.TaskTypeName(t)))
+            .ToList();
+
         return new WorkTrackerOverviewDto(
             request.Year, request.Month,
             total, completed, inProgress, pending, overdue, dueSoon,
             companiesWithOpenWork, companiesWithTasks, totalActive, Math.Max(totalActive - companiesWithTasks, 0),
-            attention, rows);
+            attention, rows, columns);
     }
 
     private static string Name(Domain.Entities.ComplianceTask t)

@@ -28,6 +28,15 @@ export interface WorkTrackerAttention {
   statusName: string
   isOverdue: boolean
   daysToDue: number
+  /** งวดของงาน เช่น "ส.ค. 2026", "ปีบัญชี 2026" — งานรอบยาวครบกำหนดคนละเดือนกับงวด */
+  periodLabel: string
+}
+
+/** คอลัมน์ประเภทงานในตาราง — มาจากงานที่มีจริงในงวดนั้น ไม่ใช่รายการตายตัว */
+export interface WorkTrackerColumn {
+  taskType: number
+  shortName: string
+  taskTypeName: string
 }
 
 export interface WorkTrackerOverview {
@@ -45,4 +54,5 @@ export interface WorkTrackerOverview {
   companiesNoTasks: number
   needsAttention: WorkTrackerAttention[]
   companies: WorkTrackerCompanyRow[]
+  columns: WorkTrackerColumn[]
 }

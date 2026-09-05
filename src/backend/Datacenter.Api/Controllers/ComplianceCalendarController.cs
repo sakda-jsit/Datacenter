@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Datacenter.Application.Features.ComplianceCalendar.Commands;
 using Datacenter.Application.Features.ComplianceCalendar.Queries;
 using Datacenter.Domain.Enums;
@@ -36,6 +37,20 @@ public class ComplianceCalendarController(IMediator mediator) : ControllerBase
     {
         var created = await mediator.Send(command, ct);
         return Ok(new { created });
+    }
+
+    /// <summary>
+    /// POST /api/v1/compliance-calendar/generate-all?year=2026&amp;month=9 —
+    /// สร้างงานของงวดนั้นให้ทุกบริษัทที่ยังใช้งานอยู่ (ปกติงานเบื้องหลังทำให้เองอยู่แล้ว
+    /// ปุ่มนี้ไว้สั่งย้อนหลัง/ล่วงหน้าเอง). ผู้ดูแลระบบเท่านั้น เพราะกระทบทุกบริษัท
+    /// </summary>
+    [HttpPost("generate-all")]
+    [Authorize(Roles = nameof(UserRole.Admin))]
+    public async Task<IActionResult> GenerateAll([FromQuery] int year, [FromQuery] int month, CancellationToken ct)
+    {
+        var user = User.FindFirstValue(ClaimTypes.Name) ?? "admin";
+        var result = await mediator.Send(new EnsureAllCompaniesTasksCommand(year, month, user), ct);
+        return Ok(result);
     }
 
     /// <summary>PATCH /api/v1/compliance-calendar/tasks/{id}/status</summary>

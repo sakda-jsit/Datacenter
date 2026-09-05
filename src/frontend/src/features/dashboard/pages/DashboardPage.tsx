@@ -14,15 +14,20 @@ import type { WorkTrackerCell } from '../types/workTracker.types'
 
 const MONTH_TH = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 // คอลัมน์ประเภทงานประจำ (คงที่) + ลิงก์ไปโมดูลที่เกี่ยวข้อง
-const TASK_TYPES = [
-  { type: 1, short: 'ภ.พ.30', link: '/vat' },
-  { type: 2, short: 'ภ.ง.ด.1', link: '/payroll?section=pnd1' },
-  { type: 3, short: 'ภ.ง.ด.3', link: '/wht' },
-  { type: 4, short: 'ภ.ง.ด.53', link: '/wht' },
-  { type: 5, short: 'ปกส.', link: '/payroll?section=sso' },
-  { type: 6, short: 'ปิดเดือน', link: '/closing-period' },
-]
-const TASK_LINK: Record<number, string> = Object.fromEntries(TASK_TYPES.map((t) => [t.type, t.link]))
+/** เมนูปลายทางของงานแต่ละประเภท — ชื่อ/คอลัมน์มาจาก API (ทะเบียนกลางฝั่ง backend) */
+const TASK_LINK: Record<number, string> = {
+  1: '/vat',
+  2: '/payroll?section=pnd1',
+  3: '/wht',
+  4: '/wht',
+  5: '/payroll?section=sso',
+  6: '/closing-period',
+  7: '/pnd50',
+  8: '/pnd50',
+  9: '/financial-statement',
+  10: '/payroll?section=pnd1',
+  11: '/payroll?section=sso',
+}
 
 function cellStyle(status: number, isOverdue: boolean) {
   if (status === 2) return { sym: '✓', cls: 'bg-green-100 text-green-700', title: 'เสร็จสิ้น' }
@@ -97,14 +102,15 @@ function AllCompaniesView({ year, month, onSelectCompany }: { year: number; mont
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Kpi label={`งานเดือน ${MONTH_TH[month]} ${year}`} value={`${data.completed}/${data.totalTasks}`} sub={`เสร็จ ${pct}%`} tone="sky" />
-        <Kpi label="เกินกำหนด" value={data.overdue} tone="red" />
-        <Kpi label="ใกล้ครบกำหนด ≤7 วัน" value={data.dueSoon} tone="amber" />
+        <Kpi label="เกินกำหนด" value={data.overdue} sub="ทุกงวด" tone="red" />
+        <Kpi label="ใกล้ครบกำหนด ≤7 วัน" value={data.dueSoon} sub="ทุกงวด" tone="amber" />
         <Kpi label="บริษัทที่ยังมีงานค้าง" value={`${data.companiesWithOpenWork}/${data.companiesWithTasks}`} tone="indigo" />
       </div>
 
       {data.companiesNoTasks > 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
-          ⚠ มี {data.companiesNoTasks} บริษัทที่ยังไม่ได้สร้างงานเดือนนี้ — เลือกบริษัทแล้วกด “สร้างงานเดือนนี้” หรือไปที่เมนูปฏิทินงาน
+          ⚠ มี {data.companiesNoTasks} บริษัทที่ยังไม่มีงานเดือนนี้ — ระบบสร้างให้อัตโนมัติทุกชั่วโมง
+          ถ้าต้องการทันทีให้เลือกบริษัทแล้วกด “สร้างงานเดือนนี้” ที่เมนูปฏิทินงาน
         </div>
       )}
 
@@ -112,18 +118,20 @@ function AllCompaniesView({ year, month, onSelectCompany }: { year: number; mont
       <div className="dc-card overflow-hidden">
         <div className="border-b border-slate-100 px-5 py-3 text-sm font-extrabold text-slate-800">
           🔴 ต้องจัดการด่วน ({data.needsAttention.length})
+          <span className="ml-2 font-normal text-slate-400">รวมงานรายปี/ครึ่งปีที่ครบกำหนดในช่วงนี้ด้วย</span>
         </div>
         {data.needsAttention.length === 0 ? (
           <p className="p-5 text-sm text-slate-400">ไม่มีงานเกินกำหนดหรือใกล้ครบกำหนด 🎉</p>
         ) : (
           <div className="max-h-72 overflow-auto">
             <table className="dc-table text-sm">
-              <thead><tr><th>บริษัท</th><th>งาน</th><th>กำหนด</th><th>สถานะ</th><th></th></tr></thead>
+              <thead><tr><th>บริษัท</th><th>งาน</th><th>งวด</th><th>กำหนด</th><th>สถานะ</th><th></th></tr></thead>
               <tbody>
                 {data.needsAttention.map((a) => (
                   <tr key={a.taskId}>
                     <td className="font-medium text-slate-800">{a.clientName}</td>
                     <td className="text-slate-600">{a.taskTypeName}</td>
+                    <td className="whitespace-nowrap text-slate-500">{a.periodLabel}</td>
                     <td className="whitespace-nowrap">{a.dueDate.slice(0, 10)}</td>
                     <td>
                       <span className={`dc-pill ${a.isOverdue ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-700'}`}>
@@ -155,7 +163,9 @@ function AllCompaniesView({ year, month, onSelectCompany }: { year: number; mont
               <thead className="bg-slate-50 text-gray-600">
                 <tr>
                   <th className="px-3 py-2 text-left">บริษัท</th>
-                  {TASK_TYPES.map((t) => <th key={t.type} className="px-2 py-2 text-center">{t.short}</th>)}
+                  {data.columns.map((c) => (
+                    <th key={c.taskType} className="px-2 py-2 text-center" title={c.taskTypeName}>{c.shortName}</th>
+                  ))}
                   <th className="px-3 py-2 text-center">ค้าง</th>
                 </tr>
               </thead>
@@ -166,12 +176,12 @@ function AllCompaniesView({ year, month, onSelectCompany }: { year: number; mont
                     <tr key={row.clientCompanyId} className="cursor-pointer border-t border-gray-100 hover:bg-sky-50"
                       onClick={() => onSelectCompany(row.clientCompanyId)}>
                       <td className="px-3 py-1.5 font-medium text-slate-800">{row.clientName}</td>
-                      {TASK_TYPES.map((t) => {
-                        const cell = byType.get(t.type)
-                        if (!cell) return <td key={t.type} className="px-2 py-1.5 text-center text-slate-300">–</td>
+                      {data.columns.map((c) => {
+                        const cell = byType.get(c.taskType)
+                        if (!cell) return <td key={c.taskType} className="px-2 py-1.5 text-center text-slate-300">–</td>
                         const s = cellStyle(cell.status, cell.isOverdue)
                         return (
-                          <td key={t.type} className="px-2 py-1.5 text-center">
+                          <td key={c.taskType} className="px-2 py-1.5 text-center">
                             <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${s.cls}`} title={s.title}>{s.sym}</span>
                           </td>
                         )

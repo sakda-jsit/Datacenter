@@ -117,7 +117,7 @@ export default function TaskTemplateSettings({ companyId, companyName }: Props) 
                         disabled={!t.enabled || upsert.isPending}
                         onChange={(e) => save(t, { dueMonthsAfter: e.target.value === '' ? null : Number(e.target.value) })}
                         className="w-16 rounded border border-gray-300 px-2 py-1 text-sm disabled:bg-slate-100" />
-                      <span className="text-xs text-gray-500">เดือน · วันที่</span>
+                      <span className="text-xs text-gray-500">เดือนหลังสิ้นงวด · วันที่</span>
                       <input type="number" min={0} max={31} title="วันที่ของเดือนนั้น (0 = วันสุดท้ายของเดือน)"
                         value={t.dueDay ?? ''} placeholder={String(t.defaultDueDay)}
                         disabled={!t.enabled || upsert.isPending}
@@ -129,6 +129,13 @@ export default function TaskTemplateSettings({ companyId, companyName }: Props) 
                       {t.usesDaysAfterRule
                         ? ' — ตามกฎหมาย กรอกช่องซ้ายเพื่อตั้งเอง'
                         : (t.dueDay ?? t.defaultDueDay) === 0 && ' (0 = วันสุดท้ายของเดือน)'}
+                    </p>
+                    {/* วันจริงของงวดตัวอย่าง — กันเข้าใจผิดว่าช่องซ้ายคือ "เดือนที่เท่าไรของปี" */}
+                    <p className="text-xs font-medium text-sky-700">
+                      งวด {t.samplePeriodLabel} → ครบกำหนด{' '}
+                      {new Date(t.sampleDueDate).toLocaleDateString('th-TH', {
+                        day: 'numeric', month: 'short', year: 'numeric',
+                      })}
                     </p>
                   </td>
                   <td className="px-4 py-2 text-center">

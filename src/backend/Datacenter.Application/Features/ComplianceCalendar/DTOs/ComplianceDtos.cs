@@ -56,6 +56,10 @@ public record ComplianceTaskTemplateDto(
     string DueDescription,
     /// <summary>กำลังใช้กติกานับเป็นจำนวนวัน — ช่อง "เดือน/วันที่" จะยังไม่มีผลจนกว่าจะตั้งค่าเอง</summary>
     bool UsesDaysAfterRule,
+    /// <summary>ตัวอย่างงวดจริงของปีปัจจุบัน เช่น "ครึ่งปีแรก 2026" — ให้เห็นภาพว่าค่าที่ตั้งจะได้วันไหน</summary>
+    string SamplePeriodLabel,
+    /// <summary>วันครบกำหนดของงวดตัวอย่างนั้น</summary>
+    DateTime SampleDueDate,
     bool RequireEvidence,        // ต้องแนบหลักฐานก่อนปิดงาน (effective)
     bool DefaultRequireEvidence, // ค่าเริ่มต้นของประเภทนี้
     string Source         // "default" = ค่าเริ่มต้นระบบ, "global" = ตั้งระดับทุกบริษัท, "company" = ตั้งเฉพาะบริษัท (override)

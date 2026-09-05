@@ -50,6 +50,9 @@ public static class DependencyInjection
         // ส่งอีเมลเตือนงานอัตโนมัติวันละครั้ง (opt-in: TaskReminders:Enabled=true + ตั้งค่า SMTP)
         services.AddHostedService<Services.Tasks.DailyTaskReminderService>();
 
+        // สร้างงานปฏิทินของเดือนปัจจุบันให้ทุกบริษัทอัตโนมัติ (ปิดด้วย TaskGeneration:Enabled=false)
+        services.AddHostedService<Services.Tasks.ComplianceTaskGeneratorService>();
+
         // หนังสือรับรองหัก ณ ที่จ่าย (QuestPDF) — license ฟรี Community + ฟอนต์ไทยจากระบบ
         QuestPDF.Settings.License = LicenseType.Community;
         var certFont = configuration["Wht:CertificateFont"] ?? "Tahoma";

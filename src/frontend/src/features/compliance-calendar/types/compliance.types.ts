@@ -91,6 +91,10 @@ export interface ComplianceTaskTemplateDto {
   dueDescription: string
   /** กำลังใช้กติกานับเป็นจำนวนวัน — ช่องเดือน/วันที่ยังไม่มีผลจนกว่าจะตั้งค่าเอง */
   usesDaysAfterRule: boolean
+  /** งวดตัวอย่างของปีปัจจุบัน เช่น "ครึ่งปีแรก 2026" */
+  samplePeriodLabel: string
+  /** วันครบกำหนดของงวดตัวอย่าง — ใช้ยืนยันว่าค่าที่ตั้งได้วันที่ถูกจริง */
+  sampleDueDate: string
   requireEvidence: boolean
   defaultRequireEvidence: boolean
   source: 'default' | 'global' | 'company'
