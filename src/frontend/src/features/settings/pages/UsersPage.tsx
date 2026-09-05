@@ -124,7 +124,8 @@ export default function UsersPage() {
    */
   function canManageUser(u: SystemUser) {
     if (isAdmin) return true
-    return isSupervisor && u.id !== me?.userId && STAFF_ROLES.includes(u.role)
+    if (!isSupervisor) return false
+    return u.id === me?.userId || STAFF_ROLES.includes(u.role)  // บัญชีตัวเอง + พนักงาน
   }
 
   function toggleCompany(id: number) {
@@ -135,6 +136,7 @@ export default function UsersPage() {
   }
 
   const creating = editId === 0
+  const editingSelf = editId === me?.userId
   const formInvalid =
     !form.displayName.trim() ||
     (creating && (!form.username.trim() || !!passwordProblem(form.password)))
@@ -331,17 +333,24 @@ export default function UsersPage() {
               <input value={form.email} onChange={(e) => set('email', e.target.value)} className={cls(false)} />
             </Field>
             <Field label="บทบาท">
-              <select value={form.role} onChange={(e) => set('role', Number(e.target.value))} className={cls(false)}>
+              <select
+                value={form.role}
+                onChange={(e) => set('role', Number(e.target.value))}
+                disabled={editingSelf && !isAdmin}
+                className={cls(false)}
+              >
                 {Object.entries(USER_ROLE_LABEL)
-                  // หัวหน้างานตั้งบทบาทได้เฉพาะระดับพนักงาน (API ปฏิเสธอยู่แล้ว — ซ่อนไว้ไม่ให้กดเสียเที่ยว)
-                  .filter(([k]) => isAdmin || STAFF_ROLES.includes(Number(k)))
+                  // หัวหน้างานตั้งบทบาทได้เฉพาะระดับพนักงาน — แต่ตอนแก้บัญชีตัวเองต้องเห็นบทบาทเดิมด้วย
+                  .filter(([k]) => isAdmin || STAFF_ROLES.includes(Number(k)) || Number(k) === form.role)
                   .map(([k, v]) => (
                     <option key={k} value={k}>
                       {v}
                     </option>
                   ))}
               </select>
-              <p className="mt-1 text-xs text-gray-400">{USER_ROLE_DESC[form.role]}</p>
+              <p className="mt-1 text-xs text-gray-400">
+                {editingSelf && !isAdmin ? 'เปลี่ยนบทบาทของตัวเองไม่ได้' : USER_ROLE_DESC[form.role]}
+              </p>
             </Field>
             {creating && (
               <Field label="รหัสผ่านชั่วคราว *">

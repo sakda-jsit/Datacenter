@@ -118,7 +118,8 @@ public class UpdateUserCommandHandler(
 
         var role = UsersFeatureHelpers.ParseRole(d.Role);
         UsersFeatureHelpers.EnsureMayManage(currentUser, user);
-        UsersFeatureHelpers.EnsureMayAssignRole(currentUser, role);
+        if (role != user.Role)   // ตรวจเฉพาะตอนเปลี่ยนบทบาท — คงบทบาทเดิมไว้ได้เสมอ (รวมถึงหัวหน้างานแก้บัญชีตัวเอง)
+            UsersFeatureHelpers.EnsureMayAssignRole(currentUser, role);
         var before = $"{user.DisplayName} / {user.Role} / {(user.IsActive ? "ใช้งาน" : "ปิดใช้งาน")}";
 
         // กันล็อกตัวเองออกจากระบบ และกันไม่ให้เหลือ Admin ที่ใช้งานได้ 0 คน
@@ -221,21 +222,19 @@ internal static class UsersFeatureHelpers
     private static readonly UserRole[] SupervisorManageable = [UserRole.Maker, UserRole.Checker];
 
     /// <summary>
-    /// หัวหน้างานแก้ไข/รีเซ็ตรหัส/ปลดล็อก ได้เฉพาะบัญชี<b>ระดับพนักงาน</b> (Maker/Checker).
-    /// แตะบัญชี Admin, หัวหน้างานด้วยกัน หรือบัญชีตัวเองไม่ได้ — ไม่งั้นจะรีเซ็ตรหัสแล้ว
-    /// สวมสิทธิ์ขึ้นไปเป็น Admin หรือขยายสิทธิ์ให้ตัวเองได้
+    /// หัวหน้างานแก้ไข/รีเซ็ตรหัส/ปลดล็อก ได้เฉพาะ <b>บัญชีตัวเอง</b> และบัญชี<b>ระดับพนักงาน</b>
+    /// (Maker/Checker) — แตะบัญชี Admin หรือหัวหน้างานคนอื่นไม่ได้.
+    /// การเปลี่ยนบทบาท/ปิดใช้งานบัญชีตัวเองยังถูกกันแยกในตัว handler (กันเลื่อนตัวเองเป็น Admin)
     /// </summary>
     public static void EnsureMayManage(ICurrentUserService currentUser, User target)
     {
         if (currentUser.Role != UserRole.Supervisor) return;   // Admin ผ่าน; บทบาทอื่นถูกกันที่ controller แล้ว
 
-        if (target.Id == currentUser.UserId)
-            throw new ForbiddenException(
-                "แก้ไขบัญชีของตัวเองที่หน้านี้ไม่ได้ — เปลี่ยนรหัสผ่านได้ที่เมนู “เปลี่ยนรหัสผ่าน”");
+        if (target.Id == currentUser.UserId) return;           // บัญชีตัวเอง — จัดการได้
 
         if (!SupervisorManageable.Contains(target.Role))
             throw new ForbiddenException(
-                "หัวหน้างานจัดการได้เฉพาะบัญชีผู้บันทึก (Maker) และผู้ตรวจ (Checker) — ให้ผู้ดูแลระบบดำเนินการเอง");
+                "หัวหน้างานจัดการได้เฉพาะบัญชีของตัวเอง กับบัญชีผู้บันทึก (Maker) และผู้ตรวจ (Checker) — บัญชีอื่นให้ผู้ดูแลระบบดำเนินการ");
     }
 
     /// <summary>ตรวจบทบาทปลายทางที่กำลังจะตั้ง (ใช้ทั้งตอนสร้างและตอนแก้)</summary>
