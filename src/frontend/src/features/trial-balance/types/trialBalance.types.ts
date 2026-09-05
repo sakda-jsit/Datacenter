@@ -1,4 +1,5 @@
-export type AccountType = 'Asset' | 'Liability' | 'Equity' | 'Income' | 'Expense'
+/** ตรงกับ Domain.Enums.AccountType — API serialize enum เป็นตัวเลข (Asset=1..Expense=5) */
+export type AccountType = 1 | 2 | 3 | 4 | 5
 export type PeriodStatus = 'Open' | 'Closed' | 'Locked'
 
 export interface TrialBalanceRowDto {

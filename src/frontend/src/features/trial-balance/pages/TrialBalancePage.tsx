@@ -9,12 +9,13 @@ import { useTrialBalance } from '../hooks/useTrialBalance'
 import type { TrialBalanceParams, TrialBalanceRowDto } from '../types/trialBalance.types'
 import type { ExportSection } from '../../../shared/utils/exportTable'
 
+/** ตรงกับ Domain.Enums.AccountType (Asset=1..Expense=5) — API ส่ง enum เป็นตัวเลข */
 const ACCOUNT_TYPE_LABEL: Record<string, string> = {
-  Asset: 'สินทรัพย์',
-  Liability: 'หนี้สิน',
-  Equity: 'ส่วนของเจ้าของ',
-  Income: 'รายได้',
-  Expense: 'ค่าใช้จ่าย',
+  1: 'สินทรัพย์',
+  2: 'หนี้สิน',
+  3: 'ส่วนของเจ้าของ',
+  4: 'รายได้',
+  5: 'ค่าใช้จ่าย',
 }
 
 function fmt(n: number) {
