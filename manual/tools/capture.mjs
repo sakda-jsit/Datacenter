@@ -275,6 +275,38 @@ ROUTES.push(
   { name: 'subsequent-payment', path: '/subsequent-payment', full: false, prepare: setYearThen() },
 )
 
+// ── กลุ่ม "รายงานและปิดงวด" ชุดที่ 3 ──
+ROUTES.push(
+  {
+    name: 'financial-statement-pl',
+    path: '/financial-statement',
+    full: false,
+    prepare: setYearThen('แสดงรายงาน'),
+  },
+  {
+    name: 'financial-statement-bs',
+    path: '/financial-statement',
+    full: false,
+    prepare: async (page) => {
+      await tab('งบแสดงฐานะการเงิน')(page)
+      await setYearThen('แสดงรายงาน')(page)
+    },
+  },
+  {
+    name: 'financial-statement-notes',
+    path: '/financial-statement',
+    full: false,
+    prepare: async (page) => {
+      await tab('หมายเหตุประกอบงบ (NOTE2)')(page)
+      await setYearThen('แสดงรายงาน')(page)
+    },
+  },
+  { name: 'closing-period', path: '/closing-period', full: false, prepare: setYearThen() },
+  { name: 'report-packages', path: '/report-packages', full: false, prepare: setYearThen() },
+  { name: 'evidence', path: '/evidence', full: false, prepare: setYearThen() },
+  { name: 'evidence-checklist', path: '/evidence', full: false, prepare: tab('ความครบถ้วนหลักฐาน') },
+)
+
 const only = process.argv.slice(2)
 const routes = only.length ? ROUTES.filter((r) => only.includes(r.name)) : ROUTES
 if (!routes.length) {
