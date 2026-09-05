@@ -110,12 +110,22 @@ export default function UsersPage() {
     })
   }
 
+  const isSupervisor = me?.role === 'Supervisor'
+  /** บทบาทระดับพนักงานที่หัวหน้างานดูแลได้ — ตรงกับกฎฝั่ง API */
+  const STAFF_ROLES: number[] = [USER_ROLE.Maker, USER_ROLE.Checker]
+
+  /** เพิ่มผู้ใช้ใหม่ = ผู้ดูแลระบบเท่านั้น */
+  const canCreateUser = isAdmin
+
   /**
-   * จัดการบัญชีผู้ใช้ (เพิ่ม/แก้/รีเซ็ตรหัส/ปลดล็อก) เป็นของผู้ดูแลระบบเท่านั้น —
-   * หัวหน้างานเปิดหน้านี้ได้เพื่อ "ดู" ว่าใครดูแลบริษัทไหน แต่แก้ไม่ได้.
+   * แก้ไข/รีเซ็ตรหัส/ปลดล็อก รายคน — Admin ทำได้ทุกบัญชี,
+   * หัวหน้างานทำได้เฉพาะบัญชีระดับพนักงาน และไม่ใช่บัญชีตัวเอง.
    * API ปฏิเสธอยู่แล้ว ตรงนี้แค่ซ่อนปุ่มไม่ให้กดเสียเที่ยว
    */
-  const canManageUsers = isAdmin
+  function canManageUser(u: SystemUser) {
+    if (isAdmin) return true
+    return isSupervisor && u.id !== me?.userId && STAFF_ROLES.includes(u.role)
+  }
 
   function toggleCompany(id: number) {
     setForm((p) => ({
@@ -210,13 +220,13 @@ export default function UsersPage() {
           <div className="flex items-center justify-between border-b border-gray-100 p-3">
             <span className="text-sm font-medium text-slate-700">
               ผู้ใช้ทั้งหมด {users?.length ?? 0} คน
-              {!canManageUsers && (
+              {!isAdmin && (
                 <span className="ml-2 text-xs font-normal text-gray-400">
-                  · ดูอย่างเดียว — เพิ่ม/แก้ไขบัญชีได้เฉพาะผู้ดูแลระบบ
+                  · แก้ไข/รีเซ็ตรหัสได้เฉพาะบัญชีผู้บันทึกและผู้ตรวจ — เพิ่มผู้ใช้ใหม่ต้องให้ผู้ดูแลระบบทำ
                 </span>
               )}
             </span>
-            {canManageUsers && (
+            {canCreateUser && (
               <Button type="button" onClick={startNew} className="px-3 py-1 text-xs">
                 + เพิ่มผู้ใช้
               </Button>
@@ -257,7 +267,7 @@ export default function UsersPage() {
                       {u.id === me?.userId && <span className="ml-1 text-xs text-gray-400">(คุณ)</span>}
                     </td>
                     <td className="px-3 py-2 text-right whitespace-nowrap">
-                      {canManageUsers ? (
+                      {canManageUser(u) ? (
                         <>
                           <button onClick={() => startEdit(u)} className="text-blue-600 hover:underline">
                             แก้ไข
@@ -323,8 +333,8 @@ export default function UsersPage() {
             <Field label="บทบาท">
               <select value={form.role} onChange={(e) => set('role', Number(e.target.value))} className={cls(false)}>
                 {Object.entries(USER_ROLE_LABEL)
-                  // หัวหน้างานตั้งใครเป็น Admin ไม่ได้ (API ปฏิเสธอยู่แล้ว — ซ่อนไว้ไม่ให้กดเสียเที่ยว)
-                  .filter(([k]) => isAdmin || Number(k) !== USER_ROLE.Admin)
+                  // หัวหน้างานตั้งบทบาทได้เฉพาะระดับพนักงาน (API ปฏิเสธอยู่แล้ว — ซ่อนไว้ไม่ให้กดเสียเที่ยว)
+                  .filter(([k]) => isAdmin || STAFF_ROLES.includes(Number(k)))
                   .map(([k, v]) => (
                     <option key={k} value={k}>
                       {v}

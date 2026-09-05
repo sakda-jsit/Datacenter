@@ -217,22 +217,34 @@ public class UnlockUserCommandHandler(
 
 internal static class UsersFeatureHelpers
 {
+    /// <summary>บทบาทระดับพนักงานที่หัวหน้างานดูแลได้</summary>
+    private static readonly UserRole[] SupervisorManageable = [UserRole.Maker, UserRole.Checker];
+
     /// <summary>
-    /// หัวหน้างานจัดการผู้ใช้ได้ แต่<b>แตะบัญชี Admin ไม่ได้</b> และ<b>ตั้งใครเป็น Admin ไม่ได้</b> —
-    /// ไม่งั้นจะเลื่อนตัวเอง (หรือรีเซ็ตรหัส Admin แล้วสวมสิทธิ์) ขึ้นเป็น Admin ได้
-    /// ซึ่งทำให้การกันไม่ให้ดูประวัติการใช้งานไม่มีความหมาย
+    /// หัวหน้างานแก้ไข/รีเซ็ตรหัส/ปลดล็อก ได้เฉพาะบัญชี<b>ระดับพนักงาน</b> (Maker/Checker).
+    /// แตะบัญชี Admin, หัวหน้างานด้วยกัน หรือบัญชีตัวเองไม่ได้ — ไม่งั้นจะรีเซ็ตรหัสแล้ว
+    /// สวมสิทธิ์ขึ้นไปเป็น Admin หรือขยายสิทธิ์ให้ตัวเองได้
     /// </summary>
     public static void EnsureMayManage(ICurrentUserService currentUser, User target)
     {
-        if (currentUser.Role == UserRole.Supervisor && target.Role == UserRole.Admin)
-            throw new ForbiddenException("หัวหน้างานจัดการบัญชีผู้ดูแลระบบไม่ได้ — ให้ผู้ดูแลระบบดำเนินการเอง");
+        if (currentUser.Role != UserRole.Supervisor) return;   // Admin ผ่าน; บทบาทอื่นถูกกันที่ controller แล้ว
+
+        if (target.Id == currentUser.UserId)
+            throw new ForbiddenException(
+                "แก้ไขบัญชีของตัวเองที่หน้านี้ไม่ได้ — เปลี่ยนรหัสผ่านได้ที่เมนู “เปลี่ยนรหัสผ่าน”");
+
+        if (!SupervisorManageable.Contains(target.Role))
+            throw new ForbiddenException(
+                "หัวหน้างานจัดการได้เฉพาะบัญชีผู้บันทึก (Maker) และผู้ตรวจ (Checker) — ให้ผู้ดูแลระบบดำเนินการเอง");
     }
 
     /// <summary>ตรวจบทบาทปลายทางที่กำลังจะตั้ง (ใช้ทั้งตอนสร้างและตอนแก้)</summary>
     public static void EnsureMayAssignRole(ICurrentUserService currentUser, UserRole role)
     {
-        if (currentUser.Role == UserRole.Supervisor && role == UserRole.Admin)
-            throw new ForbiddenException("หัวหน้างานตั้งบทบาทเป็นผู้ดูแลระบบไม่ได้");
+        if (currentUser.Role != UserRole.Supervisor) return;
+
+        if (!SupervisorManageable.Contains(role))
+            throw new ForbiddenException("หัวหน้างานตั้งบทบาทได้เฉพาะผู้บันทึก (Maker) และผู้ตรวจ (Checker)");
     }
 
     public static UserRole ParseRole(int role) => role switch
