@@ -51,7 +51,7 @@ function fmtDate(v?: string | null) {
 }
 
 export default function UsersPage() {
-  const { user: me } = useAuth()
+  const { user: me, isAdmin } = useAuth()
   const { data: users, isLoading, isError } = useUsers()
   const { data: clients } = useClientList({ pageNumber: 1, pageSize: 500 })
   const create = useCreateUser()
@@ -108,6 +108,11 @@ export default function UsersPage() {
       isActive: u.isActive,
       companyIds: [...u.companyIds],
     })
+  }
+
+  /** หัวหน้างานแตะบัญชีผู้ดูแลระบบไม่ได้ (API ปฏิเสธอยู่แล้ว — ซ่อนปุ่มไม่ให้กดเสียเที่ยว) */
+  function canManageUser(u: SystemUser) {
+    return isAdmin || u.role !== USER_ROLE.Admin
   }
 
   function toggleCompany(id: number) {
@@ -241,22 +246,28 @@ export default function UsersPage() {
                       {u.id === me?.userId && <span className="ml-1 text-xs text-gray-400">(คุณ)</span>}
                     </td>
                     <td className="px-3 py-2 text-right whitespace-nowrap">
-                      <button onClick={() => startEdit(u)} className="text-blue-600 hover:underline">
-                        แก้ไข
-                      </button>
-                      <button
-                        onClick={() => {
-                          setResetFor(u)
-                          setResetPassword('')
-                        }}
-                        className="ml-3 text-blue-600 hover:underline"
-                      >
-                        รีเซ็ตรหัส
-                      </button>
-                      {u.isLocked && (
-                        <button onClick={() => unlock.mutate(u.id)} className="ml-3 text-amber-600 hover:underline">
-                          ปลดล็อก
-                        </button>
+                      {canManageUser(u) ? (
+                        <>
+                          <button onClick={() => startEdit(u)} className="text-blue-600 hover:underline">
+                            แก้ไข
+                          </button>
+                          <button
+                            onClick={() => {
+                              setResetFor(u)
+                              setResetPassword('')
+                            }}
+                            className="ml-3 text-blue-600 hover:underline"
+                          >
+                            รีเซ็ตรหัส
+                          </button>
+                          {u.isLocked && (
+                            <button onClick={() => unlock.mutate(u.id)} className="ml-3 text-amber-600 hover:underline">
+                              ปลดล็อก
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-xs text-gray-400">เฉพาะผู้ดูแลระบบแก้ได้</span>
                       )}
                     </td>
                   </tr>
@@ -300,11 +311,14 @@ export default function UsersPage() {
             </Field>
             <Field label="บทบาท">
               <select value={form.role} onChange={(e) => set('role', Number(e.target.value))} className={cls(false)}>
-                {Object.entries(USER_ROLE_LABEL).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v}
-                  </option>
-                ))}
+                {Object.entries(USER_ROLE_LABEL)
+                  // หัวหน้างานตั้งใครเป็น Admin ไม่ได้ (API ปฏิเสธอยู่แล้ว — ซ่อนไว้ไม่ให้กดเสียเที่ยว)
+                  .filter(([k]) => isAdmin || Number(k) !== USER_ROLE.Admin)
+                  .map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
               </select>
               <p className="mt-1 text-xs text-gray-400">{USER_ROLE_DESC[form.role]}</p>
             </Field>

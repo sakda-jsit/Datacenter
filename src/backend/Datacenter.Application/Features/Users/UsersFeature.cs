@@ -78,6 +78,7 @@ public class CreateUserCommandHandler(
 
         PasswordPolicy.EnsureValid(d.Password, username, "password");
         var role = UsersFeatureHelpers.ParseRole(d.Role);
+        UsersFeatureHelpers.EnsureMayAssignRole(currentUser, role);
 
         var user = new User
         {
@@ -116,6 +117,8 @@ public class UpdateUserCommandHandler(
             ?? throw new NotFoundException("ผู้ใช้", req.Id);
 
         var role = UsersFeatureHelpers.ParseRole(d.Role);
+        UsersFeatureHelpers.EnsureMayManage(currentUser, user);
+        UsersFeatureHelpers.EnsureMayAssignRole(currentUser, role);
         var before = $"{user.DisplayName} / {user.Role} / {(user.IsActive ? "ใช้งาน" : "ปิดใช้งาน")}";
 
         // กันล็อกตัวเองออกจากระบบ และกันไม่ให้เหลือ Admin ที่ใช้งานได้ 0 คน
@@ -165,6 +168,7 @@ public class ResetUserPasswordCommandHandler(
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == req.Id, ct)
             ?? throw new NotFoundException("ผู้ใช้", req.Id);
+        UsersFeatureHelpers.EnsureMayManage(currentUser, user);
 
         PasswordPolicy.EnsureValid(req.NewPassword, user.Username, "newPassword");
 
@@ -197,6 +201,7 @@ public class UnlockUserCommandHandler(
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == req.Id, ct)
             ?? throw new NotFoundException("ผู้ใช้", req.Id);
+        UsersFeatureHelpers.EnsureMayManage(currentUser, user);
 
         user.LockedUntil = null;
         user.FailedLoginCount = 0;
@@ -212,6 +217,24 @@ public class UnlockUserCommandHandler(
 
 internal static class UsersFeatureHelpers
 {
+    /// <summary>
+    /// หัวหน้างานจัดการผู้ใช้ได้ แต่<b>แตะบัญชี Admin ไม่ได้</b> และ<b>ตั้งใครเป็น Admin ไม่ได้</b> —
+    /// ไม่งั้นจะเลื่อนตัวเอง (หรือรีเซ็ตรหัส Admin แล้วสวมสิทธิ์) ขึ้นเป็น Admin ได้
+    /// ซึ่งทำให้การกันไม่ให้ดูประวัติการใช้งานไม่มีความหมาย
+    /// </summary>
+    public static void EnsureMayManage(ICurrentUserService currentUser, User target)
+    {
+        if (currentUser.Role == UserRole.Supervisor && target.Role == UserRole.Admin)
+            throw new ForbiddenException("หัวหน้างานจัดการบัญชีผู้ดูแลระบบไม่ได้ — ให้ผู้ดูแลระบบดำเนินการเอง");
+    }
+
+    /// <summary>ตรวจบทบาทปลายทางที่กำลังจะตั้ง (ใช้ทั้งตอนสร้างและตอนแก้)</summary>
+    public static void EnsureMayAssignRole(ICurrentUserService currentUser, UserRole role)
+    {
+        if (currentUser.Role == UserRole.Supervisor && role == UserRole.Admin)
+            throw new ForbiddenException("หัวหน้างานตั้งบทบาทเป็นผู้ดูแลระบบไม่ได้");
+    }
+
     public static UserRole ParseRole(int role) => role switch
     {
         1 => UserRole.Admin,
@@ -258,7 +281,7 @@ public class UserCreateInputValidator : AbstractValidator<UserCreateInput>
         RuleFor(x => x.DisplayName).MaximumLength(150);
         RuleFor(x => x.Email).MaximumLength(256)
             .Must(v => string.IsNullOrWhiteSpace(v) || v.Contains('@')).WithMessage("อีเมลไม่ถูกต้อง");
-        RuleFor(x => x.Role).InclusiveBetween(1, 3).WithMessage("บทบาทผู้ใช้ไม่ถูกต้อง");
+        RuleFor(x => x.Role).InclusiveBetween(1, 4).WithMessage("บทบาทผู้ใช้ไม่ถูกต้อง (1=Admin, 2=Maker, 3=Checker, 4=Supervisor)");
     }
 }
 
@@ -275,7 +298,7 @@ public class UserUpdateInputValidator : AbstractValidator<UserUpdateInput>
         RuleFor(x => x.DisplayName).MaximumLength(150);
         RuleFor(x => x.Email).MaximumLength(256)
             .Must(v => string.IsNullOrWhiteSpace(v) || v.Contains('@')).WithMessage("อีเมลไม่ถูกต้อง");
-        RuleFor(x => x.Role).InclusiveBetween(1, 3).WithMessage("บทบาทผู้ใช้ไม่ถูกต้อง");
+        RuleFor(x => x.Role).InclusiveBetween(1, 4).WithMessage("บทบาทผู้ใช้ไม่ถูกต้อง (1=Admin, 2=Maker, 3=Checker, 4=Supervisor)");
     }
 }
 
