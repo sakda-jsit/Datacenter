@@ -220,6 +220,54 @@ ROUTES.push(
   { name: 'payroll-mapping', path: '/payroll', companyId: PAYROLL_COMPANY_ID, full: false, prepare: tab('แมพบัญชีเงินเดือน') },
 )
 
+// ── กลุ่ม "รายงานและปิดงวด" ชุดที่ 1 ──
+/** ตั้งปีในช่อง number ตัวแรก แล้วกดปุ่มที่ระบุ (ถ้ามี) */
+function setYearThen(btnLabel, year) {
+  return async (page) => {
+    await page.locator('main input[type="number"]').first().fill(year || YEAR)
+    await page.waitForTimeout(500)
+    if (btnLabel) {
+      await page.getByRole('button', { name: btnLabel, exact: true }).click()
+    }
+    await page.waitForTimeout(2500)
+  }
+}
+
+ROUTES.push(
+  {
+    name: 'adjustments-tb',
+    path: '/adjustments',
+    companyId: PAYROLL_COMPANY_ID, // 242 มีรายการปรับปรุง
+    full: false,
+    prepare: setYearThen('แสดงรายงาน'),
+  },
+  {
+    name: 'adjustments-entries',
+    path: '/adjustments',
+    companyId: PAYROLL_COMPANY_ID,
+    full: false,
+    prepare: async (page) => {
+      await page.locator('main input[type="number"]').first().fill(YEAR)
+      await tab('รายการปรับปรุง')(page)
+    },
+  },
+  { name: 'fixed-assets', path: '/fixed-assets', full: false, prepare: setYearThen() },
+  { name: 'fixed-assets-workpaper', path: '/fixed-assets', full: false, prepare: async (page) => {
+    await setYearThen()(page)
+    await tab('กระดาษทำการ + ปรับปรุง')(page)
+  } },
+  { name: 'leasing', path: '/leasing', full: false, prepare: setYearThen() },
+  { name: 'leasing-workpaper', path: '/leasing', full: false, prepare: async (page) => {
+    await setYearThen()(page)
+    await tab('กระดาษทำการ + ปรับปรุง')(page)
+  } },
+  { name: 'prepaid', path: '/prepaid', companyId: PAYROLL_COMPANY_ID, full: false, prepare: setYearThen() },
+  { name: 'prepaid-workpaper', path: '/prepaid', companyId: PAYROLL_COMPANY_ID, full: false, prepare: async (page) => {
+    await setYearThen()(page)
+    await tab('กระดาษทำการ + ปรับปรุง')(page)
+  } },
+)
+
 const only = process.argv.slice(2)
 const routes = only.length ? ROUTES.filter((r) => only.includes(r.name)) : ROUTES
 if (!routes.length) {

@@ -62,10 +62,10 @@
     {
       title: 'รายงานและปิดงวด',
       items: [
-        { label: 'กระดาษทำการปิดงบ' },
-        { label: 'เช่าซื้อ / เงินกู้' },
-        { label: 'สินทรัพย์ถาวร' },
-        { label: 'ค่าใช้จ่ายจ่ายล่วงหน้า' },
+        { label: 'กระดาษทำการปิดงบ', href: 'pages/adjustments.html' },
+        { label: 'เช่าซื้อ / เงินกู้', href: 'pages/leasing.html' },
+        { label: 'สินทรัพย์ถาวร', href: 'pages/fixed-assets.html' },
+        { label: 'ค่าใช้จ่ายจ่ายล่วงหน้า', href: 'pages/prepaid.html' },
         { label: 'ตรวจนับเงินสด' },
         { label: 'ดอกเบี้ยรับเงินให้กู้' },
         { label: 'ตรวจจ่ายหลังปิดงบ' },
