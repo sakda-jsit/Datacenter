@@ -37,10 +37,10 @@
       items: [
         { label: 'งบทดลอง', href: 'pages/trial-balance.html' },
         { label: 'บัญชีแยกประเภท', href: 'pages/general-ledger.html' },
-        { label: 'ลูกหนี้' },
-        { label: 'เจ้าหนี้' },
-        { label: 'สินค้าคงคลัง' },
-        { label: 'ธนาคาร / สมุดเงินฝาก' },
+        { label: 'ลูกหนี้', href: 'pages/ar.html' },
+        { label: 'เจ้าหนี้', href: 'pages/ap.html' },
+        { label: 'สินค้าคงคลัง', href: 'pages/stock.html' },
+        { label: 'ธนาคาร / สมุดเงินฝาก', href: 'pages/bank.html' },
       ],
     },
     {

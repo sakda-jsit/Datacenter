@@ -116,6 +116,36 @@ ROUTES.push(
   },
 )
 
+// ── กลุ่ม "บัญชี": ลูกหนี้ / เจ้าหนี้ / สินค้าคงคลัง / ธนาคาร ──
+/** คลิกแท็บด้วยชื่อที่เห็นบนหน้าจอ */
+function tab(label, extra) {
+  return async (page) => {
+    await page.getByRole('button', { name: label, exact: true }).click()
+    await page.waitForTimeout(2000)
+    if (extra) await extra(page)
+  }
+}
+
+ROUTES.push(
+  { name: 'ar-aging', path: '/ar', full: false },
+  { name: 'ar-invoices', path: '/ar', full: false, prepare: tab('ใบแจ้งหนี้') },
+  { name: 'ap-aging', path: '/ap', full: false },
+  { name: 'ap-invoices', path: '/ap', full: false, prepare: tab('ใบตั้งหนี้') },
+  {
+    name: 'stock-valuation',
+    path: '/stock',
+    full: false,
+    prepare: async (page) => {
+      await page.locator('main input[type="number"]').first().fill(YEAR)
+      await page.waitForTimeout(2000)
+    },
+  },
+  { name: 'stock-items', path: '/stock', full: false, prepare: tab('รายการสินค้า') },
+  { name: 'bank-book', path: '/bank-reconciliation', full: false },
+  { name: 'bank-accounts', path: '/bank-reconciliation', full: false, prepare: tab('บัญชีธนาคาร') },
+  { name: 'bank-recon', path: '/bank-reconciliation', full: false, prepare: tab('กระทบยอด (Reconciliation)') },
+)
+
 const only = process.argv.slice(2)
 const routes = only.length ? ROUTES.filter((r) => only.includes(r.name)) : ROUTES
 if (!routes.length) {

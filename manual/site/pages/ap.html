@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>เจ้าหนี้การค้า — คู่มือการใช้งาน JSP Datacenter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<div class="wrap">
+  <!-- ===== Sidebar (สร้างจาก assets/nav.js) ===== -->
+  <aside class="sidebar" data-nav></aside>
+
+  <!-- ===== Content ===== -->
+  <main class="content">
+  <div class="content-inner">
+
+    <div class="crumbs"><a href="../index.html">คู่มือการใช้งาน</a> › บัญชี › เจ้าหนี้</div>
+    <h1>เจ้าหนี้การค้า</h1>
+    <p class="lead">
+      ติดตามยอดค้างจ่ายให้ผู้ขาย — รายงานอายุหนี้, ใบตั้งหนี้รายใบพร้อมสถานะการจ่าย และทะเบียนผู้ขาย
+      ดึงจาก Express (APMAS / APTRN)
+    </p>
+
+    <div class="callout tip">
+      <span class="tag">โครงเดียวกับลูกหนี้</span>
+      <p>หน้านี้ทำงานเหมือน <a href="ar.html">ลูกหนี้การค้า</a> ทุกอย่าง แค่สลับด้าน —
+      “ลูกค้า” เป็น “ผู้ขาย”, “ใบแจ้งหนี้” เป็น “ใบตั้งหนี้”, “รับชำระ” เป็น “จ่ายชำระ”</p>
+    </div>
+
+    <h2>1. การเข้าใช้งาน</h2>
+    <ol class="steps">
+      <li><b>เลือกบริษัทลูกค้า</b> ที่แถบด้านบน</li>
+      <li>เปิดเมนู <b>บัญชี → เจ้าหนี้</b></li>
+      <li>เลือกแท็บ: <b>อายุหนี้</b> · <b>ใบตั้งหนี้</b> · <b>ผู้ขาย</b></li>
+    </ol>
+
+    <h2>2. แท็บ “อายุหนี้”</h2>
+    <p>ยอดค้างจ่ายของผู้ขายแต่ละราย แบ่งตามช่วงวันเกินกำหนดชำระ</p>
+    <figure>
+      <img src="../assets/img/ap-aging.png" alt="รายงานอายุหนี้เจ้าหนี้การค้า" />
+      <figcaption>อายุหนี้เจ้าหนี้ — ใช้วางแผนจ่ายเงินและดูว่ามีหนี้ค้างนานเกินไปหรือไม่</figcaption>
+    </figure>
+    <table class="doc">
+      <tr><th style="width:190px">ช่วง</th><th>ความหมาย</th></tr>
+      <tr><td><b>ยังไม่ถึงกำหนด</b></td><td>ใบที่ยังไม่ถึงวันครบกำหนดจ่าย — ยอดปกติที่ควรมี</td></tr>
+      <tr><td><b>1-30 / 31-60 วัน</b></td><td>เลยกำหนดจ่ายมาแล้ว</td></tr>
+      <tr><td><b>61-90 วัน</b></td><td>แสดงเป็น <b style="color:#b45309">สีเหลือง</b></td></tr>
+      <tr><td><b>เกิน 90 วัน</b></td><td>แสดงเป็น <b style="color:#dc2626">สีแดง</b> — เสี่ยงกระทบเครดิตกับผู้ขาย</td></tr>
+      <tr><td><b>รวม</b></td><td>ยอดค้างจ่ายทั้งหมดของผู้ขายรายนั้น</td></tr>
+    </table>
+    <div class="callout tip">
+      <span class="tag">ใช้ต่างจากฝั่งลูกหนี้</span>
+      <p>ฝั่งลูกหนี้ดูเพื่อ <b>ตามเก็บเงิน</b> · ฝั่งเจ้าหนี้ดูเพื่อ <b>วางแผนจ่าย</b> —
+      ตั้ง “ณ วันที่” เป็นสิ้นเดือนหน้า จะเห็นว่าเดือนนั้นต้องเตรียมเงินจ่ายเท่าไร</p>
+    </div>
+
+    <h2>3. แท็บ “ใบตั้งหนี้”</h2>
+    <figure>
+      <img src="../assets/img/ap-invoices.png" alt="รายการใบตั้งหนี้เจ้าหนี้" />
+      <figcaption>ใบตั้งหนี้ — สถานะ “ชำระครบ” / “ค้างชำระ” พร้อมยอดจ่ายชำระและคงค้าง</figcaption>
+    </figure>
+    <table class="doc">
+      <tr><th style="width:170px">คอลัมน์</th><th>ความหมาย</th></tr>
+      <tr><td><b>เลขที่ / วันที่</b></td><td>เลขที่ใบตั้งหนี้และวันที่เอกสาร</td></tr>
+      <tr><td><b>ครบกำหนด</b></td><td>วันครบกำหนดจ่าย</td></tr>
+      <tr><td><b>ผู้ขาย</b></td><td>ชื่อผู้ขาย</td></tr>
+      <tr><td><b>รวมทั้งสิ้น</b></td><td>ยอดสุทธิของใบ</td></tr>
+      <tr><td><b>จ่ายชำระ</b></td><td>ยอดที่จ่ายไปแล้ว</td></tr>
+      <tr><td><b>คงค้าง</b></td><td>ยอดที่ยังต้องจ่าย</td></tr>
+      <tr><td><b>สถานะ</b></td>
+          <td><span class="badge green">ชำระครบ</span> หรือ <span class="badge amber">ค้างชำระ</span></td></tr>
+    </table>
+    <p>ติ๊ก <b>แสดงเฉพาะที่ยังค้างชำระ</b> เพื่อดูเฉพาะใบที่ต้องจ่าย และเลือก <b>ปีเอกสาร</b> ได้จากปีที่มีข้อมูลจริง</p>
+    <div class="callout note">
+      <span class="tag">มาจากเอกสารประเภทไหน</span>
+      <p>ใบตั้งหนี้จากการรับของ (Express: <code>APTRN</code> ที่ <code>RECTYP=RR</code>) — การจ่ายเงินสะท้อนในช่อง “จ่ายชำระ”</p>
+    </div>
+
+    <h2>4. แท็บ “ผู้ขาย”</h2>
+    <p>ทะเบียนผู้ขายจาก Express (APMAS) พร้อมยอดค้างจ่ายรวมรายราย — คอลัมน์เหมือนฝั่งลูกค้า
+    (รหัส · ชื่อผู้ขาย · เลขผู้เสียภาษี · เครดิตเทอม · อีเมล · ยอดค้าง) และติ๊กแสดงผู้ขายที่ปิดใช้งานได้</p>
+    <div class="callout tip">
+      <span class="tag">ใช้คู่กับงานภาษี</span>
+      <p>เลขผู้เสียภาษีของผู้ขายในแท็บนี้ ใช้ตรวจกับใบกำกับภาษีซื้อใน
+      <a href="vat.html">ภ.พ.30</a> และหนังสือรับรองหัก ณ ที่จ่ายได้</p>
+    </div>
+
+    <h2>5. ปัญหาที่พบบ่อย</h2>
+    <table class="doc">
+      <tr><th style="width:260px">อาการ</th><th>สาเหตุและวิธีแก้</th></tr>
+      <tr><td><b>ไม่มียอดเจ้าหนี้คงค้าง</b></td>
+          <td>ไม่มีใบค้างจ่าย ณ วันที่เลือก หรือยังไม่ได้นำเข้าข้อมูลเจ้าหนี้จาก Express</td></tr>
+      <tr><td><b>ยอดค้างไม่ลดทั้งที่จ่ายแล้ว</b></td>
+          <td>ข้อมูลเป็น snapshot ณ ตอนนำเข้า — นำเข้าใหม่ที่<a href="import.html">เมนูนำเข้าข้อมูล</a></td></tr>
+      <tr><td><b>ยอดรวมไม่ตรงกับบัญชีเจ้าหนี้ใน GL</b></td>
+          <td>ตรวจที่ <a href="general-ledger.html">บัญชีแยกประเภท</a> ว่ามีรายการปรับปรุงอื่นในบัญชีเจ้าหนี้หรือไม่</td></tr>
+      <tr><td><b>ต้องดูว่าค้างจ่ายปีปิดงบ จ่ายจริงปีถัดไปหรือยัง</b></td>
+          <td>ใช้เมนู <span class="todo" style="display:inline;padding:0;color:#64748b">ตรวจจ่ายหลังปิดงบ</span> ในกลุ่มรายงานและปิดงวดแทน</td></tr>
+    </table>
+
+    <div class="callout note">
+      <span class="tag">ถัดไป</span>
+      <p>สินทรัพย์หมุนเวียนอีกตัวที่ต้องกระทบยอดตอนปิดงบ — <a href="stock.html">สินค้าคงคลัง →</a></p>
+    </div>
+
+    <div class="footer-note">
+      คู่มือการใช้งาน JSP Datacenter — เจ้าหนี้การค้า · ภาพประกอบจากระบบจริง
+    </div>
+
+  </div>
+  </main>
+</div>
+<script src="../assets/nav.js" data-root="../" data-current="pages/ap.html"></script>
+</body>
+</html>
