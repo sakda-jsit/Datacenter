@@ -64,11 +64,25 @@ export default function UsersPage() {
   const [resetFor, setResetFor] = useState<SystemUser | null>(null)
   const [resetPassword, setResetPassword] = useState('')
   const [error, setError] = useState('')
+  const [companySearch, setCompanySearch] = useState('')
 
   const companies = useMemo(
     () => (clients?.items ?? []).filter((c) => c.isActive).sort((a, b) => a.name.localeCompare(b.name, 'th')),
     [clients],
   )
+
+  // ค้นหาชื่อบริษัทในรายการติ๊ก — ตัดช่องว่างซ้ำเพื่อให้พิมพ์เว้นวรรคเกินก็ยังเจอ
+  const companyQuery = companySearch.trim().replace(/\s+/g, ' ').toLowerCase()
+  const shownCompanies = useMemo(
+    () => (companyQuery ? companies.filter((c) => c.name.toLowerCase().includes(companyQuery)) : companies),
+    [companies, companyQuery],
+  )
+  /** บริษัทที่ติ๊กไว้แต่ถูกคำค้นซ่อนอยู่ — เตือนไม่ให้เข้าใจผิดว่าติ๊กหาย */
+  const hiddenSelectedCount = useMemo(() => {
+    if (!companyQuery) return 0
+    const shown = new Set(shownCompanies.map((c) => c.id))
+    return form.companyIds.filter((id) => !shown.has(id)).length
+  }, [companyQuery, shownCompanies, form.companyIds])
 
   function set<K extends keyof FormState>(k: K, v: FormState[K]) {
     setForm((p) => ({ ...p, [k]: v }))
@@ -76,12 +90,14 @@ export default function UsersPage() {
 
   function startNew() {
     setError('')
+    setCompanySearch('')
     setEditId(0)
     setForm(blank)
   }
 
   function startEdit(u: SystemUser) {
     setError('')
+    setCompanySearch('')
     setEditId(u.id)
     setForm({
       username: u.username,
@@ -329,25 +345,51 @@ export default function UsersPage() {
                 ผู้ใช้ทุกคน <b>ดูข้อมูลได้ทุกบริษัท</b>อยู่แล้ว — ที่เลือกตรงนี้คือบริษัทที่ผู้ใช้คนนี้
                 <b>บันทึก/แก้ไข/นำเข้าข้อมูล</b> และ <b>ดูข้อมูลเงินเดือน</b> ได้
               </p>
-              <div className="flex gap-3 pb-2 text-xs">
+              <div className="relative mb-2">
+                <input
+                  type="search"
+                  value={companySearch}
+                  onChange={(e) => setCompanySearch(e.target.value)}
+                  placeholder="ค้นหาชื่อบริษัท..."
+                  className="w-full rounded-lg border border-slate-300 py-1.5 pl-8 pr-3 text-sm
+                             focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-200"
+                />
+                <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                  🔍
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 pb-2 text-xs">
                 <button
                   type="button"
-                  onClick={() => set('companyIds', companies.map((c) => c.id))}
+                  onClick={() =>
+                    set('companyIds', [
+                      ...new Set([...form.companyIds, ...shownCompanies.map((c) => c.id)]),
+                    ])
+                  }
                   className="text-blue-600 hover:underline"
                 >
-                  เลือกทั้งหมด
+                  {companyQuery ? `เลือกที่ค้นเจอ (${shownCompanies.length})` : 'เลือกทั้งหมด'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => set('companyIds', [])}
+                  onClick={() => {
+                    if (!companyQuery) return set('companyIds', [])
+                    const shown = new Set(shownCompanies.map((c) => c.id))
+                    set('companyIds', form.companyIds.filter((id) => !shown.has(id)))
+                  }}
                   className="text-blue-600 hover:underline"
                 >
-                  ล้างทั้งหมด
+                  {companyQuery ? 'ล้างที่ค้นเจอ' : 'ล้างทั้งหมด'}
                 </button>
+                {hiddenSelectedCount > 0 && (
+                  <span className="text-gray-400">
+                    (ยังมีอีก {hiddenSelectedCount} บริษัทที่เลือกไว้แต่ไม่ตรงคำค้น)
+                  </span>
+                )}
               </div>
               <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-200 p-3">
                 <div className="grid gap-1 sm:grid-cols-2">
-                  {companies.map((c) => (
+                  {shownCompanies.map((c) => (
                     <label key={c.id} className="flex items-center gap-2 text-sm text-gray-700">
                       <input
                         type="checkbox"
@@ -358,6 +400,9 @@ export default function UsersPage() {
                     </label>
                   ))}
                   {companies.length === 0 && <p className="text-sm text-gray-400">ยังไม่มีบริษัทลูกค้าในระบบ</p>}
+                  {companies.length > 0 && shownCompanies.length === 0 && (
+                    <p className="text-sm text-gray-400">ไม่พบบริษัทที่ตรงกับ “{companySearch.trim()}”</p>
+                  )}
                 </div>
               </div>
             </div>
