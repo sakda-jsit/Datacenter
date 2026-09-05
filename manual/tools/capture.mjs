@@ -268,6 +268,13 @@ ROUTES.push(
   } },
 )
 
+// ── กลุ่ม "รายงานและปิดงวด" ชุดที่ 2 ──
+ROUTES.push(
+  { name: 'cash-count', path: '/cash-count', full: false, prepare: setYearThen() },
+  { name: 'interest-income', path: '/interest-income', full: false, prepare: setYearThen() },
+  { name: 'subsequent-payment', path: '/subsequent-payment', full: false, prepare: setYearThen() },
+)
+
 const only = process.argv.slice(2)
 const routes = only.length ? ROUTES.filter((r) => only.includes(r.name)) : ROUTES
 if (!routes.length) {
